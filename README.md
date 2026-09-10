@@ -13,7 +13,8 @@ Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other vers
 
 ## Install
 
-Drop `qza-1.0.0-26.1.2.jar` into your `mods` folder alongside Fabric API.
+Grab the jar from the [latest release](https://github.com/MullyGoat/QZA/releases/latest)
+and drop it into your `mods` folder alongside Fabric API.
 
 ## Commands
 
