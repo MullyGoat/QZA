@@ -27,5 +27,7 @@ public class QZAConfig {
 
     public double necronDeathOffsetSeconds = 3.1;
 
+    public String necronAnnounceMode = "party";
+
     public double guiScale = 100.0;
 }

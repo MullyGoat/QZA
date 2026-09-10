@@ -109,6 +109,21 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        settings.add(new DropdownSetting(f7, "Necron Timer", "Announce Mode",
+                Component.literal("Send the kill time to the whole party, or only to yourself.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> List.of("party", "client"),
+                () -> cfg.necronAnnounceMode,
+                v -> {
+                    cfg.necronAnnounceMode = v;
+                    ConfigManager.save();
+                },
+                SettingsRegistry::announceModeLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.necronTimerEnabled));
+
         settings.add(new SliderSetting(f7, "Necron Timer", "Death Animation",
                 Component.literal("Seconds added to the kill time for the animation before the phase actually ends.")
                         .withStyle(ChatFormatting.GRAY),
@@ -207,6 +222,10 @@ public final class SettingsRegistry {
             names.add(track.getFileName().toString());
         }
         return names;
+    }
+
+    private static String announceModeLabel(String raw) {
+        return "client".equals(raw) ? "Client Notification" : "Announce to Party";
     }
 
     private static String stripExtension(String name) {

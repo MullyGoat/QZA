@@ -4,6 +4,8 @@ import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.util.ChatUtil;
 import com.qza.util.Scheduler;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 import java.util.Locale;
 
@@ -63,11 +65,21 @@ public final class NecronTimer {
         running = false;
         startServerTicks = -1.0;
 
-        String text = String.format(Locale.ROOT,
-                "[QZA] Necron was killed in %.2f seconds (%.2f tick time)",
-                realSeconds, tickSeconds);
+        String real = String.format(Locale.ROOT, "%.2f", realSeconds);
+        String tick = String.format(Locale.ROOT, "%.2f", tickSeconds);
 
-        Scheduler.schedule(ANNOUNCE_DELAY_TICKS, () -> ChatUtil.sendCommand("pc " + text));
+        if ("client".equals(ConfigManager.get().necronAnnounceMode)) {
+            Scheduler.schedule(ANNOUNCE_DELAY_TICKS, () -> ChatUtil.send(
+                    Component.literal("Necron was killed in ").withStyle(ChatFormatting.GRAY)
+                            .append(Component.literal(real + " seconds").withStyle(ChatFormatting.GREEN))
+                            .append(Component.literal(" (").withStyle(ChatFormatting.GRAY))
+                            .append(Component.literal(tick + " tick time").withStyle(ChatFormatting.AQUA))
+                            .append(Component.literal(")").withStyle(ChatFormatting.GRAY))));
+        } else {
+            String text = "pc [QZA] Necron was killed in " + real
+                    + " seconds (" + tick + " tick time)";
+            Scheduler.schedule(ANNOUNCE_DELAY_TICKS, () -> ChatUtil.sendCommand(text));
+        }
     }
 
     private static boolean matches(String message, String trigger) {
