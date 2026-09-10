@@ -16,6 +16,7 @@ public final class NecronTimer {
     private static boolean running;
     private static long startNanos;
     private static double startServerTicks = -1.0;
+    private static int deathHits;
 
     private NecronTimer() {
     }
@@ -34,12 +35,16 @@ public final class NecronTimer {
         }
 
         if (running && matches(message, cfg.necronDeathTrigger)) {
-            announce();
+            deathHits++;
+            if (deathHits >= Math.max(1, cfg.necronDeathTriggerCount)) {
+                announce();
+            }
         }
     }
 
     private static void start() {
         running = true;
+        deathHits = 0;
         startNanos = System.nanoTime();
         startServerTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticksNow() : -1.0;
     }
@@ -89,6 +94,7 @@ public final class NecronTimer {
     public static void reset() {
         running = false;
         startServerTicks = -1.0;
+        deathHits = 0;
     }
 
     public static boolean isRunning() {

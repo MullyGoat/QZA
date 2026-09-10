@@ -25,6 +25,8 @@ public class QZAConfig {
 
     public String necronDeathTrigger = "Necron: ARGH";
 
+    public int necronDeathTriggerCount = 2;
+
     public double necronDeathOffsetSeconds = 3.1;
 
     public String necronAnnounceMode = "party";

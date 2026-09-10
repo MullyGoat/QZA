@@ -33,7 +33,7 @@ public final class ShitterAutoKick {
             "must be the party leader"
     };
 
-    private static final int ANNOUNCE_TO_KICK_TICKS = 6;
+    private static final int ANNOUNCE_TO_KICK_TICKS = 10;
 
     private static final long FALLBACK_WINDOW_MS = 5_000L;
 
@@ -136,15 +136,7 @@ public final class ShitterAutoKick {
 
         String reason = entry.reasonOrDefault();
 
-        ChatUtil.raw(ChatUtil.prefix()
-                .append(Component.literal("Shitter detected... ").withStyle(ChatFormatting.RED))
-                .append(Component.literal("Kicking ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(entry.name).withStyle(ChatFormatting.WHITE))
-                .append(Component.literal(" (").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(reason).withStyle(ChatFormatting.RED))
-                .append(Component.literal(")").withStyle(ChatFormatting.GRAY)));
-
-        ChatUtil.sendCommand("pc Shitter detected... Kicking " + entry.name + " (" + reason + ")");
+        ChatUtil.sendCommand("pc [QZA] Shitter detected... Kicking " + entry.name + " " + reason);
 
         Scheduler.schedule(ANNOUNCE_TO_KICK_TICKS, () -> {
             pendingTarget = entry.name;
