@@ -3,11 +3,13 @@
   "id": "qza",
   "version": "${version}",
   "name": "QZA",
-  "description": "Hypixel SkyBlock QoL: ShitterList auto-kick and F7/M7 terminal-phase music.",
+  "description": "Hypixel Skyblock QoL Mod featuring Shitter List & more.",
   "authors": [
-    "QZA"
+    "Mull",
+    "Claude"
   ],
   "license": "MIT",
+  "icon": "assets/qza/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [
