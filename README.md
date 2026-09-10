@@ -13,7 +13,7 @@ Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other vers
 
 ## Install
 
-Drop `qza-1.0.0.jar` into your `mods` folder alongside Fabric API.
+Drop `qza-1.0.0-26.1.2.jar` into your `mods` folder alongside Fabric API.
 
 ## Commands
 
