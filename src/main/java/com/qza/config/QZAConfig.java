@@ -19,5 +19,13 @@ public class QZAConfig {
 
     public double fadeMillis = 1500.0;
 
+    public boolean necronTimerEnabled = true;
+
+    public String necronStartTrigger = "";
+
+    public String necronDeathTrigger = "";
+
+    public double necronDeathOffsetSeconds = 3.35;
+
     public double guiScale = 100.0;
 }

@@ -100,6 +100,26 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.terminalMusicEnabled));
 
+        settings.add(new ToggleSetting(f7, "Necron Timer", "Necron Kill Time",
+                Component.literal("Times phase 4 and announces the kill in party chat, including the death animation.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.necronTimerEnabled,
+                v -> {
+                    cfg.necronTimerEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new SliderSetting(f7, "Necron Timer", "Death Animation",
+                Component.literal("Seconds added to the kill time for the animation before the phase actually ends.")
+                        .withStyle(ChatFormatting.GRAY),
+                0, 10, 0.05, "s",
+                () -> cfg.necronDeathOffsetSeconds,
+                v -> {
+                    cfg.necronDeathOffsetSeconds = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.necronTimerEnabled));
+
         String music = "Music";
 
         settings.add(new ActionSetting(music, "Library", "Add Music",

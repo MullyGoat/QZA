@@ -25,6 +25,12 @@ public final class Scheduler {
         }
     }
 
+    public static long ticks() {
+        synchronized (Scheduler.class) {
+            return tickCount;
+        }
+    }
+
     public static void schedule(long delayTicks, Runnable action) {
         synchronized (Scheduler.class) {
             TASKS.add(new Task(tickCount + Math.max(1, delayTicks), action));

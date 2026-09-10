@@ -7,6 +7,7 @@ import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
+import com.qza.timer.NecronTimer;
 import com.qza.util.Scheduler;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -42,6 +43,7 @@ public class QZA implements ClientModInitializer {
 
             ShitterAutoKick.onChatMessage(plain);
             MusicManager.get().onChatMessage(plain);
+            NecronTimer.onChatMessage(plain);
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -51,6 +53,7 @@ public class QZA implements ClientModInitializer {
             if (level != lastLevel) {
                 lastLevel = level;
                 MusicManager.get().stopNow();
+                NecronTimer.reset();
             }
         });
 
@@ -58,6 +61,7 @@ public class QZA implements ClientModInitializer {
             MusicManager.get().stopNow();
             Scheduler.clear();
             ShitterAutoKick.reset();
+            NecronTimer.reset();
         });
 
         LOGGER.info("QZA initialised - {} shitter(s) loaded", ShitterList.size());
