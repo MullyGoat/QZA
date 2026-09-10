@@ -26,10 +26,11 @@ public final class ShitterAutoKick {
                     + " joined the dungeon group! \\(\\d+/\\d+\\)$");
 
     private static final String[] NOT_LEADER = {
-            "you are not the leader",
-            "you're not the leader",
-            "must be the party leader",
-            "you are not the party leader"
+            "not this partys leader",
+            "not the partys leader",
+            "not the party leader",
+            "not the leader",
+            "must be the party leader"
     };
 
     private static final int ANNOUNCE_TO_KICK_TICKS = 6;
@@ -88,7 +89,9 @@ public final class ShitterAutoKick {
     }
 
     private static boolean isNotLeaderReply(String message) {
-        String lower = message.toLowerCase(Locale.ROOT);
+        String lower = message.toLowerCase(Locale.ROOT)
+                .replace("'", "")
+                .replace("’", "");
         for (String needle : NOT_LEADER) {
             if (lower.contains(needle)) {
                 return true;
