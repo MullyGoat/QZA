@@ -102,7 +102,8 @@ public final class QZACommand {
         entry("/shitter remove <ign>", "Take someone off the list");
         entry("/shitter list [page]", "Show the list, 8 per page");
         entry("/shitter clear", "Wipe the list");
-        entry("/qza music play|stop", "Manually control the terminal music");
+        entry("/qza music play", "Manually plays music");
+        entry("/qza music stop", "Manually stops music");
         entry("/qza music folder", "Open the drag-and-drop music folder");
         entry("/qza music reload", "Re-scan the music folder");
         entry("/qza reload", "Reload config and list from disk");
