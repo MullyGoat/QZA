@@ -6,7 +6,6 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 public class ToggleSetting extends Setting {
-
     private final BooleanSupplier getter;
     private final Consumer<Boolean> setter;
 

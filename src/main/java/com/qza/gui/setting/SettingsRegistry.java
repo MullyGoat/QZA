@@ -16,8 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class SettingsRegistry {
-
-    /** Sidebar order. Only categories that actually have features. */
     public static final List<String> CATEGORIES = List.of(
             "Shitter List",
             "F7 / M7",
@@ -31,7 +29,6 @@ public final class SettingsRegistry {
         QZAConfig cfg = ConfigManager.get();
         List<Setting> settings = new ArrayList<>();
 
-        // ------------------------------------------------------- Shitter List
         String shitter = "Shitter List";
 
         settings.add(new ToggleSetting(shitter, "Auto-Kick", "ShitterList Toggle",
@@ -63,7 +60,6 @@ public final class SettingsRegistry {
                     ShitterListPage.print(1);
                 }));
 
-        // ------------------------------------------------------- F7 / M7
         String f7 = "F7 / M7";
 
         settings.add(new ToggleSetting(f7, "Terminal Music", "Terminal Music Toggle",
@@ -74,7 +70,6 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        // Both of these are meaningless with the music off, so they disappear.
         settings.add(new ToggleSetting(f7, "Track Selection", "Shuffle Mode",
                 Component.literal("On: pick a ")
                         .withStyle(ChatFormatting.GRAY)
@@ -105,7 +100,6 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.terminalMusicEnabled));
 
-        // ------------------------------------------------------- Music
         String music = "Music";
 
         settings.add(new ActionSetting(music, "Library", "Add Music",
@@ -156,7 +150,6 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        // ------------------------------------------------------- Miscellaneous
         String misc = "Miscellaneous";
 
         settings.add(new SliderSetting(misc, "Interface", "GUI Scale",
@@ -188,9 +181,6 @@ public final class SettingsRegistry {
         return settings;
     }
 
-    // ------------------------------------------------------------------ track picker
-
-    /** Bare file names, cached -- the dropdown re-scans on open via onOpen. */
     private static List<String> trackNames() {
         List<String> names = new ArrayList<>();
         for (Path track : MusicLibrary.tracks()) {
@@ -199,7 +189,6 @@ public final class SettingsRegistry {
         return names;
     }
 
-    /** Drops the extension so more of the actual name fits. */
     private static String stripExtension(String name) {
         int dot = name.lastIndexOf('.');
         return dot > 0 ? name.substring(0, dot) : name;

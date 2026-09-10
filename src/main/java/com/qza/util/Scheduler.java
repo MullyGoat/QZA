@@ -6,15 +6,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-/**
- * Tiny client-tick scheduler. 20 ticks == 1 second.
- *
- * Everything QZA sends to the server goes through a delay so nothing ever
- * reacts to a chat line on the same tick it arrived -- instant reactions are
- * exactly the pattern anti-cheat looks for.
- */
 public final class Scheduler {
-
     public static final int TICKS_PER_SECOND = 20;
 
     private static final List<Task> TASKS = new ArrayList<>();
@@ -39,7 +31,6 @@ public final class Scheduler {
         }
     }
 
-    /** Call once per client tick. Runs whatever is due. */
     public static void tick() {
         List<Runnable> due = null;
         synchronized (Scheduler.class) {
@@ -56,7 +47,7 @@ public final class Scheduler {
                 }
             }
         }
-        // Run outside the lock so a task may schedule more work.
+
         if (due != null) {
             for (Runnable action : due) {
                 try {

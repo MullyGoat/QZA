@@ -5,12 +5,7 @@ import net.minecraft.network.chat.Component;
 import java.util.Locale;
 import java.util.function.BooleanSupplier;
 
-/**
- * One row in the settings panel: title on the left, description under it,
- * a control on the right.
- */
 public abstract class Setting {
-
     public final String category;
     public final String section;
     public final String title;
@@ -32,10 +27,6 @@ public abstract class Setting {
         return searchIndex.contains(query.toLowerCase(Locale.ROOT));
     }
 
-    /**
-     * Rows whose condition is false are left out of the list entirely, so a
-     * section with nothing visible loses its header too.
-     */
     public Setting visibleWhen(BooleanSupplier condition) {
         this.visible = condition;
         return this;

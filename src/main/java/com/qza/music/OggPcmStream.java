@@ -11,15 +11,7 @@ import java.nio.ShortBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/**
- * Ogg Vorbis decoding through LWJGL's STB bindings, which ship with Minecraft.
- *
- * This is a pure decoder -- it never touches OpenAL or Minecraft's sound engine,
- * so it is safe to drive from our own playback thread.
- */
 final class OggPcmStream implements PcmStream {
-
-    /** Native memory holding the whole file; must outlive the decoder handle. */
     private ByteBuffer fileData;
     private ShortBuffer sampleBuffer;
     private long handle;

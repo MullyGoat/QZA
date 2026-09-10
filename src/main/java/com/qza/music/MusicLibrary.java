@@ -14,11 +14,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
-/**
- * The drag-and-drop folder: config/qza/music/
- */
 public final class MusicLibrary {
-
     private static final String README = """
             Drop your terminal-phase music in this folder.
 
@@ -52,7 +48,6 @@ public final class MusicLibrary {
         }
     }
 
-    /** Re-scans the folder and returns the current playlist. */
     public static List<Path> reload() {
         ensureDir();
         List<Path> found = new ArrayList<>();
@@ -79,7 +74,6 @@ public final class MusicLibrary {
         return tracks().size();
     }
 
-    /** @param fileName bare file name as stored in the config; null if it is gone. */
     public static Path findByName(String fileName) {
         if (fileName == null || fileName.isBlank()) {
             return null;
@@ -92,10 +86,6 @@ public final class MusicLibrary {
         return null;
     }
 
-    /**
-     * Opens the music folder in the OS file browser so tracks can be
-     * dragged straight in.
-     */
     public static void openFolder() {
         ensureDir();
         Path dir = musicDir();

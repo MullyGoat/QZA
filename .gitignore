@@ -4,6 +4,3 @@ run/
 .idea/
 *.iml
 out/
-
-# Claude Code local permission settings
-.claude/

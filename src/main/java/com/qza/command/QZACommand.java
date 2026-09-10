@@ -15,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
 
 public final class QZACommand {
-
     private QZACommand() {
     }
 
@@ -71,7 +70,7 @@ public final class QZACommand {
 
     private static void openSettings() {
         Minecraft client = Minecraft.getInstance();
-        // Deferred by a tick so the chat screen has finished closing.
+
         client.execute(() -> client.setScreen(new QZAScreen()));
     }
 

@@ -1,12 +1,6 @@
 plugins {
-    // NOTE the plugin id: the new `net.fabricmc.fabric-loom` coordinate, not the
-    // legacy `fabric-loom`. The legacy id resolves to the same version but runs
-    // in legacy mode, which demands an explicit `mappings` dependency -- and
-    // neither Yarn nor Mojang publish mappings for 26.x any more.
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
-
-// version and group come straight from gradle.properties.
 
 base {
     archivesName = project.archives_base_name
@@ -17,9 +11,6 @@ repositories {
 }
 
 dependencies {
-    // Deliberately no `mappings` line -- the new Loom plugin needs none.
-    // Minecraft names in this project are therefore the Mojang ones:
-    // Component, GuiGraphics, Minecraft, ChatFormatting, EditBox, Font.
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
@@ -33,7 +24,6 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    // Minecraft 26.1.2 reports javaVersion 25 in the version manifest.
     it.options.release = 25
     it.options.encoding = "UTF-8"
 }

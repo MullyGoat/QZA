@@ -3,12 +3,6 @@ package com.qza.shitter;
 import com.google.gson.annotations.SerializedName;
 
 public class ShitterEntry {
-
-    /**
-     * Accepts "ign" as well as "name" so a shitterlist.json from the old 1.8.9
-     * ChatTriggers version of QZA can be dropped straight in. That module wrote
-     * entries as {"ign": "...", "reason": "..."}. Always re-saved as "name".
-     */
     @SerializedName(value = "name", alternate = {"ign"})
     public String name;
 

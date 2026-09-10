@@ -5,10 +5,9 @@ import net.minecraft.network.chat.Component;
 import java.util.function.Supplier;
 
 public class ActionSetting extends Setting {
-
     private final Supplier<String> label;
     private final Runnable action;
-    /** 0 = use the screen's default button width. Widen it for long labels. */
+
     public final int buttonWidth;
 
     public ActionSetting(String category, String section, String title, Component description,

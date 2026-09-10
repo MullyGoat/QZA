@@ -9,13 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Streams a playlist on a dedicated daemon thread, completely separate from
- * Minecraft's own sound engine (so the in-game music slider does not affect it
- * and the render thread is never blocked).
- */
 public final class MusicPlayer {
-
     private static final int BUFFER_BYTES = 8192;
 
     private volatile Thread thread;
@@ -34,7 +28,6 @@ public final class MusicPlayer {
         return currentTrack;
     }
 
-    /** 0.0 - 1.0, applied immediately even mid-track. */
     public void setVolume(float volume) {
         this.volume = Math.max(0f, Math.min(1f, volume));
     }
@@ -65,7 +58,6 @@ public final class MusicPlayer {
         worker.start();
     }
 
-    /** Fades out over the configured fade length, then stops. */
     public void fadeOutAndStop() {
         if (!isPlaying()) {
             return;
@@ -77,7 +69,6 @@ public final class MusicPlayer {
         }
     }
 
-    /** Cuts the audio immediately and waits briefly for the thread to unwind. */
     public synchronized void stopNow() {
         stopRequested = true;
         fadeOutRequested = false;
@@ -92,8 +83,6 @@ public final class MusicPlayer {
         }
         currentTrack = null;
     }
-
-    // ------------------------------------------------------------------ worker
 
     private void runPlaylist(List<Path> playlist, boolean loop) {
         try {
@@ -131,8 +120,7 @@ public final class MusicPlayer {
 
             AudioFormat format = new AudioFormat(rate, 16, channels, true, false);
             line = AudioSystem.getSourceDataLine(format);
-            // ~250 ms of buffering: enough to survive a GC pause, short enough
-            // that a hard stop is not audibly late.
+
             int lineBuffer = align((rate * frameBytes) / 4, frameBytes);
             line.open(format, lineBuffer);
             line.start();
@@ -163,7 +151,6 @@ public final class MusicPlayer {
                 framesPlayed += read / frameBytes;
 
                 if (fadeOutStartFrame >= 0 && framesPlayed - fadeOutStartFrame >= fadeOutFrames) {
-                    // Fade finished -- end the whole playlist, not just this track.
                     stopRequested = true;
                     hardStop = true;
                     break;
@@ -193,9 +180,6 @@ public final class MusicPlayer {
         }
     }
 
-    /**
-     * Scales every sample by the master volume and the fade envelope, in place.
-     */
     private void applyGain(byte[] buffer, int bytes, int frameBytes, int channels,
                            long framesPlayed, long fadeInFrames,
                            long fadeOutStartFrame, long fadeOutFrames) {

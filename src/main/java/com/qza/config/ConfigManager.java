@@ -15,15 +15,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public final class ConfigManager {
-
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    /**
-     * Never reassigned. GUI settings capture this instance in their getter /
-     * setter lambdas, so load() and reset() copy values *into* it rather than
-     * swapping in a new object -- otherwise the GUI would silently edit a
-     * detached config.
-     */
     private static final QZAConfig config = new QZAConfig();
 
     private ConfigManager() {

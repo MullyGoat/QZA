@@ -10,11 +10,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/**
- * WAV / AIFF / AU via the JDK's own decoders, converted to 16-bit signed LE.
- */
 final class JavaSoundPcmStream implements PcmStream {
-
     private final AudioInputStream stream;
     private final int sampleRate;
     private final int channels;
@@ -40,7 +36,7 @@ final class JavaSoundPcmStream implements PcmStream {
                 ch,
                 ch * 2,
                 rate,
-                false /* little endian */);
+                false );
 
         this.stream = AudioSystem.getAudioInputStream(target, source);
         this.sampleRate = (int) rate;
@@ -59,7 +55,6 @@ final class JavaSoundPcmStream implements PcmStream {
 
     @Override
     public int read(byte[] buffer, int offset, int length) throws IOException {
-        // Keep reads frame-aligned so a partial frame never shifts the channels.
         int frameBytes = channels * 2;
         int aligned = (length / frameBytes) * frameBytes;
         if (aligned == 0) {

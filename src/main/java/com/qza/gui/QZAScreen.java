@@ -18,22 +18,7 @@ import net.minecraft.util.FormattedCharSequence;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * The /qza settings screen: pink QZA header with a search box, category rail on
- * the left, scrolling section/setting list on the right.
- *
- * Minecraft 26.x uses a retained-mode GUI pipeline: screens describe themselves
- * into a GuiGraphicsExtractor via extractRenderState() rather than drawing
- * immediately. Draw calls are named fill / text / centeredText.
- *
- * GUI Scale (Miscellaneous tab) shrinks the *entire* window, outer panel
- * included, about the screen centre. Layout is always computed in 100%-scale
- * logical pixels and the pose matrix does the shrinking, so row wrapping never
- * changes as you drag the slider.
- */
 public class QZAScreen extends Screen {
-
-    // ---- palette -----------------------------------------------------------
     private static final int PANEL_BG = 0x55000000;
     private static final int RAIL_BG = 0x33000000;
     private static final int BOX_BG = 0x66000000;
@@ -46,7 +31,6 @@ public class QZAScreen extends Screen {
     private static final int RAIL_LINE = 0xFF9AA5AC;
     private static final int PINK = 0xFFFF55FF;
 
-    // ---- layout ------------------------------------------------------------
     private static final int HEADER_H = 56;
     private static final int RAIL_W = 200;
     private static final int ROW_GAP = 6;
@@ -58,10 +42,9 @@ public class QZAScreen extends Screen {
     private static final int SLIDER_H = 10;
     private static final int BUTTON_W = 88;
     private static final int BUTTON_H = 18;
-    /** Multiplier for the "QZA" title relative to the normal font. */
+
     private static final float TITLE_SCALE = 1.5f;
 
-    /** Remembered across openings so /qza returns you where you were. */
     private static String selectedCategory = SettingsRegistry.CATEGORIES.get(0);
     private static double scroll;
 
@@ -70,18 +53,12 @@ public class QZAScreen extends Screen {
     private EditBox search;
     private String lastQuery = "";
 
-    /**
-     * Drag state. The coordinate transform is frozen when the grab starts:
-     * the GUI Scale slider changes the very space the drag is measured in, so
-     * reading it live makes the slider fight itself and slam to an extreme.
-     */
     private SliderSetting draggingSlider;
     private float dragScale = 1f;
     private float dragOffsetX;
     private int dragTrackX;
     private int dragTrackW;
 
-    // ---- open dropdown state (drawn on top of everything, own scroll) ------
     private static final int DD_ROW_H = 12;
     private static final int DD_MAX_ROWS = 6;
     private DropdownSetting openDropdown;
@@ -105,7 +82,6 @@ public class QZAScreen extends Screen {
         super(Component.literal("QZA"));
     }
 
-    /** GUI Scale as a multiplier. */
     private static float scale() {
         double pct = ConfigManager.get().guiScale;
         return (float) Math.max(0.5, Math.min(1.5, pct / 100.0));
@@ -136,13 +112,6 @@ public class QZAScreen extends Screen {
         rebuildRows();
     }
 
-    // ------------------------------------------------------------------ layout
-
-    /**
-     * Panel rectangles in logical pixels. Deliberately independent of GUI
-     * Scale -- the matrix shrinks the result, so the outer panel scales with
-     * everything else and text wrapping stays put.
-     */
     private void layout() {
         panelX = 8;
         panelY = 6;
@@ -156,7 +125,6 @@ public class QZAScreen extends Screen {
     }
 
     private void rebuildRows() {
-        // Row positions are about to move; an anchored dropdown would desync.
         openDropdown = null;
         rows.clear();
         String query = search == null ? "" : search.getValue().trim();
@@ -175,8 +143,6 @@ public class QZAScreen extends Screen {
                 continue;
             }
 
-            // While searching, headers read "Category / Section" so results stay
-            // identifiable across categories.
             String header = searching ? setting.category + " / " + setting.section : setting.section;
             if (!header.equals(currentSection)) {
                 currentSection = header;
@@ -199,12 +165,6 @@ public class QZAScreen extends Screen {
         return Math.max(40, 9 + 11 + (lines * 10) + 8);
     }
 
-    /**
-     * Horizontal space a row's control needs, so description text can be
-     * wrapped clear of it. For sliders that includes the value label drawn to
-     * the left of the track, sized for the widest value the slider can show --
-     * a fixed reserve, so the wrap does not jitter as the value changes.
-     */
     private int controlWidth(Setting setting) {
         if (setting instanceof ToggleSetting) {
             return TOGGLE_W;
@@ -240,12 +200,8 @@ public class QZAScreen extends Screen {
         scroll = Math.max(0, Math.min(scroll, max));
     }
 
-    // ------------------------------------------------------------------ render
-
-    /** Keeps the world visible behind the panels instead of blurring it. */
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-        // intentionally empty
     }
 
     @Override
@@ -268,28 +224,21 @@ public class QZAScreen extends Screen {
         outline(graphics, panelX, panelY, panelW, panelH, 0x33FFFFFF);
         graphics.fill(panelX, panelY + HEADER_H, panelX + RAIL_W, panelY + panelH, RAIL_BG);
 
-        // Draws the child widgets, i.e. the search box.
         super.extractRenderState(graphics, mx, my, delta);
 
         drawHeader(graphics);
         drawRail(graphics, mx, my);
         drawContent(graphics, mx, my);
-        // Last, and outside the content scissor, so it floats over the rows.
+
         drawOpenDropdown(graphics, mx, my);
 
         graphics.pose().popMatrix();
     }
 
-    /**
-     * enableScissor DOES honour the pose matrix -- verified in game: converting
-     * to screen pixels by hand applied the scale and offset twice and clipped
-     * the content to a narrow band on the right. Pass logical coordinates.
-     */
     private void scissorLogical(GuiGraphicsExtractor graphics, int x0, int y0, int x1, int y1) {
         graphics.enableScissor(x0, y0, x1, y1);
     }
 
-    /** 26.x has no renderOutline, so borders are four thin fills. */
     private static void outline(GuiGraphicsExtractor graphics, int x, int y, int w, int h, int colour) {
         graphics.fill(x, y, x + w, y + 1, colour);
         graphics.fill(x, y + h - 1, x + w, y + h, colour);
@@ -298,7 +247,6 @@ public class QZAScreen extends Screen {
     }
 
     private void drawHeader(GuiGraphicsExtractor graphics) {
-        // The font has one size, so the title is scaled by its own nested matrix.
         int centreX = panelX + (panelW / 2);
         int titleY = panelY + 14;
         graphics.pose().pushMatrix();
@@ -307,7 +255,6 @@ public class QZAScreen extends Screen {
         graphics.centeredText(this.font, Component.literal("QZA"), 0, 0, PINK);
         graphics.pose().popMatrix();
 
-        // underline beneath the search box
         graphics.fill(search.getX() - 2, search.getY() + 14,
                 search.getX() + search.getWidth(), search.getY() + 15, 0x66FFFFFF);
 
@@ -431,7 +378,6 @@ public class QZAScreen extends Screen {
                 x + (w / 2), y + ((BUTTON_H - 8) / 2), TEXT);
     }
 
-    /** Closed dropdown: label left-aligned, little triangle on the right. */
     private void drawDropdownButton(GuiGraphicsExtractor graphics, int x, int y, int w,
                                     String label, boolean hovered) {
         boolean open = openDropdown != null;
@@ -441,7 +387,6 @@ public class QZAScreen extends Screen {
         graphics.text(this.font, Component.literal(trim(label, w - 20)),
                 x + 6, y + ((BUTTON_H - 8) / 2), TEXT);
 
-        // Drawn from fills rather than a glyph, so no font coverage worries.
         int ax = x + w - 12;
         int ay = y + (BUTTON_H / 2) - 2;
         graphics.fill(ax, ay, ax + 7, ay + 1, TEXT);
@@ -450,7 +395,6 @@ public class QZAScreen extends Screen {
         graphics.fill(ax + 3, ay + 3, ax + 4, ay + 4, TEXT);
     }
 
-    /** Truncates with an ellipsis to fit maxWidth logical pixels. */
     private String trim(String label, int maxWidth) {
         if (this.font.width(label) <= maxWidth) {
             return label;
@@ -461,8 +405,6 @@ public class QZAScreen extends Screen {
         }
         return shown + "...";
     }
-
-    // ------------------------------------------------------------------ dropdown
 
     private boolean inDropdown(double mouseX, double mouseY) {
         return openDropdown != null
@@ -483,7 +425,7 @@ public class QZAScreen extends Screen {
         dropdown.notifyOpen();
         List<String> options = dropdown.options();
         if (options.isEmpty()) {
-            return; // nothing to choose; the button already reads "(no music)"
+            return;
         }
         ddOptions = new ArrayList<>(options);
         openDropdown = dropdown;
@@ -492,7 +434,7 @@ public class QZAScreen extends Screen {
         ddH = Math.min(ddOptions.size(), DD_MAX_ROWS) * DD_ROW_H + 2;
         ddX = rect[0];
         ddY = rect[1] + rect[3] + 1;
-        // Flip above the button if it would spill out of the panel.
+
         if (ddY + ddH > panelY + panelH - 4) {
             ddY = rect[1] - ddH - 1;
         }
@@ -555,8 +497,6 @@ public class QZAScreen extends Screen {
         graphics.fill(trackX, barY, trackX + 3, barY + barH, 0x99FFFFFF);
     }
 
-    // ------------------------------------------------------------------ hit boxes
-
     private int[] toggleRect(Row row, int y) {
         int x = contentX + contentW - CONTROL_PAD - TOGGLE_W;
         return new int[]{x, y + ((row.height - TOGGLE_H) / 2), TOGGLE_W, TOGGLE_H};
@@ -578,13 +518,6 @@ public class QZAScreen extends Screen {
                 && mouseY >= rect[1] && mouseY <= rect[1] + rect[3];
     }
 
-    // ------------------------------------------------------------------ input
-
-    /**
-     * MouseButtonEvent is a record, so a logical-space copy can be handed to
-     * child widgets -- otherwise the search box hitbox would drift from where
-     * it is drawn once GUI Scale is not 100%.
-     */
     private MouseButtonEvent toLogical(MouseButtonEvent event) {
         float s = scale();
         float ox = offsetX();
@@ -599,8 +532,6 @@ public class QZAScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         MouseButtonEvent local = toLogical(event);
 
-        // An open dropdown is on top and eats the click, whether it lands on an
-        // option or outside (which just closes it).
         if (openDropdown != null) {
             if (inDropdown(local.x(), local.y())) {
                 int index = (int) ((local.y() - (ddY + 1) + ddScroll) / DD_ROW_H);
@@ -622,7 +553,6 @@ public class QZAScreen extends Screen {
         double mouseX = local.x();
         double mouseY = local.y();
 
-        // Category rail
         int railY = panelY + HEADER_H + 14;
         for (String category : SettingsRegistry.CATEGORIES) {
             int x = panelX + 24;
@@ -639,7 +569,6 @@ public class QZAScreen extends Screen {
             railY += 32;
         }
 
-        // Settings list
         if (mouseX < contentX - 4 || mouseX > contentX + contentW + 4
                 || mouseY < contentY || mouseY > contentY + contentH) {
             return false;
@@ -658,17 +587,17 @@ public class QZAScreen extends Screen {
             if (row.setting instanceof ToggleSetting toggle) {
                 if (inside(mouseX, mouseY, toggleRect(row, y))) {
                     toggle.toggle();
-                    // A toggle can reveal or hide other rows.
+
                     rebuildRows();
                     return true;
                 }
             } else if (row.setting instanceof SliderSetting slider) {
                 int[] r = sliderRect(row, y);
-                // Generous vertical grab area -- the track itself is only 10px.
+
                 if (mouseX >= r[0] - 2 && mouseX <= r[0] + r[2] + 2
                         && mouseY >= r[1] - 5 && mouseY <= r[1] + r[3] + 5) {
                     draggingSlider = slider;
-                    // Freeze the transform and the track position for this drag.
+
                     dragScale = scale();
                     dragOffsetX = offsetX();
                     dragTrackX = r[0];
@@ -696,8 +625,6 @@ public class QZAScreen extends Screen {
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
         if (draggingSlider != null) {
-            // Uses the transform captured at grab time, so adjusting GUI Scale
-            // does not move the track out from under the cursor.
             double logicalX = (event.x() - dragOffsetX) / dragScale;
             draggingSlider.setFromFraction((logicalX - dragTrackX) / (double) dragTrackW);
             return true;
@@ -721,7 +648,6 @@ public class QZAScreen extends Screen {
         double mx = (mouseX - offsetX()) / s;
         double my = (mouseY - offsetY()) / s;
 
-        // The dropdown scrolls independently while it is open.
         if (openDropdown != null) {
             if (inDropdown(mx, my)) {
                 ddScroll -= verticalAmount * DD_ROW_H;
@@ -750,8 +676,6 @@ public class QZAScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
-
-    // ------------------------------------------------------------------ row model
 
     private static final class Row {
         final String header;

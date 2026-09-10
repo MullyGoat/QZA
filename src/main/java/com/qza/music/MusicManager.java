@@ -9,21 +9,7 @@ import net.minecraft.network.chat.Component;
 import java.nio.file.Path;
 import java.util.List;
 
-/**
- * Ties the chat triggers to the player.
- *
- * In F7 / M7, across the terminal phase:
- *   "[BOSS] Goldor: Who dares trespass into my domain?" -> music starts, looping
- *   "The Core entrance is opening!"                     -> music fades out
- *
- * The music always loops, so it lasts as long as the terminal phase does.
- * Leaving the run stops it -- see the level-change watcher in QZA.
- *
- * Both trigger substrings live in config.json (musicStartTrigger /
- * musicStopTrigger) so they can be re-pointed without a rebuild.
- */
 public final class MusicManager {
-
     private static final MusicManager INSTANCE = new MusicManager();
 
     private final MusicPlayer player = new MusicPlayer();
@@ -42,8 +28,6 @@ public final class MusicManager {
     public boolean isPlaying() {
         return player.isPlaying();
     }
-
-    // ------------------------------------------------------------------ triggers
 
     public void onChatMessage(String raw) {
         QZAConfig cfg = ConfigManager.get();
@@ -67,12 +51,6 @@ public final class MusicManager {
         return trigger != null && !trigger.isBlank() && message.contains(trigger);
     }
 
-    // ------------------------------------------------------------------ control
-
-    /**
-     * Starts playback according to the current mode: a shuffled run through the
-     * whole folder, or the one chosen track. Always loops.
-     */
     public void startPlaylist() {
         QZAConfig cfg = ConfigManager.get();
         List<Path> tracks = MusicLibrary.reload();
@@ -90,7 +68,6 @@ public final class MusicManager {
         } else {
             Path chosen = MusicLibrary.findByName(cfg.selectedTrack);
             if (chosen == null) {
-                // Chosen track was renamed or deleted -- fall back rather than go silent.
                 chosen = tracks.get(0);
             }
             queue = List.of(chosen);
@@ -120,7 +97,6 @@ public final class MusicManager {
         }
     }
 
-    /** Pushes the current config values into the running player. */
     public void applySettings() {
         QZAConfig cfg = ConfigManager.get();
         player.setVolume((float) (cfg.musicVolume / 100.0));

@@ -9,12 +9,7 @@ import net.minecraft.network.chat.MutableComponent;
 
 import java.util.List;
 
-/**
- * Renders /shitter list as a Hypixel-friends-list style paginated block with
- * clickable page arrows. 8 entries per page.
- */
 public final class ShitterListPage {
-
     public static final int PER_PAGE = 8;
     private static final String DIVIDER = "-----------------------------------------------------";
 

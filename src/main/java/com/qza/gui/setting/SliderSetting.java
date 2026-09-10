@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 
 public class SliderSetting extends Setting {
-
     private final DoubleSupplier getter;
     private final Consumer<Double> setter;
     public final double min;
@@ -30,7 +29,6 @@ public class SliderSetting extends Setting {
         return Math.max(min, Math.min(max, getter.getAsDouble()));
     }
 
-    /** @param fraction 0.0 - 1.0 position along the track */
     public void setFromFraction(double fraction) {
         double raw = min + (Math.max(0, Math.min(1, fraction)) * (max - min));
         double snapped = min + (Math.round((raw - min) / step) * step);
@@ -45,11 +43,6 @@ public class SliderSetting extends Setting {
         return labelFor(value());
     }
 
-    /**
-     * Formats an arbitrary value. The screen uses this on {@link #min} and
-     * {@link #max} to work out how much room the label needs, so description
-     * text can be wrapped clear of it.
-     */
     public String labelFor(double v) {
         String number = (step >= 1 && v == Math.rint(v))
                 ? String.valueOf((long) v)

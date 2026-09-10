@@ -17,16 +17,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class QZA implements ClientModInitializer {
-
     public static final String MOD_ID = "qza";
     public static final String MOD_NAME = "QZA";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
 
-    /**
-     * Last seen ClientLevel, by identity. Held as Object so we do not depend on
-     * the level class name. Hypixel swaps the level instance when you leave a
-     * dungeon for the hub, which is how we notice you left the run.
-     */
     private static Object lastLevel;
 
     @Override
@@ -41,8 +35,6 @@ public class QZA implements ClientModInitializer {
             ShitterCommand.register(dispatcher);
         });
 
-        // Single chat hook feeding both features. Action bar messages (overlay) are
-        // ignored -- Hypixel boss lines and party messages are always real chat.
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (overlay) return;
             String plain = message.getString();
@@ -52,8 +44,6 @@ public class QZA implements ClientModInitializer {
             MusicManager.get().onChatMessage(plain);
         });
 
-        // Leaving the run mid-terminals (or dying out to the hub) changes the
-        // client level instance -- cut the music when that happens.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             Scheduler.tick();
 
@@ -64,8 +54,6 @@ public class QZA implements ClientModInitializer {
             }
         });
 
-        // Never leave music running -- or fire a queued kick into a party that
-        // no longer exists -- after a disconnect.
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             MusicManager.get().stopNow();
             Scheduler.clear();

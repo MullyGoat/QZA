@@ -4,18 +4,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
 
-/**
- * A decoded track, exposed as interleaved signed 16-bit little-endian PCM.
- */
 public interface PcmStream extends AutoCloseable {
-
     int sampleRate();
 
     int channels();
 
-    /**
-     * @return number of bytes written into {@code buffer}, or -1 at end of stream.
-     */
     int read(byte[] buffer, int offset, int length) throws IOException;
 
     @Override
@@ -33,7 +26,6 @@ public interface PcmStream extends AutoCloseable {
         throw new IOException("Unsupported audio format: " + path.getFileName());
     }
 
-    /** Extensions {@link #open} can handle. */
     static boolean isSupported(String fileName) {
         String name = fileName.toLowerCase(Locale.ROOT);
         return name.endsWith(".ogg") || name.endsWith(".wav") || name.endsWith(".wave")

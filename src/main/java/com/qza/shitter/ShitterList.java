@@ -20,12 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * The list itself, persisted to config/qza/shitterlist.json.
- * Keys are lower-cased IGNs so lookups are case-insensitive.
- */
 public final class ShitterList {
-
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Type LIST_TYPE = new TypeToken<List<ShitterEntry>>() {
     }.getType();
@@ -43,8 +38,6 @@ public final class ShitterList {
         return ign.toLowerCase(Locale.ROOT);
     }
 
-    // ------------------------------------------------------------------ queries
-
     public static boolean contains(String ign) {
         return ENTRIES.containsKey(key(ign));
     }
@@ -61,9 +54,6 @@ public final class ShitterList {
         return ENTRIES.size();
     }
 
-    // ------------------------------------------------------------------ mutations
-
-    /** @return the previous entry if this was an update, otherwise null. */
     public static ShitterEntry add(String ign, String reason) {
         ShitterEntry previous = ENTRIES.get(key(ign));
         ENTRIES.put(key(ign), new ShitterEntry(ign, reason));
@@ -71,7 +61,6 @@ public final class ShitterList {
         return previous;
     }
 
-    /** @return the removed entry, or null if they were not on the list. */
     public static ShitterEntry remove(String ign) {
         ShitterEntry removed = ENTRIES.remove(key(ign));
         if (removed != null) {
@@ -86,8 +75,6 @@ public final class ShitterList {
         save();
         return removed;
     }
-
-    // ------------------------------------------------------------------ storage
 
     public static void load() {
         ENTRIES.clear();

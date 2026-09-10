@@ -7,20 +7,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/**
- * A row whose control is a closed button that opens a scrollable list of
- * choices. Values are stored raw (e.g. a file name); {@link #display} turns one
- * into what the user sees.
- */
 public class DropdownSetting extends Setting {
-
     private final Supplier<List<String>> options;
     private final Supplier<String> getter;
     private final Consumer<String> setter;
     private final Function<String, String> display;
     private final Runnable onOpen;
 
-    /** Shown when there is nothing to choose from. */
     public final String emptyLabel;
     public final int width;
 
@@ -59,14 +52,12 @@ public class DropdownSetting extends Setting {
         return display == null ? raw : display.apply(raw);
     }
 
-    /** Called just before the list opens, so it can be refreshed from disk. */
     public void notifyOpen() {
         if (onOpen != null) {
             onOpen.run();
         }
     }
 
-    /** Label for the closed button. */
     public String currentLabel() {
         if (options().isEmpty()) {
             return emptyLabel;

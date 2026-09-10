@@ -1,12 +1,6 @@
-# Normalise text in the repo to LF regardless of platform.
 * text=auto eol=lf
-
-# gradlew is run by /bin/sh on the CI runner -- CRLF makes it fail with
-# "bad interpreter". gradlew.bat is the opposite: it must stay CRLF.
 gradlew text eol=lf
 gradlew.bat text eol=crlf
-
-# Never touch binaries.
 *.jar binary
 *.ogg binary
 *.wav binary
