@@ -25,7 +25,7 @@ public class QZAConfig {
 
     public String necronDeathTrigger = "Necron: ARGH";
 
-    public double necronDeathOffsetSeconds = 3.35;
+    public double necronDeathOffsetSeconds = 3.1;
 
     public double guiScale = 100.0;
 }
