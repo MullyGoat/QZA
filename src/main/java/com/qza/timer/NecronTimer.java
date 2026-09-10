@@ -13,7 +13,7 @@ public final class NecronTimer {
 
     private static boolean running;
     private static long startNanos;
-    private static long startTicks;
+    private static double startServerTicks = -1.0;
 
     private NecronTimer() {
     }
@@ -39,14 +39,29 @@ public final class NecronTimer {
     private static void start() {
         running = true;
         startNanos = System.nanoTime();
-        startTicks = Scheduler.ticks();
+        startServerTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticksNow() : -1.0;
     }
 
     private static void announce() {
         double offset = ConfigManager.get().necronDeathOffsetSeconds;
         double realSeconds = ((System.nanoTime() - startNanos) / 1_000_000_000.0) + offset;
-        double tickSeconds = ((Scheduler.ticks() - startTicks) * SECONDS_PER_TICK) + offset;
+
+        double tickSeconds = realSeconds;
+        boolean serverTime = false;
+        if (startServerTicks >= 0.0 && ServerTickClock.isAvailable()) {
+            double elapsedTicks = ServerTickClock.ticksNow() - startServerTicks;
+            if (elapsedTicks >= 0.0) {
+                tickSeconds = (elapsedTicks * SECONDS_PER_TICK) + offset;
+                serverTime = true;
+            }
+        }
+
+        if (!serverTime) {
+            ChatUtil.error("Server tick time unavailable - reported tick time is real time.");
+        }
+
         running = false;
+        startServerTicks = -1.0;
 
         String text = String.format(Locale.ROOT,
                 "[QZA] Necron was killed in %.2f seconds (%.2f tick time)",
@@ -61,6 +76,7 @@ public final class NecronTimer {
 
     public static void reset() {
         running = false;
+        startServerTicks = -1.0;
     }
 
     public static boolean isRunning() {

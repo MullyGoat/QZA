@@ -21,9 +21,9 @@ public class QZAConfig {
 
     public boolean necronTimerEnabled = true;
 
-    public String necronStartTrigger = "";
+    public String necronStartTrigger = "You went further than any human before";
 
-    public String necronDeathTrigger = "";
+    public String necronDeathTrigger = "Necron: ARGH";
 
     public double necronDeathOffsetSeconds = 3.35;
 

@@ -16,6 +16,9 @@
       "com.qza.QZA"
     ]
   },
+  "mixins": [
+    "qza.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.19.0",
     "fabric-api": "*",

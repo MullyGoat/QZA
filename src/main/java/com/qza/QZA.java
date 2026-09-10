@@ -8,6 +8,7 @@ import com.qza.music.MusicManager;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
 import com.qza.timer.NecronTimer;
+import com.qza.timer.ServerTickClock;
 import com.qza.util.Scheduler;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -62,6 +63,7 @@ public class QZA implements ClientModInitializer {
             Scheduler.clear();
             ShitterAutoKick.reset();
             NecronTimer.reset();
+            ServerTickClock.reset();
         });
 
         LOGGER.info("QZA initialised - {} shitter(s) loaded", ShitterList.size());
