@@ -124,6 +124,16 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.necronTimerEnabled));
 
+        settings.add(new ToggleSetting(f7, "Necron Timer", "Timer Debug",
+                Component.literal("Prints the raw measurement breakdown to your own chat after each kill.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.necronTimerDebug,
+                v -> {
+                    cfg.necronTimerDebug = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.necronTimerEnabled));
+
         settings.add(new SliderSetting(f7, "Necron Timer", "Death Animation",
                 Component.literal("Seconds added to the kill time for the animation before the phase actually ends.")
                         .withStyle(ChatFormatting.GRAY),

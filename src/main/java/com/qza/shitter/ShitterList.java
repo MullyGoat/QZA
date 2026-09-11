@@ -54,6 +54,37 @@ public final class ShitterList {
         return ENTRIES.size();
     }
 
+    public static ShitterEntry getByUuid(String uuid) {
+        if (uuid == null || uuid.isBlank()) {
+            return null;
+        }
+        for (ShitterEntry entry : ENTRIES.values()) {
+            if (uuid.equalsIgnoreCase(entry.uuid)) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    public static void setUuid(ShitterEntry entry, String uuid) {
+        if (entry == null || uuid == null || uuid.isBlank()) {
+            return;
+        }
+        entry.uuid = uuid;
+        save();
+    }
+
+    public static void rename(ShitterEntry entry, String newName) {
+        if (entry == null || newName == null || newName.isBlank()) {
+            return;
+        }
+        String oldKey = key(entry.name);
+        entry.name = newName;
+        ENTRIES.remove(oldKey);
+        ENTRIES.put(key(newName), entry);
+        save();
+    }
+
     public static ShitterEntry add(String ign, String reason) {
         ShitterEntry previous = ENTRIES.get(key(ign));
         ENTRIES.put(key(ign), new ShitterEntry(ign, reason));
