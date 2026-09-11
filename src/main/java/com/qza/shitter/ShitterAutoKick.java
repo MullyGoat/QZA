@@ -3,6 +3,7 @@ package com.qza.shitter;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.util.ChatUtil;
+import com.qza.util.PlayerLookup;
 import com.qza.util.Scheduler;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -101,9 +102,28 @@ public final class ShitterAutoKick {
     }
 
     private static void considerKick(String ign) {
+        String uuid = PlayerLookup.uuidFor(ign);
         ShitterEntry entry = ShitterList.get(ign);
+
+        if (entry == null && uuid != null) {
+            entry = ShitterList.getByUuid(uuid);
+            if (entry != null) {
+                String previousName = entry.name;
+                ShitterList.rename(entry, ign);
+                ChatUtil.send(Component.literal("Name change detected: ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(previousName).withStyle(ChatFormatting.YELLOW))
+                        .append(Component.literal(" is now ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(ign).withStyle(ChatFormatting.YELLOW)));
+            }
+        }
+
         if (entry == null) {
             return;
+        }
+
+        if (!entry.hasUuid() && uuid != null) {
+            ShitterList.setUuid(entry, uuid);
         }
 
         Minecraft client = Minecraft.getInstance();
@@ -119,13 +139,14 @@ public final class ShitterAutoKick {
         }
         LAST_KICK.put(key, now);
 
+        ShitterEntry target = entry;
         queued++;
         long delayTicks = (long) queued * Scheduler.TICKS_PER_SECOND;
         Scheduler.schedule(delayTicks, () -> {
             if (queued > 0) {
                 queued--;
             }
-            performKick(entry);
+            performKick(target);
         });
     }
 

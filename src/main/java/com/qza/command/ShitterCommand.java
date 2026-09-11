@@ -8,9 +8,11 @@ import com.qza.shitter.ShitterEntry;
 import com.qza.shitter.ShitterList;
 import com.qza.shitter.ShitterListPage;
 import com.qza.util.ChatUtil;
+import com.qza.util.PlayerLookup;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
@@ -67,17 +69,27 @@ public final class ShitterCommand {
 
     private static int add(String ign, String reason) {
         ShitterEntry previous = ShitterList.add(ign, reason);
-        if (previous != null) {
-            ChatUtil.send(Component.literal("Updated ").withStyle(ChatFormatting.GREEN)
-                    .append(Component.literal(ign).withStyle(ChatFormatting.WHITE))
-                    .append(Component.literal(" - ").withStyle(ChatFormatting.DARK_GRAY))
-                    .append(Component.literal(reason).withStyle(ChatFormatting.RED)));
-        } else {
-            ChatUtil.send(Component.literal("Added ").withStyle(ChatFormatting.GREEN)
-                    .append(Component.literal(ign).withStyle(ChatFormatting.WHITE))
-                    .append(Component.literal(" to the shitter list - ").withStyle(ChatFormatting.GRAY))
-                    .append(Component.literal(reason).withStyle(ChatFormatting.RED)));
+
+        String uuid = PlayerLookup.uuidFor(ign);
+        if (uuid != null) {
+            ShitterList.setUuid(ShitterList.get(ign), uuid);
         }
+
+        MutableComponent message = previous != null
+                ? Component.literal("Updated ").withStyle(ChatFormatting.GREEN)
+                        .append(Component.literal(ign).withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" - ").withStyle(ChatFormatting.DARK_GRAY))
+                        .append(Component.literal(reason).withStyle(ChatFormatting.RED))
+                : Component.literal("Added ").withStyle(ChatFormatting.GREEN)
+                        .append(Component.literal(ign).withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" to the shitter list - ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(reason).withStyle(ChatFormatting.RED));
+
+        message.append(uuid != null
+                ? Component.literal(" [UUID tracked]").withStyle(ChatFormatting.DARK_AQUA)
+                : Component.literal(" [no UUID yet]").withStyle(ChatFormatting.DARK_GRAY));
+
+        ChatUtil.send(message);
         return 1;
     }
 

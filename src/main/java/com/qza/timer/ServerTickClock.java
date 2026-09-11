@@ -37,6 +37,17 @@ public final class ServerTickClock {
         return base + Math.min(sinceSync, syncIntervalTicks);
     }
 
+    public static long syncIntervalTicks() {
+        return syncIntervalTicks;
+    }
+
+    public static double sinceSyncTicks() {
+        if (lastServerTick < 0L) {
+            return -1.0;
+        }
+        return (System.nanoTime() - lastSyncNanos) / NANOS_PER_TICK;
+    }
+
     public static void reset() {
         lastServerTick = -1L;
         syncIntervalTicks = 20L;
