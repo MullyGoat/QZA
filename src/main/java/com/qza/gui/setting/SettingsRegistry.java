@@ -134,8 +134,8 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.necronTimerEnabled));
 
-        settings.add(new SliderSetting(f7, "Necron Timer", "Death Animation",
-                Component.literal("Seconds added to the kill time for the animation before the phase actually ends.")
+        settings.add(new SliderSetting(f7, "Necron Timer", "Time Offset",
+                Component.literal("Extra seconds added to the announced time. Leave at 0 to match Odin.")
                         .withStyle(ChatFormatting.GRAY),
                 0, 10, 0.05, "s",
                 () -> cfg.necronDeathOffsetSeconds,
