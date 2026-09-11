@@ -101,7 +101,7 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.terminalMusicEnabled));
 
         settings.add(new ToggleSetting(f7, "Necron Timer", "Necron Kill Time",
-                Component.literal("Times phase 4 and announces the kill in party chat, including the death animation.")
+                Component.literal("Announces how long it took to kill Necron before the phase is fully over")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.necronTimerEnabled,
                 v -> {
