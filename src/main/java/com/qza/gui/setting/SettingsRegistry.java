@@ -134,13 +134,13 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.necronTimerEnabled));
 
-        settings.add(new SliderSetting(f7, "Necron Timer", "Time Offset",
-                Component.literal("Extra seconds added to the announced time. Leave at 0 to match Odin.")
+        settings.add(new SliderSetting(f7, "Necron Timer", "Animation Ticks",
+                Component.literal("Server ticks added for the death animation, so the time can be announced the moment Necron dies. 62 ticks = 3.10s.")
                         .withStyle(ChatFormatting.GRAY),
-                0, 10, 0.05, "s",
-                () -> cfg.necronDeathOffsetSeconds,
+                0, 120, 1, "t",
+                () -> cfg.necronAnimationTicks,
                 v -> {
-                    cfg.necronDeathOffsetSeconds = v;
+                    cfg.necronAnimationTicks = v;
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.necronTimerEnabled));

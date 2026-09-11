@@ -23,11 +23,13 @@ public class QZAConfig {
 
     public String necronStartTrigger = "You went further than any human before";
 
-    public String necronDeathTrigger = "Necron: All this, for nothing";
+    public String necronDeathTrigger = "Necron: ARGH";
 
-    public int necronDeathTriggerCount = 1;
+    public int necronDeathTriggerCount = 2;
 
-    public double necronDeathOffsetSeconds = 0.0;
+    public String necronEndTrigger = "Necron: All this, for nothing";
+
+    public double necronAnimationTicks = 62.0;
 
     public String necronAnnounceMode = "party";
 
