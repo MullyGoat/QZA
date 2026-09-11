@@ -86,8 +86,9 @@ public final class NecronTimer {
 
         if (cfg.necronTimerDebug) {
             ChatUtil.send(Component.literal(String.format(Locale.ROOT,
-                    "debug: at kill real %.3fs | ticks %d | +%d anim | server %s",
-                    rawReal, elapsedTicks, animationTicks, serverTime))
+                    "debug: at kill real %.3fs | ticks %d (%.1f/s) | +%d anim | server %s",
+                    rawReal, elapsedTicks, elapsedTicks / Math.max(0.001, rawReal),
+                    animationTicks, serverTime))
                     .withStyle(ChatFormatting.DARK_GRAY));
         }
 
