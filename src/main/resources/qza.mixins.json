@@ -4,7 +4,7 @@
   "package": "com.qza.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "ClientPacketListenerMixin"
+    "ServerTickMixin"
   ],
   "injectors": {
     "defaultRequire": 0

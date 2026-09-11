@@ -15,8 +15,7 @@ public final class NecronTimer {
 
     private static boolean running;
     private static long startNanos;
-    private static double startServerTicks = -1.0;
-    private static double startInterp = -1.0;
+    private static long startServerTicks = -1L;
     private static int deathHits;
 
     private NecronTimer() {
@@ -47,8 +46,7 @@ public final class NecronTimer {
         running = true;
         deathHits = 0;
         startNanos = System.nanoTime();
-        startServerTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticksNow() : -1.0;
-        startInterp = ServerTickClock.sinceSyncTicks();
+        startServerTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticks() : -1L;
     }
 
     private static void announce() {
@@ -56,33 +54,30 @@ public final class NecronTimer {
         double rawReal = (System.nanoTime() - startNanos) / 1_000_000_000.0;
         double realSeconds = rawReal + offset;
 
-        double rawTicks = -1.0;
-        double endInterp = ServerTickClock.sinceSyncTicks();
+        long elapsedTicks = -1L;
         double tickSeconds = realSeconds;
         boolean serverTime = false;
-        if (startServerTicks >= 0.0 && ServerTickClock.isAvailable()) {
-            double elapsedTicks = ServerTickClock.ticksNow() - startServerTicks;
-            if (elapsedTicks >= 0.0) {
-                rawTicks = elapsedTicks;
+        if (startServerTicks >= 0L && ServerTickClock.isAvailable()) {
+            elapsedTicks = ServerTickClock.ticks() - startServerTicks;
+            if (elapsedTicks >= 0L) {
                 tickSeconds = (elapsedTicks * SECONDS_PER_TICK) + offset;
                 serverTime = true;
             }
         }
 
+        running = false;
+        startServerTicks = -1L;
+
         if (ConfigManager.get().necronTimerDebug) {
             ChatUtil.send(Component.literal(String.format(Locale.ROOT,
-                    "debug: real %.3fs | server %.3fs (%.1f ticks) | offset %.2f | interp start %.2ft end %.2ft | sync %dt",
-                    rawReal, rawTicks * SECONDS_PER_TICK, rawTicks, offset,
-                    startInterp, endInterp, ServerTickClock.syncIntervalTicks()))
+                    "debug: real %.3fs | ticks %d (%.2fs) | offset %.2f | server %s",
+                    rawReal, elapsedTicks, elapsedTicks * SECONDS_PER_TICK, offset, serverTime))
                     .withStyle(ChatFormatting.DARK_GRAY));
         }
 
         if (!serverTime) {
             ChatUtil.error("Server tick time unavailable - reported tick time is real time.");
         }
-
-        running = false;
-        startServerTicks = -1.0;
 
         String real = String.format(Locale.ROOT, "%.2f", realSeconds);
         String tick = String.format(Locale.ROOT, "%.2f", tickSeconds);
@@ -107,7 +102,7 @@ public final class NecronTimer {
 
     public static void reset() {
         running = false;
-        startServerTicks = -1.0;
+        startServerTicks = -1L;
         deathHits = 0;
     }
 
