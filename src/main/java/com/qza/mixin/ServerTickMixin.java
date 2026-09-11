@@ -1,6 +1,7 @@
 package com.qza.mixin;
 
 import com.qza.timer.ServerTickClock;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
 import net.minecraft.network.protocol.common.ClientboundPingPacket;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,8 +14,12 @@ public class ServerTickMixin {
 
     @Inject(method = "handlePing", at = @At("HEAD"))
     private void qzaCountServerTick(ClientboundPingPacket packet, CallbackInfo ci) {
-        if (packet.getId() != 0) {
-            ServerTickClock.onServerTick();
+        if (packet.getId() == 0) {
+            return;
         }
+        if (!Minecraft.getInstance().isSameThread()) {
+            return;
+        }
+        ServerTickClock.onServerTick();
     }
 }
