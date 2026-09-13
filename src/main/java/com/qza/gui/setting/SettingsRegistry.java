@@ -135,7 +135,7 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.necronTimerEnabled));
 
         settings.add(new SliderSetting(f7, "Necron Timer", "Animation Ticks",
-                Component.literal("Server ticks added for the death animation, so the time can be announced the moment Necron dies. 62 ticks = 3.10s.")
+                Component.literal("Server ticks from Necron's death to the end of the phase, added so the time can be announced the moment he dies. 20 ticks = 1 second.")
                         .withStyle(ChatFormatting.GRAY),
                 0, 120, 1, "t",
                 () -> cfg.necronAnimationTicks,
