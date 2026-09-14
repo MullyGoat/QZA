@@ -1,25 +1,23 @@
 package com.qza.mixin;
 
 import com.qza.timer.ServerTickClock;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
+import io.netty.channel.ChannelHandlerContext;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundPingPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ClientCommonPacketListenerImpl.class)
+@Mixin(Connection.class)
 public class ServerTickMixin {
 
-    @Inject(method = "handlePing", at = @At("HEAD"))
-    private void qzaCountServerTick(ClientboundPingPacket packet, CallbackInfo ci) {
-        if (packet.getId() == 0) {
-            return;
+    @Inject(method = "channelRead0(Lio/netty/channel/ChannelHandlerContext;Lnet/minecraft/network/protocol/Packet;)V",
+            at = @At("HEAD"))
+    private void qzaCountServerTick(ChannelHandlerContext context, Packet<?> packet, CallbackInfo ci) {
+        if (packet instanceof ClientboundPingPacket ping && ping.getId() != 0) {
+            ServerTickClock.onServerTick();
         }
-        if (!Minecraft.getInstance().isSameThread()) {
-            return;
-        }
-        ServerTickClock.onServerTick();
     }
 }
