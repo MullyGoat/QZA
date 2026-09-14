@@ -18,6 +18,7 @@ public final class NecronTimer {
     private static boolean awaitingEnd;
     private static long startTicks = -1L;
     private static long deathTicks = -1L;
+    private static long startNanos;
     private static int deathHits;
     private static int arghCount;
 
@@ -64,6 +65,7 @@ public final class NecronTimer {
         deathHits = 0;
         arghCount = 0;
         deathTicks = -1L;
+        startNanos = System.nanoTime();
         startTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticks() : -1L;
     }
 
@@ -101,12 +103,17 @@ public final class NecronTimer {
 
         long animation = ServerTickClock.ticks() - deathTicks;
         long total = ServerTickClock.ticks() - startTicks;
+        double wallSeconds = (System.nanoTime() - startNanos) / 1_000_000_000.0;
 
         ChatUtil.send(Component.literal(String.format(Locale.ROOT,
-                "debug: animation %d ticks (%.2fs) | true total %d ticks (%.2fs) | announced %d | ARGH count %d",
-                animation, animation * SECONDS_PER_TICK,
-                total, total * SECONDS_PER_TICK,
+                "debug: animation %d ticks | total %d ticks (%.2fs) | announced %d | ARGH %d",
+                animation, total, total * SECONDS_PER_TICK,
                 (deathTicks - startTicks) + ANIMATION_TICKS, arghCount))
+                .withStyle(ChatFormatting.DARK_GRAY));
+
+        ChatUtil.send(Component.literal(String.format(Locale.ROOT,
+                "debug: wall clock %.2fs | rate %.2f ticks/s (20.00 expected)",
+                wallSeconds, total / Math.max(0.001, wallSeconds)))
                 .withStyle(ChatFormatting.DARK_GRAY));
 
         deathTicks = -1L;
