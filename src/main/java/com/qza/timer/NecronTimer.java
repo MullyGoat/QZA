@@ -12,6 +12,7 @@ import java.util.Locale;
 public final class NecronTimer {
     private static final int ANNOUNCE_DELAY_TICKS = 10;
     private static final double SECONDS_PER_TICK = 0.05;
+    private static final long ANIMATION_TICKS = 62L;
 
     private static boolean running;
     private static boolean awaitingEnd;
@@ -69,14 +70,13 @@ public final class NecronTimer {
         }
 
         deathTicks = ServerTickClock.ticks();
-        long animationTicks = Math.round(cfg.necronAnimationTicks);
-        long totalTicks = (deathTicks - startTicks) + animationTicks;
+        long totalTicks = (deathTicks - startTicks) + ANIMATION_TICKS;
         awaitingEnd = true;
 
         if (cfg.necronTimerDebug) {
             ChatUtil.send(Component.literal(String.format(Locale.ROOT,
-                    "debug: at kill %d ticks | +%d predicted | total %d ticks",
-                    deathTicks - startTicks, animationTicks, totalTicks))
+                    "debug: at kill %d ticks | +%d animation | total %d ticks",
+                    deathTicks - startTicks, ANIMATION_TICKS, totalTicks))
                     .withStyle(ChatFormatting.DARK_GRAY));
         }
 
@@ -101,26 +101,14 @@ public final class NecronTimer {
 
         long actualAnimation = ServerTickClock.ticks() - deathTicks;
         long actualTotal = ServerTickClock.ticks() - startTicks;
-        long configured = Math.round(ConfigManager.get().necronAnimationTicks);
-
-        ChatUtil.send(Component.literal("Measured animation: ").withStyle(ChatFormatting.GRAY)
-                .append(Component.literal(actualAnimation + " ticks").withStyle(ChatFormatting.YELLOW))
-                .append(Component.literal(String.format(Locale.ROOT, " (%.2fs)",
-                        actualAnimation * SECONDS_PER_TICK)).withStyle(ChatFormatting.DARK_GRAY)));
 
         if (ConfigManager.get().necronTimerDebug) {
             ChatUtil.send(Component.literal(String.format(Locale.ROOT,
-                    "debug: true total %d ticks (%.2fs) | configured anim %d | error %d ticks",
-                    actualTotal, actualTotal * SECONDS_PER_TICK, configured,
-                    configured - actualAnimation))
+                    "debug: animation %d ticks (%.2fs) | true total %d ticks (%.2fs) | error %d ticks",
+                    actualAnimation, actualAnimation * SECONDS_PER_TICK,
+                    actualTotal, actualTotal * SECONDS_PER_TICK,
+                    ANIMATION_TICKS - actualAnimation))
                     .withStyle(ChatFormatting.DARK_GRAY));
-        }
-
-        if (actualAnimation != configured) {
-            ChatUtil.send(Component.literal("Set Animation Ticks to ").withStyle(ChatFormatting.GRAY)
-                    .append(Component.literal(String.valueOf(actualAnimation))
-                            .withStyle(ChatFormatting.YELLOW))
-                    .append(Component.literal(" for an exact prediction.").withStyle(ChatFormatting.GRAY)));
         }
 
         deathTicks = -1L;

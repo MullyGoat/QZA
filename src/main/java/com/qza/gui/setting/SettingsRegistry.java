@@ -134,17 +134,6 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.necronTimerEnabled));
 
-        settings.add(new SliderSetting(f7, "Necron Timer", "Animation Ticks",
-                Component.literal("Server ticks from Necron's death to the end of the phase, added so the time can be announced the moment he dies. 20 ticks = 1 second.")
-                        .withStyle(ChatFormatting.GRAY),
-                0, 120, 1, "t",
-                () -> cfg.necronAnimationTicks,
-                v -> {
-                    cfg.necronAnimationTicks = v;
-                    ConfigManager.save();
-                })
-                .visibleWhen(() -> cfg.necronTimerEnabled));
-
         String music = "Music";
 
         settings.add(new ActionSetting(music, "Library", "Add Music",
