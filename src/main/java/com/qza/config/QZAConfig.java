@@ -27,11 +27,7 @@ public class QZAConfig {
 
     public int necronDeathTriggerCount = 2;
 
-    public String necronEndTrigger = "Necron: All this, for nothing";
-
     public String necronAnnounceMode = "party";
-
-    public boolean necronTimerDebug = false;
 
     public double guiScale = 100.0;
 }

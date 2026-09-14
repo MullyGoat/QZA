@@ -124,16 +124,6 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.necronTimerEnabled));
 
-        settings.add(new ToggleSetting(f7, "Necron Timer", "Timer Debug",
-                Component.literal("Prints the raw measurement breakdown to your own chat after each kill.")
-                        .withStyle(ChatFormatting.GRAY),
-                () -> cfg.necronTimerDebug,
-                v -> {
-                    cfg.necronTimerDebug = v;
-                    ConfigManager.save();
-                })
-                .visibleWhen(() -> cfg.necronTimerEnabled));
-
         String music = "Music";
 
         settings.add(new ActionSetting(music, "Library", "Add Music",
