@@ -39,5 +39,21 @@ public class QZAConfig {
 
     public double partyNotifyScale = 1.0;
 
+    public boolean qzaChatEnabled = true;
+
+    public String chatHistoryMode = "forever";
+
+    public boolean chatNotifyEnabled = true;
+
+    public String chatNotifyMode = "ringer";
+
+    public double chatNotifyDuration = 5.0;
+
+    public double chatNotifyX = 0.5;
+
+    public double chatNotifyY = 0.16;
+
+    public double chatNotifyScale = 1.0;
+
     public double guiScale = 100.0;
 }

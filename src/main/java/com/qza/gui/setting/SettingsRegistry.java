@@ -1,8 +1,10 @@
 package com.qza.gui.setting;
 
+import com.qza.chat.ChatHistory;
+import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
-import com.qza.gui.GuiEditScreen;
+import com.qza.gui.QZAChatScreen;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.party.PartyNotification;
@@ -22,6 +24,8 @@ public final class SettingsRegistry {
             "Shitter List",
             "F7 / M7",
             "Music",
+            "Chat",
+            "Notifications",
             "Miscellaneous");
 
     private SettingsRegistry() {
@@ -176,6 +180,121 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        String chat = "Chat";
+
+        settings.add(new ToggleSetting(chat, "QZA Chat", "QZA Chat Toggle",
+                Component.literal("Saves the whispers you send and receive so you can read them in one place.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.qzaChatEnabled,
+                v -> {
+                    cfg.qzaChatEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ActionSetting(chat, "QZA Chat", "Open QZA Chat",
+                Component.literal("Opens the messaging screen. Same as ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("/qza chat").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                () -> {
+                    int unread = ChatHistory.unreadTotal();
+                    return unread > 0 ? "Open (" + unread + ")" : "Open";
+                },
+                () -> Minecraft.getInstance().setScreen(new QZAChatScreen()))
+                .visibleWhen(() -> cfg.qzaChatEnabled));
+
+        settings.add(new DropdownSetting(chat, "History", "Message History",
+                Component.literal("Keep every conversation on disk, or wipe them all when the game launches.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> List.of(ChatHistory.MODE_FOREVER, ChatHistory.MODE_SESSION),
+                () -> cfg.chatHistoryMode,
+                v -> {
+                    cfg.chatHistoryMode = v;
+                    ConfigManager.save();
+                    ChatHistory.save();
+                },
+                SettingsRegistry::historyModeLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.qzaChatEnabled));
+
+        boolean[] confirmClear = {false};
+        settings.add(new ActionSetting(chat, "History", "Clear Messages",
+                Component.literal("Deletes every saved conversation. ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Click twice to confirm.")
+                                .withStyle(ChatFormatting.RED)),
+                () -> confirmClear[0] ? "Confirm?" : "Clear",
+                () -> {
+                    if (!confirmClear[0]) {
+                        confirmClear[0] = true;
+                        return;
+                    }
+                    confirmClear[0] = false;
+                    ChatHistory.clear();
+                    ChatUtil.success("Cleared saved messages.");
+                })
+                .visibleWhen(() -> cfg.qzaChatEnabled));
+
+        String notify = "Notifications";
+
+        settings.add(new ToggleSetting(notify, "Party", "Party Invite Alert",
+                Component.literal("Pops a notification on screen when someone invites you to their party, so you do not miss it in busy chat.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.partyInviteNotifyEnabled,
+                v -> {
+                    cfg.partyInviteNotifyEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new SliderSetting(notify, "Party", "Notification Duration",
+                Component.literal("How long the invite notification stays on screen before it fades out.")
+                        .withStyle(ChatFormatting.GRAY),
+                PartyNotification.MIN_DURATION, PartyNotification.MAX_DURATION, 1, "s",
+                () -> cfg.partyNotifyDuration,
+                v -> {
+                    cfg.partyNotifyDuration = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.partyInviteNotifyEnabled));
+
+        settings.add(new ToggleSetting(notify, "QZA Chat", "Message Alert",
+                Component.literal("Pops a notification showing what someone whispered you.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.chatNotifyEnabled,
+                v -> {
+                    cfg.chatNotifyEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new DropdownSetting(notify, "QZA Chat", "Alert Mode",
+                Component.literal("Ringer plays a ding, Silent shows it quietly, Do Not Disturb hides it completely.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> List.of(ChatNotification.MODE_RINGER,
+                        ChatNotification.MODE_SILENT,
+                        ChatNotification.MODE_DND),
+                () -> cfg.chatNotifyMode,
+                v -> {
+                    cfg.chatNotifyMode = v;
+                    ConfigManager.save();
+                },
+                SettingsRegistry::alertModeLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.chatNotifyEnabled));
+
+        settings.add(new SliderSetting(notify, "QZA Chat", "Notification Duration",
+                Component.literal("How long the message notification stays on screen before it fades out.")
+                        .withStyle(ChatFormatting.GRAY),
+                ChatNotification.MIN_DURATION, ChatNotification.MAX_DURATION, 1, "s",
+                () -> cfg.chatNotifyDuration,
+                v -> {
+                    cfg.chatNotifyDuration = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.chatNotifyEnabled));
+
         String misc = "Miscellaneous";
 
         settings.add(new SliderSetting(misc, "Interface", "GUI Scale",
@@ -190,36 +309,6 @@ public final class SettingsRegistry {
                     cfg.guiScale = v;
                     ConfigManager.save();
                 }));
-
-        settings.add(new ToggleSetting(misc, "Party", "Party Invite Alert",
-                Component.literal("Pops a notification on screen when someone invites you to their party, so you do not miss it in busy chat.")
-                        .withStyle(ChatFormatting.GRAY),
-                () -> cfg.partyInviteNotifyEnabled,
-                v -> {
-                    cfg.partyInviteNotifyEnabled = v;
-                    ConfigManager.save();
-                }));
-
-        settings.add(new SliderSetting(misc, "Party", "Notification Duration",
-                Component.literal("How long the notification stays on screen before it fades out.")
-                        .withStyle(ChatFormatting.GRAY),
-                PartyNotification.MIN_DURATION, PartyNotification.MAX_DURATION, 1, "s",
-                () -> cfg.partyNotifyDuration,
-                v -> {
-                    cfg.partyNotifyDuration = v;
-                    ConfigManager.save();
-                })
-                .visibleWhen(() -> cfg.partyInviteNotifyEnabled));
-
-        settings.add(new ActionSetting(misc, "Party", "Notification Position",
-                Component.literal("Drag the preview to place it. ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("Hold it and scroll").withStyle(ChatFormatting.WHITE))
-                        .append(Component.literal(" to resize. Reset it with ").withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal("/qza gui reset").withStyle(ChatFormatting.LIGHT_PURPLE)),
-                "Edit",
-                () -> Minecraft.getInstance().setScreen(new GuiEditScreen()))
-                .visibleWhen(() -> cfg.partyInviteNotifyEnabled));
 
         settings.add(new ActionSetting(misc, "Config", "Reset Settings",
                 Component.literal("Restores every option to its default. ")
@@ -243,6 +332,20 @@ public final class SettingsRegistry {
             names.add(track.getFileName().toString());
         }
         return names;
+    }
+
+    private static String historyModeLabel(String raw) {
+        return ChatHistory.MODE_SESSION.equals(raw) ? "Reset On Launch" : "Save Forever";
+    }
+
+    private static String alertModeLabel(String raw) {
+        if (ChatNotification.MODE_SILENT.equals(raw)) {
+            return "Silent";
+        }
+        if (ChatNotification.MODE_DND.equals(raw)) {
+            return "Do Not Disturb";
+        }
+        return "Ringer";
     }
 
     private static String announceModeLabel(String raw) {

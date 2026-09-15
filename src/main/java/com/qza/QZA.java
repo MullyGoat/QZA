@@ -1,16 +1,19 @@
 package com.qza;
 
+import com.qza.chat.ChatHistory;
+import com.qza.chat.ChatNotification;
 import com.qza.command.QZACommand;
 import com.qza.command.ShitterCommand;
 import com.qza.config.ConfigManager;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
+import com.qza.notify.NotificationHud;
 import com.qza.party.PartyNotification;
-import com.qza.party.PartyNotificationHud;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
 import com.qza.timer.NecronTimer;
 import com.qza.timer.ServerTickClock;
+import com.qza.util.PlayerFaces;
 import com.qza.util.Scheduler;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -33,11 +36,12 @@ public class QZA implements ClientModInitializer {
     public void onInitializeClient() {
         ConfigManager.load();
         ShitterList.load();
+        ChatHistory.load();
         MusicLibrary.ensureDir();
         MusicManager.get().applySettings();
 
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "party_invite"),
-                new PartyNotificationHud());
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
+                new NotificationHud());
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> {
             QZACommand.register(dispatcher);
@@ -53,6 +57,7 @@ public class QZA implements ClientModInitializer {
             MusicManager.get().onChatMessage(plain);
             NecronTimer.onChatMessage(plain);
             PartyNotification.onChatMessage(plain);
+            ChatHistory.onChatMessage(plain);
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -73,6 +78,8 @@ public class QZA implements ClientModInitializer {
             NecronTimer.reset();
             ServerTickClock.reset();
             PartyNotification.clear();
+            ChatNotification.clear();
+            PlayerFaces.clearCache();
         });
 
         LOGGER.info("QZA initialised - {} shitter(s) loaded", ShitterList.size());

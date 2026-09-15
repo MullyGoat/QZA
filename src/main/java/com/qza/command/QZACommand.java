@@ -3,10 +3,10 @@ package com.qza.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.qza.config.ConfigManager;
 import com.qza.gui.GuiEditScreen;
+import com.qza.gui.QZAChatScreen;
 import com.qza.gui.QZAScreen;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
-import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterList;
 import com.qza.util.ChatUtil;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -39,13 +39,17 @@ public final class QZACommand {
                             + " shitter(s) and " + tracks + " track(s).");
                     return 1;
                 }))
+                .then(literal("chat").executes(ctx -> {
+                    openChat();
+                    return 1;
+                }))
                 .then(literal("gui")
                         .executes(ctx -> {
                             openEditor();
                             return 1;
                         })
                         .then(literal("reset").executes(ctx -> {
-                            PartyNotification.resetPlacement();
+                            GuiEditScreen.resetAll();
                             ChatUtil.success("GUI reset to default.");
                             return 1;
                         })))
@@ -92,6 +96,12 @@ public final class QZACommand {
         client.execute(() -> client.setScreen(new GuiEditScreen(false)));
     }
 
+    private static void openChat() {
+        Minecraft client = Minecraft.getInstance();
+
+        client.execute(() -> client.setScreen(new QZAChatScreen()));
+    }
+
     private static void musicStatus() {
         MusicManager manager = MusicManager.get();
         int tracks = MusicLibrary.count();
@@ -120,6 +130,7 @@ public final class QZACommand {
         entry("/shitter remove <ign>", "Take someone off the list");
         entry("/shitter list [page]", "Show the list, 8 per page");
         entry("/shitter clear", "Wipe the list");
+        entry("/qza chat", "Open QZA Chat to read and reply to whispers");
         entry("/qza gui", "Open GUI edit mode to move and resize elements");
         entry("/qza gui reset", "Restore the GUI layout to its default");
         entry("/qza music play", "Manually plays music");

@@ -227,6 +227,7 @@ public class QZAScreen extends Screen {
         super.extractRenderState(graphics, mx, my, delta);
 
         drawHeader(graphics);
+        drawEditGui(graphics, mx, my);
         drawRail(graphics, mx, my);
         drawContent(graphics, mx, my);
 
@@ -244,6 +245,19 @@ public class QZAScreen extends Screen {
         graphics.fill(x, y + h - 1, x + w, y + h, colour);
         graphics.fill(x, y + 1, x + 1, y + h - 1, colour);
         graphics.fill(x + w - 1, y + 1, x + w, y + h - 1, colour);
+    }
+
+    private int[] editGuiRect() {
+        return new int[]{panelX + 16, panelY + 14, 66, 16};
+    }
+
+    private void drawEditGui(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        int[] r = editGuiRect();
+        boolean hovered = inside(mouseX, mouseY, r);
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hovered ? 0xAA3C5A70 : 0x99223140);
+        outline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFAFD4EC : 0xFF6A8CA8);
+        graphics.centeredText(this.font, Component.literal("Edit GUI"),
+                r[0] + (r[2] / 2), r[1] + 4, TEXT);
     }
 
     private void drawHeader(GuiGraphicsExtractor graphics) {
@@ -552,6 +566,12 @@ public class QZAScreen extends Screen {
 
         double mouseX = local.x();
         double mouseY = local.y();
+
+        if (inside(mouseX, mouseY, editGuiRect())) {
+            ConfigManager.save();
+            this.minecraft.setScreen(new GuiEditScreen());
+            return true;
+        }
 
         int railY = panelY + HEADER_H + 14;
         for (String category : SettingsRegistry.CATEGORIES) {
