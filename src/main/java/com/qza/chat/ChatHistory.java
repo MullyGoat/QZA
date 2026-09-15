@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import com.qza.QZA;
 import com.qza.config.ConfigManager;
 import com.qza.util.ChatUtil;
+import com.qza.util.PlayerLookup;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -118,27 +119,123 @@ public final class ChatHistory {
     }
 
     public static ChatConversation start(String ign) {
-        String key = ign.toLowerCase(Locale.ROOT);
-        ChatConversation conversation = conversations.get(key);
-        if (conversation == null) {
-            conversation = new ChatConversation(ign);
-            conversations.put(key, conversation);
-        }
+        ChatConversation conversation = resolve(ign);
         conversation.lastActivity = System.currentTimeMillis();
         conversation.hidden = false;
         save();
         return conversation;
     }
 
-    public static void record(String ign, boolean outgoing, String text) {
-        String key = ign.toLowerCase(Locale.ROOT);
-        ChatConversation conversation = conversations.get(key);
-        if (conversation == null) {
-            conversation = new ChatConversation(ign);
-            conversations.put(key, conversation);
-        } else {
-            conversation.name = ign;
+    private static String key(String name) {
+        return name.toLowerCase(Locale.ROOT);
+    }
+
+    public static ChatConversation getByUuid(String uuid) {
+        if (uuid == null || uuid.isBlank()) {
+            return null;
         }
+        for (ChatConversation conversation : conversations.values()) {
+            if (uuid.equalsIgnoreCase(conversation.uuid)) {
+                return conversation;
+            }
+        }
+        return null;
+    }
+
+    private static void renameTo(ChatConversation conversation, String newName) {
+        String previous = conversation.name;
+        conversations.remove(key(previous));
+        conversation.name = newName;
+        conversations.put(key(newName), conversation);
+        ChatUtil.info(previous + " is now " + newName + " - chat history kept.");
+    }
+
+    private static void merge(ChatConversation keep, ChatConversation drop) {
+        keep.messages.addAll(drop.messages);
+        keep.messages.sort(Comparator.comparingLong(m -> m.time));
+        while (keep.messages.size() > MAX_MESSAGES) {
+            keep.messages.remove(0);
+        }
+        keep.unread += drop.unread;
+        keep.lastActivity = Math.max(keep.lastActivity, drop.lastActivity);
+        keep.hidden = keep.hidden && drop.hidden;
+        if (keep.uuid == null || keep.uuid.isBlank()) {
+            keep.uuid = drop.uuid;
+        }
+    }
+
+    private static ChatConversation resolve(String ign) {
+        String uuid = PlayerLookup.uuidFor(ign);
+        ChatConversation named = conversations.get(key(ign));
+        ChatConversation known = getByUuid(uuid);
+
+        if (known == null) {
+            if (named == null) {
+                named = new ChatConversation(ign);
+                conversations.put(key(ign), named);
+            } else {
+                named.name = ign;
+            }
+            if (uuid != null) {
+                named.uuid = uuid;
+            }
+            return named;
+        }
+
+        if (named != null && named != known) {
+            merge(known, named);
+            conversations.remove(key(ign));
+        }
+        if (!ign.equalsIgnoreCase(known.name)) {
+            renameTo(known, ign);
+        } else {
+            known.name = ign;
+        }
+        known.uuid = uuid;
+        return known;
+    }
+
+    public static void refreshIdentities() {
+        boolean changed = false;
+
+        for (ChatConversation conversation : new ArrayList<>(conversations.values())) {
+            if (conversation.uuid != null && !conversation.uuid.isBlank()) {
+                continue;
+            }
+            String uuid = PlayerLookup.uuidFor(conversation.name);
+            if (uuid != null) {
+                conversation.uuid = uuid;
+                changed = true;
+            }
+        }
+
+        Map<String, ChatConversation> seen = new LinkedHashMap<>();
+        for (ChatConversation conversation : new ArrayList<>(conversations.values())) {
+            if (conversation.uuid == null || conversation.uuid.isBlank()) {
+                continue;
+            }
+            String id = conversation.uuid.toLowerCase(Locale.ROOT);
+            ChatConversation existing = seen.get(id);
+            if (existing == null) {
+                seen.put(id, conversation);
+                continue;
+            }
+            ChatConversation keep = existing.lastActivity >= conversation.lastActivity
+                    ? existing : conversation;
+            ChatConversation drop = keep == existing ? conversation : existing;
+            merge(keep, drop);
+            conversations.remove(key(drop.name));
+            seen.put(id, keep);
+            changed = true;
+        }
+
+        if (changed) {
+            save();
+        }
+    }
+
+    public static void record(String ign, boolean outgoing, String text) {
+        ChatConversation conversation = resolve(ign);
 
         conversation.messages.add(new ChatMessage(outgoing, text, System.currentTimeMillis()));
         while (conversation.messages.size() > MAX_MESSAGES) {

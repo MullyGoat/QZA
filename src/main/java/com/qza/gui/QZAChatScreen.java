@@ -101,6 +101,7 @@ public class QZAChatScreen extends Screen {
     @Override
     protected void init() {
         layout();
+        ChatHistory.refreshIdentities();
 
         if (selected == null || ChatHistory.get(selected) == null) {
             List<ChatConversation> all = ChatHistory.conversations();

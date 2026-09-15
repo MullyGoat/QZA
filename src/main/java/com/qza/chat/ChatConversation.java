@@ -5,6 +5,7 @@ import java.util.List;
 
 public class ChatConversation {
     public String name = "";
+    public String uuid;
     public long lastActivity;
     public int unread;
     public boolean hidden;
