@@ -15,12 +15,8 @@ public final class NecronTimer {
     private static final long ANIMATION_TICKS = 62L;
 
     private static boolean running;
-    private static boolean awaitingEnd;
     private static long startTicks = -1L;
-    private static long deathTicks = -1L;
-    private static long startNanos;
     private static int deathHits;
-    private static int arghCount;
 
     private NecronTimer() {
     }
@@ -38,34 +34,17 @@ public final class NecronTimer {
             return;
         }
 
-        if (matches(message, cfg.necronDeathTrigger)) {
-            arghCount++;
-            if (cfg.necronTimerDebug && startTicks >= 0L && ServerTickClock.isAvailable()) {
-                ChatUtil.send(Component.literal(String.format(Locale.ROOT,
-                        "debug: ARGH #%d at %d ticks", arghCount, ServerTickClock.ticks() - startTicks))
-                        .withStyle(ChatFormatting.DARK_GRAY));
+        if (running && matches(message, cfg.necronDeathTrigger)) {
+            deathHits++;
+            if (deathHits >= Math.max(1, cfg.necronDeathTriggerCount)) {
+                announce();
             }
-            if (running) {
-                deathHits++;
-                if (deathHits >= Math.max(1, cfg.necronDeathTriggerCount)) {
-                    announce();
-                }
-            }
-            return;
-        }
-
-        if (awaitingEnd && matches(message, cfg.necronEndTrigger)) {
-            measure();
         }
     }
 
     private static void start() {
         running = true;
-        awaitingEnd = false;
         deathHits = 0;
-        arghCount = 0;
-        deathTicks = -1L;
-        startNanos = System.nanoTime();
         startTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticks() : -1L;
     }
 
@@ -78,9 +57,7 @@ public final class NecronTimer {
             return;
         }
 
-        deathTicks = ServerTickClock.ticks();
-        awaitingEnd = true;
-        long totalTicks = (deathTicks - startTicks) + ANIMATION_TICKS;
+        long totalTicks = (ServerTickClock.ticks() - startTicks) + ANIMATION_TICKS;
         String seconds = String.format(Locale.ROOT, "%.2f", totalTicks * SECONDS_PER_TICK);
 
         if ("client".equals(ConfigManager.get().necronAnnounceMode)) {
@@ -93,43 +70,14 @@ public final class NecronTimer {
         }
     }
 
-    private static void measure() {
-        awaitingEnd = false;
-        if (!ConfigManager.get().necronTimerDebug
-                || deathTicks < 0L || startTicks < 0L || !ServerTickClock.isAvailable()) {
-            deathTicks = -1L;
-            return;
-        }
-
-        long animation = ServerTickClock.ticks() - deathTicks;
-        long total = ServerTickClock.ticks() - startTicks;
-        double wallSeconds = (System.nanoTime() - startNanos) / 1_000_000_000.0;
-
-        ChatUtil.send(Component.literal(String.format(Locale.ROOT,
-                "debug: animation %d ticks | total %d ticks (%.2fs) | announced %d | ARGH %d",
-                animation, total, total * SECONDS_PER_TICK,
-                (deathTicks - startTicks) + ANIMATION_TICKS, arghCount))
-                .withStyle(ChatFormatting.DARK_GRAY));
-
-        ChatUtil.send(Component.literal(String.format(Locale.ROOT,
-                "debug: wall clock %.2fs | rate %.2f ticks/s (20.00 expected)",
-                wallSeconds, total / Math.max(0.001, wallSeconds)))
-                .withStyle(ChatFormatting.DARK_GRAY));
-
-        deathTicks = -1L;
-    }
-
     private static boolean matches(String message, String trigger) {
         return trigger != null && !trigger.isBlank() && message.contains(trigger);
     }
 
     public static void reset() {
         running = false;
-        awaitingEnd = false;
         startTicks = -1L;
-        deathTicks = -1L;
         deathHits = 0;
-        arghCount = 0;
     }
 
     public static boolean isRunning() {
