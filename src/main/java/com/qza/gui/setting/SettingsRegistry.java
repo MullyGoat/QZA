@@ -2,8 +2,10 @@ package com.qza.gui.setting;
 
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.gui.GuiEditScreen;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
+import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterList;
 import com.qza.shitter.ShitterListPage;
 import com.qza.util.ChatUtil;
@@ -188,6 +190,36 @@ public final class SettingsRegistry {
                     cfg.guiScale = v;
                     ConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(misc, "Party", "Party Invite Alert",
+                Component.literal("Pops a notification on screen when someone invites you to their party, so you do not miss it in busy chat.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.partyInviteNotifyEnabled,
+                v -> {
+                    cfg.partyInviteNotifyEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new SliderSetting(misc, "Party", "Notification Duration",
+                Component.literal("How long the notification stays on screen before it fades out.")
+                        .withStyle(ChatFormatting.GRAY),
+                PartyNotification.MIN_DURATION, PartyNotification.MAX_DURATION, 1, "s",
+                () -> cfg.partyNotifyDuration,
+                v -> {
+                    cfg.partyNotifyDuration = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.partyInviteNotifyEnabled));
+
+        settings.add(new ActionSetting(misc, "Party", "Notification Position",
+                Component.literal("Drag the preview to place it. ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Hold it and scroll").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" to resize. Reset it with ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("/qza gui reset").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                "Edit",
+                () -> Minecraft.getInstance().setScreen(new GuiEditScreen()))
+                .visibleWhen(() -> cfg.partyInviteNotifyEnabled));
 
         settings.add(new ActionSetting(misc, "Config", "Reset Settings",
                 Component.literal("Restores every option to its default. ")

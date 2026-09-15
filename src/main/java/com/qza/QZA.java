@@ -5,6 +5,8 @@ import com.qza.command.ShitterCommand;
 import com.qza.config.ConfigManager;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
+import com.qza.party.PartyNotification;
+import com.qza.party.PartyNotificationHud;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
 import com.qza.timer.NecronTimer;
@@ -15,6 +17,8 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +36,9 @@ public class QZA implements ClientModInitializer {
         MusicLibrary.ensureDir();
         MusicManager.get().applySettings();
 
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "party_invite"),
+                new PartyNotificationHud());
+
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> {
             QZACommand.register(dispatcher);
             ShitterCommand.register(dispatcher);
@@ -45,6 +52,7 @@ public class QZA implements ClientModInitializer {
             ShitterAutoKick.onChatMessage(plain);
             MusicManager.get().onChatMessage(plain);
             NecronTimer.onChatMessage(plain);
+            PartyNotification.onChatMessage(plain);
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -64,6 +72,7 @@ public class QZA implements ClientModInitializer {
             ShitterAutoKick.reset();
             NecronTimer.reset();
             ServerTickClock.reset();
+            PartyNotification.clear();
         });
 
         LOGGER.info("QZA initialised - {} shitter(s) loaded", ShitterList.size());

@@ -29,5 +29,15 @@ public class QZAConfig {
 
     public String necronAnnounceMode = "party";
 
+    public boolean partyInviteNotifyEnabled = true;
+
+    public double partyNotifyDuration = 5.0;
+
+    public double partyNotifyX = 0.5;
+
+    public double partyNotifyY = 0.28;
+
+    public double partyNotifyScale = 1.0;
+
     public double guiScale = 100.0;
 }
