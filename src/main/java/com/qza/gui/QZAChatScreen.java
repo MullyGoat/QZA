@@ -336,6 +336,10 @@ public class QZAChatScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         rebuildBubbles(false);
 
+        if (!adding && getFocused() != input) {
+            setInitialFocus(input);
+        }
+
         float s = scale();
         int mx = Math.round((mouseX - offsetX()) / s);
         int my = Math.round((mouseY - offsetY()) / s);
@@ -884,6 +888,17 @@ public class QZAChatScreen extends Screen {
         List<ChatConversation> all = ChatHistory.conversations();
         int index = (int) ((y - railY + railScroll) / CONTACT_H);
         return index >= 0 && index < all.size() ? all.get(index) : null;
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        float s = scale();
+        return super.mouseDragged(toLogical(event), deltaX / s, deltaY / s);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        return super.mouseReleased(toLogical(event));
     }
 
     @Override
