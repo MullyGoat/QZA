@@ -51,6 +51,7 @@ public class QZAChatScreen extends Screen {
 
     private static final int MENU_W = 58;
     private static final int MENU_ROW_H = 12;
+    private static final long COPIED_MS = 1500L;
 
     private EditBox input;
     private EditBox ignInput;
@@ -59,6 +60,7 @@ public class QZAChatScreen extends Screen {
     private String menuFor;
     private int menuX;
     private int menuY;
+    private long copiedAt;
 
     private final List<Bubble> bubbles = new ArrayList<>();
     private String builtFor;
@@ -186,7 +188,7 @@ public class QZAChatScreen extends Screen {
                 for (FormattedCharSequence line : lines) {
                     widest = Math.max(widest, this.font.width(line));
                 }
-                Bubble bubble = new Bubble(message.outgoing, lines,
+                Bubble bubble = new Bubble(message.outgoing, message.text, lines,
                         widest + (BUBBLE_PAD * 2),
                         (lines.size() * LINE_H) + (BUBBLE_PAD * 2) - 1);
                 bubble.y = y;
@@ -473,6 +475,13 @@ public class QZAChatScreen extends Screen {
         graphics.text(this.font, conversation.name, threadX + FACE + 6, railY + 4, TEXT);
         graphics.fill(threadX, railY + 18, threadX + threadW, railY + 19, 0x33FFFFFF);
 
+        String hint = System.currentTimeMillis() - copiedAt < COPIED_MS
+                ? "Copied to clipboard"
+                : "Right-click a message to copy";
+        int hintColour = System.currentTimeMillis() - copiedAt < COPIED_MS ? 0xFF7BE87B : TEXT_FAINT;
+        graphics.text(this.font, hint,
+                threadX + threadW - this.font.width(hint), railY + 4, hintColour);
+
         if (bubbles.isEmpty()) {
             graphics.centeredText(this.font, "No messages in this conversation",
                     threadX + (threadW / 2), threadY + (threadH / 2) - 4, TEXT_DIM);
@@ -623,6 +632,11 @@ public class QZAChatScreen extends Screen {
         }
 
         if (local.button() == 1) {
+            Bubble bubble = bubbleAt(mouseX, mouseY);
+            if (bubble != null) {
+                copy(bubble);
+                return true;
+            }
             ChatConversation hit = contactAt(mouseX, mouseY);
             if (hit != null) {
                 openMenu(hit.name, mouseX, mouseY);
@@ -667,6 +681,32 @@ public class QZAChatScreen extends Screen {
         }
 
         return false;
+    }
+
+    private Bubble bubbleAt(double x, double y) {
+        if (x < threadX || x > threadX + threadW || y < threadY || y > threadY + threadH) {
+            return null;
+        }
+        int top = threadY - (int) Math.round(threadScroll);
+        for (Bubble bubble : bubbles) {
+            int by = top + bubble.y;
+            int bx = bubble.outgoing ? threadX + threadW - bubble.w : threadX;
+            if (x >= bx && x <= bx + bubble.w && y >= by && y <= by + bubble.h) {
+                return bubble;
+            }
+        }
+        return null;
+    }
+
+    private void copy(Bubble bubble) {
+        ChatConversation conversation = current();
+        if (conversation == null) {
+            return;
+        }
+        String line = (bubble.outgoing ? "To " : "From ")
+                + conversation.name + ": " + bubble.text;
+        this.minecraft.keyboardHandler.setClipboard(line);
+        copiedAt = System.currentTimeMillis();
     }
 
     private ChatConversation contactAt(double x, double y) {
@@ -732,13 +772,15 @@ public class QZAChatScreen extends Screen {
 
     private static final class Bubble {
         final boolean outgoing;
+        final String text;
         final List<FormattedCharSequence> lines;
         final int w;
         final int h;
         int y;
 
-        Bubble(boolean outgoing, List<FormattedCharSequence> lines, int w, int h) {
+        Bubble(boolean outgoing, String text, List<FormattedCharSequence> lines, int w, int h) {
             this.outgoing = outgoing;
+            this.text = text;
             this.lines = lines;
             this.w = w;
             this.h = h;

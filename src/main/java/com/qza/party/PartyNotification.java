@@ -3,6 +3,7 @@ package com.qza.party;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.notify.NotificationBox;
+import com.qza.notify.NotificationGate;
 import com.qza.util.IgnUtil;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -20,7 +21,7 @@ public final class PartyNotification {
     }
 
     public static void onChatMessage(String raw) {
-        if (!ConfigManager.get().partyInviteNotifyEnabled) {
+        if (!ConfigManager.get().partyInviteNotifyEnabled || !NotificationGate.allowsParty()) {
             return;
         }
 

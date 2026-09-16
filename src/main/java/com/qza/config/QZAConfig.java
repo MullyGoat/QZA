@@ -55,5 +55,9 @@ public class QZAConfig {
 
     public double chatNotifyScale = 1.0;
 
+    public boolean dungeonOnlyNotifications = false;
+
+    public String dungeonOnlyScope = "both";
+
     public double guiScale = 100.0;
 }

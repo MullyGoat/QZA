@@ -3,6 +3,7 @@ package com.qza.chat;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.notify.NotificationBox;
+import com.qza.notify.NotificationGate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -25,7 +26,8 @@ public final class ChatNotification {
 
     public static void show(String ign, String message) {
         QZAConfig cfg = ConfigManager.get();
-        if (!cfg.chatNotifyEnabled || MODE_DND.equals(cfg.chatNotifyMode)) {
+        if (!cfg.chatNotifyEnabled || MODE_DND.equals(cfg.chatNotifyMode)
+                || !NotificationGate.allowsMessages()) {
             return;
         }
 

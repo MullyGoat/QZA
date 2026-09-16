@@ -7,6 +7,7 @@ import com.qza.config.QZAConfig;
 import com.qza.gui.QZAChatScreen;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
+import com.qza.notify.NotificationGate;
 import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterList;
 import com.qza.shitter.ShitterListPage;
@@ -238,6 +239,34 @@ public final class SettingsRegistry {
 
         String notify = "Notifications";
 
+        settings.add(new ToggleSetting(notify, "Dungeon Runs", "Dungeon Only Notifications",
+                Component.literal("Only pop notifications while you are inside a dungeon run. ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Everything stays silent outside of one.")
+                                .withStyle(ChatFormatting.WHITE)),
+                () -> cfg.dungeonOnlyNotifications,
+                v -> {
+                    cfg.dungeonOnlyNotifications = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new DropdownSetting(notify, "Dungeon Runs", "Show During Runs",
+                Component.literal("Which notifications you still want once you are in a run.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> List.of(NotificationGate.SCOPE_BOTH,
+                        NotificationGate.SCOPE_MESSAGES,
+                        NotificationGate.SCOPE_PARTY),
+                () -> cfg.dungeonOnlyScope,
+                v -> {
+                    cfg.dungeonOnlyScope = v;
+                    ConfigManager.save();
+                },
+                SettingsRegistry::dungeonScopeLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.dungeonOnlyNotifications));
+
         settings.add(new ToggleSetting(notify, "Party", "Party Invite Alert",
                 Component.literal("Pops a notification on screen when someone invites you to their party, so you do not miss it in busy chat.")
                         .withStyle(ChatFormatting.GRAY),
@@ -336,6 +365,16 @@ public final class SettingsRegistry {
 
     private static String historyModeLabel(String raw) {
         return ChatHistory.MODE_SESSION.equals(raw) ? "Reset On Launch" : "Save Forever";
+    }
+
+    private static String dungeonScopeLabel(String raw) {
+        if (NotificationGate.SCOPE_MESSAGES.equals(raw)) {
+            return "Messages Only";
+        }
+        if (NotificationGate.SCOPE_PARTY.equals(raw)) {
+            return "Party Invites Only";
+        }
+        return "Both";
     }
 
     private static String alertModeLabel(String raw) {

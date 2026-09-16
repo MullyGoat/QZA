@@ -13,6 +13,7 @@ import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
 import com.qza.timer.NecronTimer;
 import com.qza.timer.ServerTickClock;
+import com.qza.util.DungeonState;
 import com.qza.util.PlayerFaces;
 import com.qza.util.Scheduler;
 import net.fabricmc.api.ClientModInitializer;
@@ -80,6 +81,7 @@ public class QZA implements ClientModInitializer {
             PartyNotification.clear();
             ChatNotification.clear();
             PlayerFaces.clearCache();
+            DungeonState.reset();
         });
 
         LOGGER.info("QZA initialised - {} shitter(s) loaded", ShitterList.size());
