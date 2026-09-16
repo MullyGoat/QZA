@@ -1,6 +1,6 @@
 # QZA
 
-Hypixel Skyblock QoL Mod featuring Shitter List & more.
+Hypixel Skyblock QoL Mod featuring Shitter List, QZA's Universal Hypixel Chat, & more.
 
 Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other version.
 
@@ -23,19 +23,31 @@ and drop it into your `mods` folder alongside Fabric API.
 | Command | What it does |
 | --- | --- |
 | `/qza` | Open the settings GUI |
-| `/shitter add <ign> [reason]` | Add someone to the shitter list |
-| `/shitter remove <ign>` | Take someone off the list |
-| `/shitter list [page]` | Show the list, 8 per page |
-| `/shitter clear` | Wipe the list |
+| `/qza chat` | Open QZA Chat |
+| `/qza gui` | Open GUI edit mode to move and resize notifications |
+| `/qza gui reset` | Restore the GUI layout to its default |
+| `/qza music` | Show what is playing and how many tracks are loaded |
 | `/qza music play` | Start the music now |
 | `/qza music stop` | Stop the music |
 | `/qza music folder` | Open the music folder |
 | `/qza music reload` | Re-scan the music folder |
 | `/qza reload` | Reload config and list from disk |
+| `/qza help` | Print this list in game |
+
+### Shitter list
+
+| Command | What it does |
+| --- | --- |
+| `/shitter` | Show the shitter list commands |
+| `/shitter add <ign> [reason]` | Add someone to the shitter list |
+| `/shitter remove <ign>` | Take someone off the list |
+| `/shitter list [page]` | Show the list, 8 per page |
+| `/shitter clear` | Wipe the list |
+| `/shitter help` | Show the shitter list commands |
 
 `/shitterlist` works as an alias for every `/shitter` command.
 
 ## Files
 
-Settings, the shitter list and your music live in `config/qza/`, so updating the mod
-never touches them.
+Settings, the shitter list, your saved DMs and your music live in `config/qza/`, so
+updating the mod never touches them.

@@ -126,18 +126,21 @@ public final class QZACommand {
                 .append(Component.literal(" commands").withStyle(ChatFormatting.WHITE)));
 
         entry("/qza", "Open the settings GUI");
+        entry("/qza chat", "Open QZA Chat");
+        entry("/qza gui", "Open GUI edit mode to move and resize notifications");
+        entry("/qza gui reset", "Restore the GUI layout to its default");
+        entry("/qza music", "Show what is playing and how many tracks are loaded");
+        entry("/qza music play", "Start the music now");
+        entry("/qza music stop", "Stop the music");
+        entry("/qza music folder", "Open the music folder");
+        entry("/qza music reload", "Re-scan the music folder");
+        entry("/qza reload", "Reload config and list from disk");
+        entry("/qza help", "Print this list in game");
+        entry("/shitter", "Show the shitter list commands");
         entry("/shitter add <ign> [reason]", "Add someone to the shitter list");
         entry("/shitter remove <ign>", "Take someone off the list");
         entry("/shitter list [page]", "Show the list, 8 per page");
         entry("/shitter clear", "Wipe the list");
-        entry("/qza chat", "Open QZA Chat to read and reply to whispers");
-        entry("/qza gui", "Open GUI edit mode to move and resize elements");
-        entry("/qza gui reset", "Restore the GUI layout to its default");
-        entry("/qza music play", "Manually plays music");
-        entry("/qza music stop", "Manually stops music");
-        entry("/qza music folder", "Open the drag-and-drop music folder");
-        entry("/qza music reload", "Re-scan the music folder");
-        entry("/qza reload", "Reload config and list from disk");
     }
 
     private static void entry(String command, String description) {

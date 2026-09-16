@@ -3,10 +3,9 @@
   "id": "qza",
   "version": "${version}",
   "name": "QZA",
-  "description": "Hypixel Skyblock QoL Mod featuring Shitter List & more.",
+  "description": "Hypixel Skyblock QoL Mod featuring Shitter List, QZA's Universal Hypixel Chat, & more.",
   "authors": [
-    "Mull",
-    "Claude"
+    "Mull"
   ],
   "license": "MIT",
   "icon": "assets/qza/icon.png",
