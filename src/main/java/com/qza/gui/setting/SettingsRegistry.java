@@ -213,7 +213,7 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
         settings.add(new DropdownSetting(chat, "Open Chat", "Default Tab",
-                Component.literal("Which tab QZA Chat opens on, however you open it")
+                Component.literal("Select which tab QZA Chat goes to when opened")
                         .withStyle(ChatFormatting.GRAY),
                 () -> ChatFocus.OPTIONS,
                 () -> cfg.chatDefaultTab,

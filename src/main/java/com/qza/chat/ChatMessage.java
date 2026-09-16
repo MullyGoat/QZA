@@ -19,10 +19,11 @@ public class ChatMessage {
         this.time = time;
     }
 
-    public ChatMessage(Component rich, String text, long time, String speaker) {
+    public ChatMessage(Component rich, String text, long time, String speaker, boolean outgoing) {
         this.rich = rich;
         this.text = text;
         this.time = time;
         this.speaker = speaker;
+        this.outgoing = outgoing;
     }
 }

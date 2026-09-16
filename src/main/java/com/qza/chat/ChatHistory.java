@@ -113,7 +113,8 @@ public final class ChatHistory {
         }
         if (ConfigManager.get().qzaChatEnabled) {
             record(whisper.ign(), whisper.outgoing(), whisper.text());
-            ChannelHistory.record(ChannelHistory.ALL, rich, plain, whisper.ign());
+            ChannelHistory.record(ChannelHistory.ALL, rich, plain,
+                    whisper.ign(), whisper.outgoing());
         }
         if (whisper.outgoing()) {
             ChatFocus.sent(ChatFocus.TAB_DM);

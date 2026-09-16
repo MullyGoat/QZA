@@ -1,6 +1,7 @@
 package com.qza.chat;
 
 import com.qza.config.ConfigManager;
+import com.qza.util.IgnUtil;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -30,10 +31,11 @@ public final class ChannelHistory {
         if (line == null) {
             return;
         }
+        boolean own = isOwn(plain, line.speaker());
         if (!ALL.equals(line.channel())) {
-            record(line.channel(), rich, plain, line.speaker());
+            record(line.channel(), rich, plain, line.speaker(), own);
         }
-        record(ALL, rich, plain, line.speaker());
+        record(ALL, rich, plain, line.speaker(), own);
 
         if (ChatFocus.isSelf(line.speaker())) {
             ChatFocus.sent(line.channel());
@@ -46,12 +48,25 @@ public final class ChannelHistory {
         if (!ConfigManager.get().qzaChatEnabled || plain == null || plain.isBlank()) {
             return;
         }
-        record(EVERYTHING, rich, plain, ChannelParser.speakerAnywhere(plain));
+        String speaker = ChannelParser.speakerAnywhere(plain);
+        record(EVERYTHING, rich, plain, speaker, isOwn(plain, speaker));
     }
 
-    public static void record(String channel, Component rich, String text, String speaker) {
+    public static boolean isOwn(String plain, String speaker) {
+        String text = IgnUtil.stripCodes(plain == null ? "" : plain).trim();
+        if (text.startsWith("To ")) {
+            return true;
+        }
+        if (text.startsWith("From ")) {
+            return false;
+        }
+        return ChatFocus.isSelf(speaker);
+    }
+
+    public static void record(String channel, Component rich, String text,
+                              String speaker, boolean outgoing) {
         List<ChatMessage> log = logs.computeIfAbsent(channel, key -> new ArrayList<>());
-        log.add(new ChatMessage(rich, text, System.currentTimeMillis(), speaker));
+        log.add(new ChatMessage(rich, text, System.currentTimeMillis(), speaker, outgoing));
         while (log.size() > MAX_MESSAGES) {
             log.remove(0);
         }
@@ -64,6 +79,15 @@ public final class ChannelHistory {
 
     public static void clear() {
         logs.clear();
+    }
+
+    public static String inviteCommand(String channel) {
+        return switch (channel) {
+            case PARTY -> "party invite";
+            case GUILD -> "guild invite";
+            case COOP -> "coopadd";
+            default -> null;
+        };
     }
 
     public static String command(String channel) {

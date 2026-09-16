@@ -43,7 +43,7 @@ public class QZAConfig {
 
     public String chatHistoryMode = "forever";
 
-    public String chatDefaultTab = "tab";
+    public String chatDefaultTab = "everything";
 
     public boolean openChatWithT = false;
 

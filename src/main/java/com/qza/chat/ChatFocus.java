@@ -16,11 +16,11 @@ public final class ChatFocus {
     public static final List<String> OPTIONS = List.of(
             MODE_RECENT_TAB,
             TAB_DM,
+            ChannelParser.EVERYTHING,
             ChannelParser.ALL,
             ChannelParser.PARTY,
             ChannelParser.GUILD,
             ChannelParser.COOP,
-            ChannelParser.EVERYTHING,
             MODE_RECEIVED,
             MODE_SENT);
 

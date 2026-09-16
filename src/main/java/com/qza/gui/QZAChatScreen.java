@@ -14,15 +14,22 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
+import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Util;
 import org.lwjgl.glfw.GLFW;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class QZAChatScreen extends Screen {
     private static final int PANEL_BG = 0x55000000;
@@ -54,10 +61,10 @@ public class QZAChatScreen extends Screen {
 
     private static final String TAB_DM = "dm";
     private static final String[] TAB_KEYS = {
-            TAB_DM, ChannelHistory.ALL, ChannelHistory.PARTY,
-            ChannelHistory.GUILD, ChannelHistory.COOP, ChannelHistory.EVERYTHING};
+            TAB_DM, ChannelHistory.EVERYTHING, ChannelHistory.ALL,
+            ChannelHistory.PARTY, ChannelHistory.GUILD, ChannelHistory.COOP};
     private static final String[] TAB_LABELS = {
-            "DMs", "All", "Party", "Guild", "Co-op", "Everything"};
+            "DMs", "Everything", "All", "Party", "Guild", "Co-op"};
     private static final int TAB_H = 14;
 
 
@@ -67,15 +74,23 @@ public class QZAChatScreen extends Screen {
     private static final int MENU_W = 58;
     private static final int MENU_ROW_H = 12;
     private static final long COPIED_MS = 1500L;
+    private static final int INVITE_FIELD_W = 110;
+    private static final int INVITE_GO_W = 27;
 
     private EditBox input;
     private EditBox ignInput;
     private boolean adding;
+    private boolean inviting;
 
     private String menuFor;
     private int menuX;
     private int menuY;
     private long copiedAt;
+
+    private Bubble hoverBubble;
+    private Segment hoverSegment;
+    private long handCursor;
+    private boolean handApplied;
 
     private final List<Bubble> bubbles = new ArrayList<>();
     private String builtFor;
@@ -223,6 +238,7 @@ public class QZAChatScreen extends Screen {
         }
         selectedTab = tab;
         menuFor = null;
+        inviting = false;
         setAdding(false);
         layout();
         repositionInput();
@@ -280,16 +296,20 @@ public class QZAChatScreen extends Screen {
             String speaker = isDm() ? null : message.speaker;
             int faceRoom = speaker == null ? 0 : SMALL_FACE + 4;
 
-            List<FormattedCharSequence> lines =
-                    this.font.split(content(message), Math.max(30, maxTextW - faceRoom));
+            Component body = content(message);
+            int wrapAt = Math.max(30, maxTextW - faceRoom);
+            List<FormattedCharSequence> lines = this.font.split(body, wrapAt);
             if (lines.isEmpty()) {
                 continue;
             }
+            List<FormattedText> rawLines =
+                    this.font.getSplitter().splitLines(body, wrapAt, Style.EMPTY);
             int widest = 0;
             for (FormattedCharSequence line : lines) {
                 widest = Math.max(widest, this.font.width(line));
             }
-            Bubble bubble = new Bubble(message.outgoing, message.text, speaker, faceRoom, lines,
+            Bubble bubble = new Bubble(message.outgoing, message.text, speaker, faceRoom,
+                    lines, rawLines,
                     widest + faceRoom + (BUBBLE_PAD * 2),
                     (lines.size() * LINE_H) + (BUBBLE_PAD * 2) - 1);
             bubble.y = y;
@@ -336,13 +356,15 @@ public class QZAChatScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         rebuildBubbles(false);
 
-        if (!adding && getFocused() != input) {
+        if (!adding && !inviting && getFocused() != input) {
             setInitialFocus(input);
         }
 
         float s = scale();
         int mx = Math.round((mouseX - offsetX()) / s);
         int my = Math.round((mouseY - offsetY()) / s);
+
+        updateHover(mx, my);
 
         graphics.pose().pushMatrix();
         graphics.pose().translate(offsetX(), offsetY());
@@ -363,6 +385,7 @@ public class QZAChatScreen extends Screen {
             drawContacts(graphics, mx, my);
         }
         drawThread(graphics);
+        drawInvite(graphics, mx, my);
         drawInput(graphics, mx, my);
 
         super.extractRenderState(graphics, mx, my, delta);
@@ -502,14 +525,32 @@ public class QZAChatScreen extends Screen {
 
     private void setAdding(boolean value) {
         adding = value;
-        ignInput.visible = value;
         if (value) {
-            ignInput.setValue("");
-            setInitialFocus(ignInput);
-        } else {
-            ignInput.setValue("");
-            setInitialFocus(input);
+            inviting = false;
         }
+        refreshIgnInput();
+    }
+
+    private void refreshIgnInput() {
+        boolean active = adding || inviting;
+        ignInput.visible = active;
+        ignInput.setValue("");
+
+        if (!active) {
+            setInitialFocus(input);
+            return;
+        }
+        if (adding) {
+            ignInput.setX(railX + 5);
+            ignInput.setY(panelY + 24);
+            ignInput.setWidth(RAIL_W - 41);
+        } else {
+            int[] field = inviteFieldRect();
+            ignInput.setX(field[0] + 5);
+            ignInput.setY(field[1] + 4);
+            ignInput.setWidth(field[2] - 10);
+        }
+        setInitialFocus(ignInput);
     }
 
     private void confirmAdd() {
@@ -647,10 +688,17 @@ public class QZAChatScreen extends Screen {
                         x + BUBBLE_PAD, y + BUBBLE_PAD, SMALL_FACE);
             }
 
+            int textX = x + BUBBLE_PAD + bubble.faceRoom;
             int lineY = y + BUBBLE_PAD;
             for (FormattedCharSequence line : bubble.lines) {
-                graphics.text(this.font, line, x + BUBBLE_PAD + bubble.faceRoom, lineY, TEXT);
+                graphics.text(this.font, line, textX, lineY, TEXT);
                 lineY += LINE_H;
+            }
+
+            if (bubble == hoverBubble && hoverSegment != null) {
+                int underlineY = y + BUBBLE_PAD + (hoverSegment.line() * LINE_H) + 9;
+                graphics.fill(textX + Math.round(hoverSegment.start()), underlineY,
+                        textX + Math.round(hoverSegment.end()), underlineY + 1, 0xFFFFFFFF);
             }
         }
 
@@ -731,7 +779,7 @@ public class QZAChatScreen extends Screen {
             return;
         }
 
-        if (ChannelHistory.EVERYTHING.equals(selectedTab)) {
+        if (text.startsWith("/") || ChannelHistory.EVERYTHING.equals(selectedTab)) {
             ChatUtil.sendChat(text);
         } else if (isDm()) {
             ChatConversation conversation = current();
@@ -744,6 +792,83 @@ public class QZAChatScreen extends Screen {
         }
         ChatFocus.sent(selectedTab);
         input.setValue("");
+    }
+
+    private String inviteLabel() {
+        return switch (selectedTab) {
+            case ChannelHistory.PARTY -> "Invite to Party";
+            case ChannelHistory.GUILD -> "Invite to Guild";
+            case ChannelHistory.COOP -> "Invite to Coop";
+            default -> null;
+        };
+    }
+
+    private int[] inviteRect() {
+        String label = inviteLabel();
+        int w = label == null ? 0 : this.font.width(label) + 16;
+        return new int[]{threadX + (threadW / 2) - (w / 2), railY, w, 16};
+    }
+
+    private int[] inviteFieldRect() {
+        int total = INVITE_FIELD_W + 4 + INVITE_GO_W;
+        return new int[]{threadX + (threadW / 2) - (total / 2), railY, INVITE_FIELD_W, 16};
+    }
+
+    private int[] inviteGoRect() {
+        int[] field = inviteFieldRect();
+        return new int[]{field[0] + field[2] + 4, field[1], INVITE_GO_W, 16};
+    }
+
+    private void drawInvite(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        String label = inviteLabel();
+        if (label == null) {
+            return;
+        }
+
+        if (!inviting) {
+            int[] r = inviteRect();
+            boolean hovered = inside(mouseX, mouseY, r);
+            graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3],
+                    hovered ? 0xAA3C5A70 : 0x99223140);
+            outline(graphics, r[0], r[1], r[2], r[3],
+                    hovered ? 0xFFAFD4EC : 0xFF6A8CA8);
+            graphics.centeredText(this.font, label, r[0] + (r[2] / 2), r[1] + 4, TEXT);
+            return;
+        }
+
+        int[] field = inviteFieldRect();
+        boolean valid = validIgn(ignInput.getValue()) != null;
+        boolean empty = ignInput.getValue().trim().isEmpty();
+        graphics.fill(field[0], field[1], field[0] + field[2], field[1] + field[3], 0x66000000);
+        outline(graphics, field[0], field[1], field[2], field[3],
+                empty || valid ? BOX_BORDER : 0xFFE05555);
+
+        int[] go = inviteGoRect();
+        boolean hovered = inside(mouseX, mouseY, go);
+        graphics.fill(go[0], go[1], go[0] + go[2], go[1] + go[3],
+                valid && hovered ? 0xAA5A2E62 : 0x99321A38);
+        outline(graphics, go[0], go[1], go[2], go[3],
+                valid ? (hovered ? PINK : 0xFFB05CB8) : 0xFF5A5A5A);
+        graphics.centeredText(this.font, "Go", go[0] + (go[2] / 2), go[1] + 4,
+                valid ? TEXT : TEXT_FAINT);
+    }
+
+    private void setInviting(boolean value) {
+        inviting = value && inviteLabel() != null;
+        if (inviting) {
+            adding = false;
+        }
+        refreshIgnInput();
+    }
+
+    private void confirmInvite() {
+        String invite = ChannelHistory.inviteCommand(selectedTab);
+        String ign = validIgn(ignInput.getValue());
+        if (invite == null || ign == null) {
+            return;
+        }
+        ChatUtil.sendCommand(invite + " " + ign);
+        setInviting(false);
     }
 
     private MouseButtonEvent toLogical(MouseButtonEvent event) {
@@ -804,10 +929,27 @@ public class QZAChatScreen extends Screen {
             return false;
         }
 
+        Bubble clicked = bubbleAt(mouseX, mouseY);
+        if (clicked != null && runClick(styleAtBubble(clicked, mouseX, mouseY))) {
+            return true;
+        }
+
         if (inside(mouseX, mouseY, settingsRect())) {
             QZAScreen.openCategory("Chat");
             this.minecraft.setScreen(new QZAScreen());
             return true;
+        }
+
+        if (inviteLabel() != null) {
+            if (inviting) {
+                if (inside(mouseX, mouseY, inviteGoRect())) {
+                    confirmInvite();
+                    return true;
+                }
+            } else if (inside(mouseX, mouseY, inviteRect())) {
+                setInviting(true);
+                return true;
+            }
         }
 
         for (int i = 0; i < TAB_KEYS.length; i++) {
@@ -863,6 +1005,128 @@ public class QZAChatScreen extends Screen {
             }
         }
         return null;
+    }
+
+    private record Segment(Style style, int line, float start, float end) {
+    }
+
+    private Segment segmentAt(FormattedText line, int index, int targetX) {
+        if (targetX < 0) {
+            return null;
+        }
+        float[] used = {0f};
+        return line.visit((style, text) -> {
+            float width = this.font.getSplitter().stringWidth(FormattedText.of(text, style));
+            if (targetX < used[0] + width) {
+                return Optional.of(new Segment(style, index, used[0], used[0] + width));
+            }
+            used[0] += width;
+            return Optional.empty();
+        }, Style.EMPTY).orElse(null);
+    }
+
+    private Segment segmentAtBubble(Bubble bubble, double mouseX, double mouseY) {
+        if (bubble.rawLines == null || bubble.rawLines.isEmpty()) {
+            return null;
+        }
+        int top = threadY - (int) Math.round(threadScroll);
+        int by = top + bubble.y;
+        int bx = bubble.outgoing ? threadX + threadW - bubble.w : threadX;
+
+        int index = (int) Math.floor((mouseY - (by + BUBBLE_PAD)) / (double) LINE_H);
+        if (index < 0 || index >= bubble.rawLines.size()) {
+            return null;
+        }
+        int x = (int) Math.floor(mouseX - (bx + BUBBLE_PAD + bubble.faceRoom));
+        return segmentAt(bubble.rawLines.get(index), index, x);
+    }
+
+    private Style styleAtBubble(Bubble bubble, double mouseX, double mouseY) {
+        Segment segment = segmentAtBubble(bubble, mouseX, mouseY);
+        return segment == null ? null : segment.style();
+    }
+
+    private void updateHover(int mouseX, int mouseY) {
+        hoverBubble = null;
+        hoverSegment = null;
+
+        Bubble bubble = bubbleAt(mouseX, mouseY);
+        if (bubble == null) {
+            applyHandCursor(false);
+            return;
+        }
+        Segment segment = segmentAtBubble(bubble, mouseX, mouseY);
+        boolean clickable = segment != null && segment.style().getClickEvent() != null;
+        if (clickable) {
+            hoverBubble = bubble;
+            hoverSegment = segment;
+        }
+        applyHandCursor(clickable);
+    }
+
+    private void applyHandCursor(boolean hand) {
+        if (hand == handApplied) {
+            return;
+        }
+        long window = this.minecraft.getWindow().handle();
+        if (hand) {
+            if (handCursor == 0L) {
+                handCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_POINTING_HAND_CURSOR);
+            }
+            if (handCursor == 0L) {
+                return;
+            }
+            GLFW.glfwSetCursor(window, handCursor);
+        } else {
+            GLFW.glfwSetCursor(window, 0L);
+        }
+        handApplied = hand;
+    }
+
+    @Override
+    public void removed() {
+        applyHandCursor(false);
+        if (handCursor != 0L) {
+            GLFW.glfwDestroyCursor(handCursor);
+            handCursor = 0L;
+        }
+        super.removed();
+    }
+
+    private boolean runClick(Style style) {
+        ClickEvent event = style == null ? null : style.getClickEvent();
+        if (event == null) {
+            return false;
+        }
+
+        if (event instanceof ClickEvent.RunCommand run) {
+            ChatUtil.sendChat(run.command());
+            this.minecraft.setScreen(null);
+            return true;
+        }
+        if (event instanceof ClickEvent.SuggestCommand suggest) {
+            input.setValue(suggest.command());
+            input.moveCursorToEnd(false);
+            setInitialFocus(input);
+            return true;
+        }
+        if (event instanceof ClickEvent.CopyToClipboard copy) {
+            this.minecraft.keyboardHandler.setClipboard(copy.value());
+            copiedAt = System.currentTimeMillis();
+            return true;
+        }
+        if (event instanceof ClickEvent.OpenUrl open) {
+            URI uri = open.uri();
+            QZAChatScreen self = this;
+            this.minecraft.setScreen(new ConfirmLinkScreen(confirmed -> {
+                if (confirmed) {
+                    Util.getPlatform().openUri(uri);
+                }
+                this.minecraft.setScreen(self);
+            }, uri.toString(), false));
+            return true;
+        }
+        return false;
     }
 
     private void copy(Bubble bubble) {
@@ -931,6 +1195,8 @@ public class QZAChatScreen extends Screen {
         if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
             if (adding) {
                 confirmAdd();
+            } else if (inviting) {
+                confirmInvite();
             } else {
                 sendCurrent();
             }
@@ -943,6 +1209,10 @@ public class QZAChatScreen extends Screen {
             }
             if (adding) {
                 setAdding(false);
+                return true;
+            }
+            if (inviting) {
+                setInviting(false);
                 return true;
             }
         }
@@ -960,17 +1230,19 @@ public class QZAChatScreen extends Screen {
         final String speaker;
         final int faceRoom;
         final List<FormattedCharSequence> lines;
+        final List<FormattedText> rawLines;
         final int w;
         final int h;
         int y;
 
         Bubble(boolean outgoing, String text, String speaker, int faceRoom,
-               List<FormattedCharSequence> lines, int w, int h) {
+               List<FormattedCharSequence> lines, List<FormattedText> rawLines, int w, int h) {
             this.outgoing = outgoing;
             this.text = text;
             this.speaker = speaker;
             this.faceRoom = faceRoom;
             this.lines = lines;
+            this.rawLines = rawLines;
             this.w = w;
             this.h = h;
         }
