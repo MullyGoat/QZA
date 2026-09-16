@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class ChannelHistory {
+    public static final String EVERYTHING = ChannelParser.EVERYTHING;
     public static final String ALL = ChannelParser.ALL;
     public static final String PARTY = ChannelParser.PARTY;
     public static final String GUILD = ChannelParser.GUILD;
@@ -39,6 +40,13 @@ public final class ChannelHistory {
         } else {
             ChatFocus.received(line.channel());
         }
+    }
+
+    public static void onAnyChatLine(Component rich, String plain) {
+        if (!ConfigManager.get().qzaChatEnabled || plain == null || plain.isBlank()) {
+            return;
+        }
+        record(EVERYTHING, rich, plain, ChannelParser.speakerAnywhere(plain));
     }
 
     public static void record(String channel, Component rich, String text, String speaker) {

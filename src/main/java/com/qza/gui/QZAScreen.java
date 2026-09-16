@@ -84,6 +84,13 @@ public class QZAScreen extends Screen {
         super(Component.literal("QZA"));
     }
 
+    public static void openCategory(String category) {
+        if (SettingsRegistry.CATEGORIES.contains(category)) {
+            selectedCategory = category;
+            scroll = 0;
+        }
+    }
+
     private static float scale() {
         double pct = ConfigManager.get().guiScale;
         return (float) Math.max(0.5, Math.min(1.5, pct / 100.0));

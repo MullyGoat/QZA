@@ -3,6 +3,7 @@ package com.qza.chat;
 import com.qza.util.IgnUtil;
 
 public final class ChannelParser {
+    public static final String EVERYTHING = "everything";
     public static final String ALL = "all";
     public static final String PARTY = "party";
     public static final String GUILD = "guild";
@@ -57,6 +58,20 @@ public final class ChannelParser {
         }
         String body = message.substring(prefix.length()).trim();
         return body.isEmpty() ? null : new Line(channel, speakerOf(body));
+    }
+
+    public static String speakerAnywhere(String message) {
+        if (message == null) {
+            return null;
+        }
+        String text = IgnUtil.stripCodes(message).trim();
+        for (String prefix : new String[]{"Party > ", "Guild > ", "Co-op > ", "Coop > ", "From ", "To "}) {
+            if (text.startsWith(prefix)) {
+                text = text.substring(prefix.length());
+                break;
+            }
+        }
+        return speakerOf(text);
     }
 
     public static String speakerOf(String body) {

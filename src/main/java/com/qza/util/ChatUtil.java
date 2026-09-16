@@ -46,6 +46,21 @@ public final class ChatUtil {
         send(Component.literal(message).withStyle(ChatFormatting.RED));
     }
 
+    public static void sendChat(String message) {
+        Minecraft client = Minecraft.getInstance();
+        client.execute(() -> {
+            ClientPacketListener connection = client.getConnection();
+            if (connection == null) {
+                return;
+            }
+            if (message.startsWith("/")) {
+                connection.sendCommand(message.substring(1));
+            } else {
+                connection.sendChat(message);
+            }
+        });
+    }
+
     public static void sendCommand(String commandWithoutSlash) {
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {

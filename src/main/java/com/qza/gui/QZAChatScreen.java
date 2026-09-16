@@ -55,8 +55,9 @@ public class QZAChatScreen extends Screen {
     private static final String TAB_DM = "dm";
     private static final String[] TAB_KEYS = {
             TAB_DM, ChannelHistory.ALL, ChannelHistory.PARTY,
-            ChannelHistory.GUILD, ChannelHistory.COOP};
-    private static final String[] TAB_LABELS = {"DMs", "All", "Party", "Guild", "Co-op"};
+            ChannelHistory.GUILD, ChannelHistory.COOP, ChannelHistory.EVERYTHING};
+    private static final String[] TAB_LABELS = {
+            "DMs", "All", "Party", "Guild", "Co-op", "Everything"};
     private static final int TAB_H = 14;
 
 
@@ -180,6 +181,32 @@ public class QZAChatScreen extends Screen {
 
     private static boolean isDm() {
         return TAB_DM.equals(selectedTab);
+    }
+
+    private int[] settingsRect() {
+        return new int[]{panelX + panelW - 28, panelY + 20, 16, 16};
+    }
+
+    private void drawSettings(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        int[] r = settingsRect();
+        boolean hovered = inside(mouseX, mouseY, r);
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3],
+                hovered ? 0xAA3C5A70 : 0x66223140);
+        outline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFAFD4EC : 0xFF6A8CA8);
+
+        int colour = hovered ? 0xFFFFFFFF : 0xFFCCCCCC;
+        int x = r[0] + 3;
+        int y = r[1] + 3;
+
+        graphics.fill(x + 4, y, x + 7, y + 2, colour);
+        graphics.fill(x + 4, y + 9, x + 7, y + 11, colour);
+        graphics.fill(x, y + 4, x + 2, y + 7, colour);
+        graphics.fill(x + 9, y + 4, x + 11, y + 7, colour);
+
+        graphics.fill(x + 2, y + 2, x + 9, y + 4, colour);
+        graphics.fill(x + 2, y + 7, x + 9, y + 9, colour);
+        graphics.fill(x + 2, y + 4, x + 4, y + 7, colour);
+        graphics.fill(x + 7, y + 4, x + 9, y + 7, colour);
     }
 
     private int[] tabRect(int index) {
@@ -325,6 +352,7 @@ public class QZAChatScreen extends Screen {
         }
 
         drawHeader(graphics);
+        drawSettings(graphics, mx, my);
         drawTabs(graphics, mx, my);
         if (isDm()) {
             drawAdd(graphics, mx, my);
@@ -699,7 +727,9 @@ public class QZAChatScreen extends Screen {
             return;
         }
 
-        if (isDm()) {
+        if (ChannelHistory.EVERYTHING.equals(selectedTab)) {
+            ChatUtil.sendChat(text);
+        } else if (isDm()) {
             ChatConversation conversation = current();
             if (conversation == null) {
                 return;
@@ -768,6 +798,12 @@ public class QZAChatScreen extends Screen {
         }
         if (local.button() != 0) {
             return false;
+        }
+
+        if (inside(mouseX, mouseY, settingsRect())) {
+            QZAScreen.openCategory("Chat");
+            this.minecraft.setScreen(new QZAScreen());
+            return true;
         }
 
         for (int i = 0; i < TAB_KEYS.length; i++) {

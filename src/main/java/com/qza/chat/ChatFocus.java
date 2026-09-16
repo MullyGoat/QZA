@@ -20,6 +20,7 @@ public final class ChatFocus {
             ChannelParser.PARTY,
             ChannelParser.GUILD,
             ChannelParser.COOP,
+            ChannelParser.EVERYTHING,
             MODE_RECEIVED,
             MODE_SENT);
 
@@ -57,6 +58,7 @@ public final class ChatFocus {
             case ChannelParser.PARTY -> "Party Chat";
             case ChannelParser.GUILD -> "Guild Chat";
             case ChannelParser.COOP -> "Coop Chat";
+            case ChannelParser.EVERYTHING -> "Everything";
             case MODE_RECEIVED -> "Most Recently Received";
             case MODE_SENT -> "Most Recently Sent";
             default -> "Most Recent Tab";
