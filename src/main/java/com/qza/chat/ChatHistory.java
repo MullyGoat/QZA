@@ -7,6 +7,7 @@ import com.qza.QZA;
 import com.qza.config.ConfigManager;
 import com.qza.util.ChatUtil;
 import com.qza.util.PlayerLookup;
+import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -105,15 +106,19 @@ public final class ChatHistory {
         }
     }
 
-    public static void onChatMessage(String raw) {
-        WhisperParser.Whisper whisper = WhisperParser.parse(raw);
+    public static void onChatMessage(Component rich, String plain) {
+        WhisperParser.Whisper whisper = WhisperParser.parse(plain);
         if (whisper == null) {
             return;
         }
         if (ConfigManager.get().qzaChatEnabled) {
             record(whisper.ign(), whisper.outgoing(), whisper.text());
+            ChannelHistory.record(ChannelHistory.ALL, rich, plain, whisper.ign());
         }
-        if (!whisper.outgoing()) {
+        if (whisper.outgoing()) {
+            ChatFocus.sent(ChatFocus.TAB_DM);
+        } else {
+            ChatFocus.received(ChatFocus.TAB_DM);
             ChatNotification.show(whisper.ign(), whisper.text());
         }
     }

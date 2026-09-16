@@ -1,6 +1,8 @@
 package com.qza.gui.setting;
 
+import com.qza.chat.ChatFocus;
 import com.qza.chat.ChatHistory;
+import com.qza.chat.ChatKeybind;
 import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
@@ -78,11 +80,8 @@ public final class SettingsRegistry {
                 }));
 
         settings.add(new ToggleSetting(f7, "Track Selection", "Shuffle Mode",
-                Component.literal("On: pick a ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("random").withStyle(ChatFormatting.GREEN))
-                        .append(Component.literal(" track every run. Off: always play the chosen track below.")
-                                .withStyle(ChatFormatting.GRAY)),
+                Component.literal("Picks a random song every run")
+                        .withStyle(ChatFormatting.GRAY),
                 () -> cfg.shuffleMode,
                 v -> {
                     cfg.shuffleMode = v;
@@ -91,10 +90,8 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.terminalMusicEnabled));
 
         settings.add(new DropdownSetting(f7, "Track Selection", "Chosen Track",
-                Component.literal("Pick the track from your music folder. Only used when ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("Shuffle Mode").withStyle(ChatFormatting.WHITE))
-                        .append(Component.literal(" is off.").withStyle(ChatFormatting.GRAY)),
+                Component.literal("Plays chosen song during terminal phase")
+                        .withStyle(ChatFormatting.GRAY),
                 SettingsRegistry::trackNames,
                 () -> cfg.selectedTrack,
                 v -> {
@@ -105,10 +102,10 @@ public final class SettingsRegistry {
                 MusicLibrary::reload,
                 "(no music)",
                 170)
-                .visibleWhen(() -> cfg.terminalMusicEnabled));
+                .visibleWhen(() -> cfg.terminalMusicEnabled && !cfg.shuffleMode));
 
         settings.add(new ToggleSetting(f7, "Necron Timer", "Necron Kill Time",
-                Component.literal("Announces how long it took to kill Necron before the phase is fully over")
+                Component.literal("Announces how long it took to kill Necron before phase is over")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.necronTimerEnabled,
                 v -> {
@@ -134,14 +131,12 @@ public final class SettingsRegistry {
         String music = "Music";
 
         settings.add(new ActionSetting(music, "Library", "Add Music",
-                Component.literal("Opens ")
+                Component.literal("Opens QZA's music folder - Only drag and drop ")
                         .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("config/qza/music/").withStyle(ChatFormatting.LIGHT_PURPLE))
-                        .append(Component.literal(" - drag and drop ").withStyle(ChatFormatting.GRAY))
                         .append(Component.literal(".ogg").withStyle(ChatFormatting.GREEN))
                         .append(Component.literal(" or ").withStyle(ChatFormatting.GRAY))
                         .append(Component.literal(".wav").withStyle(ChatFormatting.GREEN))
-                        .append(Component.literal(" files straight in.").withStyle(ChatFormatting.GRAY)),
+                        .append(Component.literal(" files to play").withStyle(ChatFormatting.GRAY)),
                 "Open Folder",
                 MusicLibrary::openFolder));
 
@@ -154,7 +149,7 @@ public final class SettingsRegistry {
                 }));
 
         settings.add(new ActionSetting(music, "Library", "Test Playback",
-                Component.literal("Play right now to check volume and format support.")
+                Component.literal("Tests the output of a song in the folder")
                         .withStyle(ChatFormatting.GRAY),
                 () -> MusicManager.get().isPlaying() ? "Stop" : "Play",
                 () -> MusicManager.get().toggleTestPlayback()));
@@ -171,7 +166,7 @@ public final class SettingsRegistry {
                 }));
 
         settings.add(new SliderSetting(music, "Playback", "Fade Length",
-                Component.literal("Fade in on start and fade out on stop. Music loops automatically for as long as the terminal phase lasts.")
+                Component.literal("The fade in and fade out duration of songs")
                         .withStyle(ChatFormatting.GRAY),
                 0, 5000, 100, "ms",
                 () -> cfg.fadeMillis,
@@ -184,7 +179,7 @@ public final class SettingsRegistry {
         String chat = "Chat";
 
         settings.add(new ToggleSetting(chat, "QZA Chat", "QZA Chat Toggle",
-                Component.literal("Saves the whispers you send and receive so you can read them in one place.")
+                Component.literal("All in one chat GUI for Hypixel")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.qzaChatEnabled,
                 v -> {
@@ -193,9 +188,7 @@ public final class SettingsRegistry {
                 }));
 
         settings.add(new ActionSetting(chat, "QZA Chat", "Open QZA Chat",
-                Component.literal("Opens the messaging screen. Same as ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("/qza chat").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                Component.literal("Opens QZA Chat").withStyle(ChatFormatting.GRAY),
                 () -> {
                     int unread = ChatHistory.unreadTotal();
                     return unread > 0 ? "Open (" + unread + ")" : "Open";
@@ -203,8 +196,8 @@ public final class SettingsRegistry {
                 () -> Minecraft.getInstance().setScreen(new QZAChatScreen()))
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
-        settings.add(new DropdownSetting(chat, "History", "Message History",
-                Component.literal("Keep every conversation on disk, or wipe them all when the game launches.")
+        settings.add(new DropdownSetting(chat, "History", "DM History",
+                Component.literal("Wipes DM History after closing game or keeps it forever")
                         .withStyle(ChatFormatting.GRAY),
                 () -> List.of(ChatHistory.MODE_FOREVER, ChatHistory.MODE_SESSION),
                 () -> cfg.chatHistoryMode,
@@ -219,9 +212,46 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
+        settings.add(new DropdownSetting(chat, "Open Chat", "Default Tab",
+                Component.literal("Which tab QZA Chat opens on, however you open it")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> ChatFocus.OPTIONS,
+                () -> cfg.chatDefaultTab,
+                v -> {
+                    cfg.chatDefaultTab = v;
+                    ConfigManager.save();
+                },
+                ChatFocus::label,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.qzaChatEnabled));
+
+        settings.add(new ToggleSetting(chat, "Open Chat", "Open With T",
+                Component.literal("Override chat keybind to open QZA Chat")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.openChatWithT,
+                v -> {
+                    cfg.openChatWithT = v;
+                    ChatKeybind.cancel();
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.qzaChatEnabled));
+
+        settings.add(new ActionSetting(chat, "Open Chat", "Custom Key",
+                Component.literal("Custom keybind to open QZA Chat: ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Delete").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" clears it and ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("esc").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" cancels").withStyle(ChatFormatting.GRAY)),
+                () -> ChatKeybind.capturing() ? "Press a key..." : ChatKeybind.label(),
+                ChatKeybind::arm)
+                .visibleWhen(() -> cfg.qzaChatEnabled && !cfg.openChatWithT));
+
         boolean[] confirmClear = {false};
-        settings.add(new ActionSetting(chat, "History", "Clear Messages",
-                Component.literal("Deletes every saved conversation. ")
+        settings.add(new ActionSetting(chat, "History", "Clear DMs",
+                Component.literal("Deletes every saved DM conversation. ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Click twice to confirm.")
                                 .withStyle(ChatFormatting.RED)),
@@ -240,10 +270,8 @@ public final class SettingsRegistry {
         String notify = "Notifications";
 
         settings.add(new ToggleSetting(notify, "Dungeon Runs", "Dungeon Only Notifications",
-                Component.literal("Only pop notifications while you are inside a dungeon run. ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("Everything stays silent outside of one.")
-                                .withStyle(ChatFormatting.WHITE)),
+                Component.literal("Only displays notifications while inside a Dungeon / Kuudra run")
+                        .withStyle(ChatFormatting.GRAY),
                 () -> cfg.dungeonOnlyNotifications,
                 v -> {
                     cfg.dungeonOnlyNotifications = v;
@@ -251,7 +279,7 @@ public final class SettingsRegistry {
                 }));
 
         settings.add(new DropdownSetting(notify, "Dungeon Runs", "Show During Runs",
-                Component.literal("Which notifications you still want once you are in a run.")
+                Component.literal("Only displays selected notifications during a Dungeon / Kuudra run")
                         .withStyle(ChatFormatting.GRAY),
                 () -> List.of(NotificationGate.SCOPE_BOTH,
                         NotificationGate.SCOPE_MESSAGES,
@@ -268,7 +296,7 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.dungeonOnlyNotifications));
 
         settings.add(new ToggleSetting(notify, "Party", "Party Invite Alert",
-                Component.literal("Pops a notification on screen when someone invites you to their party, so you do not miss it in busy chat.")
+                Component.literal("Displays party invite notification on screen")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.partyInviteNotifyEnabled,
                 v -> {
@@ -277,7 +305,7 @@ public final class SettingsRegistry {
                 }));
 
         settings.add(new SliderSetting(notify, "Party", "Notification Duration",
-                Component.literal("How long the invite notification stays on screen before it fades out.")
+                Component.literal("Displays duration of notification for selected amount of time")
                         .withStyle(ChatFormatting.GRAY),
                 PartyNotification.MIN_DURATION, PartyNotification.MAX_DURATION, 1, "s",
                 () -> cfg.partyNotifyDuration,
@@ -297,7 +325,7 @@ public final class SettingsRegistry {
                 }));
 
         settings.add(new DropdownSetting(notify, "QZA Chat", "Alert Mode",
-                Component.literal("Ringer plays a ding, Silent shows it quietly, Do Not Disturb hides it completely.")
+                Component.literal("Ringer plays a sound and displays notification, Silent only displays without sound, and Do Not Disturb silences and hides it")
                         .withStyle(ChatFormatting.GRAY),
                 () -> List.of(ChatNotification.MODE_RINGER,
                         ChatNotification.MODE_SILENT,
@@ -314,7 +342,7 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.chatNotifyEnabled));
 
         settings.add(new SliderSetting(notify, "QZA Chat", "Notification Duration",
-                Component.literal("How long the message notification stays on screen before it fades out.")
+                Component.literal("Displays duration of notification for selected amount of time")
                         .withStyle(ChatFormatting.GRAY),
                 ChatNotification.MIN_DURATION, ChatNotification.MAX_DURATION, 1, "s",
                 () -> cfg.chatNotifyDuration,
@@ -327,11 +355,10 @@ public final class SettingsRegistry {
         String misc = "Miscellaneous";
 
         settings.add(new SliderSetting(misc, "Interface", "GUI Scale",
-                Component.literal("Size of this settings screen. ")
+                Component.literal("Size of GUI Scale (")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("100%").withStyle(ChatFormatting.WHITE))
-                        .append(Component.literal(" is the default; lower makes it smaller.")
-                                .withStyle(ChatFormatting.GRAY)),
+                        .append(Component.literal(" is default)").withStyle(ChatFormatting.GRAY)),
                 50, 150, 5, "%",
                 () -> cfg.guiScale,
                 v -> {
@@ -339,13 +366,19 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        boolean[] confirmReset = {false};
         settings.add(new ActionSetting(misc, "Config", "Reset Settings",
-                Component.literal("Restores every option to its default. ")
+                Component.literal("Restores all settings to default. ")
                         .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("Your shitter list is kept.")
-                                .withStyle(ChatFormatting.GREEN)),
-                "Reset",
+                        .append(Component.literal("Click twice to confirm")
+                                .withStyle(ChatFormatting.RED)),
+                () -> confirmReset[0] ? "Confirm?" : "Reset",
                 () -> {
+                    if (!confirmReset[0]) {
+                        confirmReset[0] = true;
+                        return;
+                    }
+                    confirmReset[0] = false;
                     ConfigManager.reset();
                     MusicManager.get().applySettings();
                     ChatUtil.success("Settings reset to defaults.");

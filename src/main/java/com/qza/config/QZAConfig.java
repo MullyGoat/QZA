@@ -43,6 +43,12 @@ public class QZAConfig {
 
     public String chatHistoryMode = "forever";
 
+    public String chatDefaultTab = "tab";
+
+    public boolean openChatWithT = false;
+
+    public int chatKeyCode = -1;
+
     public boolean chatNotifyEnabled = true;
 
     public String chatNotifyMode = "ringer";

@@ -1,5 +1,6 @@
 package com.qza.gui;
 
+import com.qza.chat.ChatKeybind;
 import com.qza.config.ConfigManager;
 import com.qza.gui.setting.ActionSetting;
 import com.qza.gui.setting.DropdownSetting;
@@ -11,6 +12,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
@@ -687,7 +689,18 @@ public class QZAScreen extends Screen {
     }
 
     @Override
+    public boolean keyPressed(KeyEvent event) {
+        if (ChatKeybind.capturing()) {
+            ChatKeybind.capture(event.key());
+            ChatKeybind.swallowNextChar();
+            return true;
+        }
+        return super.keyPressed(event);
+    }
+
+    @Override
     public void onClose() {
+        ChatKeybind.cancel();
         ConfigManager.save();
         super.onClose();
     }

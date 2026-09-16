@@ -10,7 +10,7 @@ import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 
 public final class DungeonState {
-    private static final String MARKER = "The Catacombs";
+    private static final String[] MARKERS = {"The Catacombs", "Kuudra"};
     private static final long CACHE_MS = 500L;
 
     private static boolean inDungeon;
@@ -61,7 +61,13 @@ public final class DungeonState {
             sidebar.append('\n');
         }
 
-        return IgnUtil.stripCodes(sidebar.toString()).contains(MARKER);
+        String text = IgnUtil.stripCodes(sidebar.toString());
+        for (String marker : MARKERS) {
+            if (text.contains(marker)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void append(StringBuilder builder, Component component) {

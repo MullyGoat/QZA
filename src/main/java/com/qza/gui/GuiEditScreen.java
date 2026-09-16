@@ -51,7 +51,7 @@ public class GuiEditScreen extends Screen {
         targets.clear();
 
         targets.add(new Target(
-                PartyNotification.textFor("Steve"),
+                PartyNotification.textFor("Player"),
                 NotificationBox.PARTY_TEXT,
                 () -> cfg.partyInviteNotifyEnabled,
                 () -> cfg.partyNotifyX, () -> cfg.partyNotifyY, () -> cfg.partyNotifyScale,
@@ -62,7 +62,7 @@ public class GuiEditScreen extends Screen {
                 s -> cfg.partyNotifyScale = s));
 
         targets.add(new Target(
-                "Steve: hey are you on?",
+                "Player has sent you a message!",
                 NotificationBox.CHAT_TEXT,
                 () -> cfg.chatNotifyEnabled,
                 () -> cfg.chatNotifyX, () -> cfg.chatNotifyY, () -> cfg.chatNotifyScale,

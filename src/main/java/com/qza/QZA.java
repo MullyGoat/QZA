@@ -1,5 +1,6 @@
 package com.qza;
 
+import com.qza.chat.ChannelHistory;
 import com.qza.chat.ChatHistory;
 import com.qza.chat.ChatNotification;
 import com.qza.command.QZACommand;
@@ -15,6 +16,7 @@ import com.qza.timer.NecronTimer;
 import com.qza.timer.ServerTickClock;
 import com.qza.util.DungeonState;
 import com.qza.util.PlayerFaces;
+import com.qza.util.PlayerLookup;
 import com.qza.util.Scheduler;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -58,7 +60,8 @@ public class QZA implements ClientModInitializer {
             MusicManager.get().onChatMessage(plain);
             NecronTimer.onChatMessage(plain);
             PartyNotification.onChatMessage(plain);
-            ChatHistory.onChatMessage(plain);
+            ChatHistory.onChatMessage(message, plain);
+            ChannelHistory.onChatMessage(message, plain);
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

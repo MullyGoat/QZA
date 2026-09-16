@@ -1,11 +1,15 @@
 package com.qza.gui;
 
+import com.qza.chat.ChannelHistory;
 import com.qza.chat.ChatConversation;
+import com.qza.chat.ChatFocus;
 import com.qza.chat.ChatHistory;
 import com.qza.chat.ChatMessage;
 import com.qza.config.ConfigManager;
+import com.qza.util.ChatUtil;
 import com.qza.util.IgnUtil;
 import com.qza.util.PlayerFaces;
+import com.qza.util.PlayerLookup;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
@@ -35,10 +39,11 @@ public class QZAChatScreen extends Screen {
     private static final int OUT_BG = 0x8C4A2A52;
     private static final int OUT_BORDER = 0x80FF55FF;
 
-    private static final int HEADER_H = 44;
+    private static final int HEADER_H = 62;
     private static final int RAIL_W = 190;
     private static final int CONTACT_H = 28;
     private static final int FACE = 16;
+    private static final int SMALL_FACE = 8;
     private static final int INPUT_H = 18;
     private static final int SEND_W = 46;
     private static final int BUBBLE_PAD = 5;
@@ -47,7 +52,16 @@ public class QZAChatScreen extends Screen {
 
     private static final float TITLE_SCALE = 1.5f;
 
+    private static final String TAB_DM = "dm";
+    private static final String[] TAB_KEYS = {
+            TAB_DM, ChannelHistory.ALL, ChannelHistory.PARTY,
+            ChannelHistory.GUILD, ChannelHistory.COOP};
+    private static final String[] TAB_LABELS = {"DMs", "All", "Party", "Guild", "Co-op"};
+    private static final int TAB_H = 14;
+
+
     private static String selected;
+    private static String selectedTab = TAB_DM;
 
     private static final int MENU_W = 58;
     private static final int MENU_ROW_H = 12;
@@ -85,6 +99,14 @@ public class QZAChatScreen extends Screen {
 
     public QZAChatScreen() {
         super(Component.literal("QZA Chat"));
+
+        String wanted = ChatFocus.resolve(selectedTab);
+        for (String key : TAB_KEYS) {
+            if (key.equals(wanted)) {
+                selectedTab = wanted;
+                break;
+            }
+        }
     }
 
     private static float scale() {
@@ -141,12 +163,14 @@ public class QZAChatScreen extends Screen {
         panelW = this.width - 16;
         panelH = this.height - 12;
 
+        boolean dm = isDm();
+
         railX = panelX + 10;
         railY = panelY + HEADER_H;
         int railBottom = panelY + panelH - 10;
         railH = Math.max(40, railBottom - railY);
 
-        threadX = panelX + RAIL_W + 28;
+        threadX = dm ? panelX + RAIL_W + 28 : panelX + 12;
         int threadRight = panelX + panelW - 12;
         threadW = Math.max(120, threadRight - threadX);
         threadY = railY + 22;
@@ -154,47 +178,96 @@ public class QZAChatScreen extends Screen {
         threadH = Math.max(40, inputY - 8 - threadY);
     }
 
+    private static boolean isDm() {
+        return TAB_DM.equals(selectedTab);
+    }
+
+    private int[] tabRect(int index) {
+        int x = railX;
+        for (int i = 0; i < index; i++) {
+            x += this.font.width(TAB_LABELS[i]) + 18;
+        }
+        return new int[]{x, panelY + 42, this.font.width(TAB_LABELS[index]) + 14, TAB_H};
+    }
+
+    private void selectTab(String tab) {
+        if (tab.equals(selectedTab)) {
+            return;
+        }
+        selectedTab = tab;
+        menuFor = null;
+        setAdding(false);
+        layout();
+        repositionInput();
+        builtFor = null;
+        rebuildBubbles(true);
+    }
+
+    private void repositionInput() {
+        int boxW = threadW - SEND_W - 6;
+        input.setX(threadX + 5);
+        input.setY(inputY + 5);
+        input.setWidth(Math.max(40, boxW - 10));
+    }
+
     private ChatConversation current() {
         return selected == null ? null : ChatHistory.get(selected);
     }
 
-    private void rebuildBubbles(boolean toBottom) {
+    private List<ChatMessage> currentMessages() {
+        if (!isDm()) {
+            return ChannelHistory.get(selectedTab);
+        }
         ChatConversation conversation = current();
-        int count = conversation == null || conversation.messages == null
-                ? 0 : conversation.messages.size();
+        return conversation == null || conversation.messages == null
+                ? List.of() : conversation.messages;
+    }
 
-        boolean same = builtFor != null && builtFor.equals(selected)
-                && builtCount == count && builtWidth == threadW;
-        if (same) {
+    private static Component content(ChatMessage message) {
+        return message.rich != null ? message.rich : Component.literal(message.text);
+    }
+
+    private String builtKey() {
+        return selectedTab + "/" + (isDm() ? String.valueOf(selected) : "");
+    }
+
+    private void rebuildBubbles(boolean toBottom) {
+        List<ChatMessage> messages = currentMessages();
+        int count = messages.size();
+        String key = builtKey();
+
+        if (key.equals(builtFor) && builtCount == count && builtWidth == threadW) {
             return;
         }
 
-        boolean grew = builtFor != null && builtFor.equals(selected) && count > builtCount;
-        builtFor = selected;
+        boolean grew = key.equals(builtFor) && count > builtCount;
+        builtFor = key;
         builtCount = count;
         builtWidth = threadW;
         bubbles.clear();
 
-        if (conversation != null) {
-            int maxTextW = Math.max(40, (int) (threadW * 0.72) - (BUBBLE_PAD * 2));
-            int y = 0;
-            for (ChatMessage message : conversation.messages) {
-                List<FormattedCharSequence> lines =
-                        this.font.split(Component.literal(message.text), maxTextW);
-                if (lines.isEmpty()) {
-                    continue;
-                }
-                int widest = 0;
-                for (FormattedCharSequence line : lines) {
-                    widest = Math.max(widest, this.font.width(line));
-                }
-                Bubble bubble = new Bubble(message.outgoing, message.text, lines,
-                        widest + (BUBBLE_PAD * 2),
-                        (lines.size() * LINE_H) + (BUBBLE_PAD * 2) - 1);
-                bubble.y = y;
-                bubbles.add(bubble);
-                y += bubble.h + BUBBLE_GAP;
+        double share = isDm() ? 0.72 : 0.94;
+        int maxTextW = Math.max(40, (int) (threadW * share) - (BUBBLE_PAD * 2));
+        int y = 0;
+        for (ChatMessage message : messages) {
+            String speaker = isDm() ? null : message.speaker;
+            int faceRoom = speaker == null ? 0 : SMALL_FACE + 4;
+
+            List<FormattedCharSequence> lines =
+                    this.font.split(content(message), Math.max(30, maxTextW - faceRoom));
+            if (lines.isEmpty()) {
+                continue;
             }
+            int widest = 0;
+            for (FormattedCharSequence line : lines) {
+                widest = Math.max(widest, this.font.width(line));
+            }
+            Bubble bubble = new Bubble(message.outgoing, message.text, speaker, faceRoom, lines,
+                    widest + faceRoom + (BUBBLE_PAD * 2),
+                    (lines.size() * LINE_H) + (BUBBLE_PAD * 2) - 1);
+            bubble.y = y;
+            bubbles.add(bubble);
+            y += bubble.h + BUBBLE_GAP;
         }
 
         if (toBottom || grew) {
@@ -246,11 +319,17 @@ public class QZAChatScreen extends Screen {
 
         graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL_BG);
         outline(graphics, panelX, panelY, panelW, panelH, 0x33FFFFFF);
-        graphics.fill(panelX, panelY + HEADER_H, panelX + RAIL_W + 8, panelY + panelH, RAIL_BG);
+        if (isDm()) {
+            graphics.fill(panelX, panelY + HEADER_H, panelX + RAIL_W + 8,
+                    panelY + panelH, RAIL_BG);
+        }
 
         drawHeader(graphics);
-        drawAdd(graphics, mx, my);
-        drawContacts(graphics, mx, my);
+        drawTabs(graphics, mx, my);
+        if (isDm()) {
+            drawAdd(graphics, mx, my);
+            drawContacts(graphics, mx, my);
+        }
         drawThread(graphics);
         drawInput(graphics, mx, my);
 
@@ -278,6 +357,28 @@ public class QZAChatScreen extends Screen {
 
         graphics.fill(panelX + 8, panelY + HEADER_H - 6,
                 panelX + panelW - 8, panelY + HEADER_H - 5, DIVIDER);
+    }
+
+    private void drawTabs(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        for (int i = 0; i < TAB_KEYS.length; i++) {
+            int[] r = tabRect(i);
+            boolean active = TAB_KEYS[i].equals(selectedTab);
+            boolean hovered = inside(mouseX, mouseY, r);
+            graphics.centeredText(this.font, TAB_LABELS[i],
+                    r[0] + (r[2] / 2), r[1] + 3,
+                    active ? PINK : (hovered ? TEXT : TEXT_DIM));
+            graphics.fill(r[0], r[1] + TAB_H - 1, r[0] + r[2], r[1] + TAB_H,
+                    active ? PINK : 0x33FFFFFF);
+        }
+    }
+
+    private String channelTitle() {
+        for (int i = 0; i < TAB_KEYS.length; i++) {
+            if (TAB_KEYS[i].equals(selectedTab)) {
+                return TAB_LABELS[i] + " Chat";
+            }
+        }
+        return "Chat";
     }
 
     private void drawAdd(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -464,15 +565,18 @@ public class QZAChatScreen extends Screen {
     private void drawThread(GuiGraphicsExtractor graphics) {
         ChatConversation conversation = current();
 
-        if (conversation == null) {
-            graphics.centeredText(this.font, "Pick a conversation on the left",
-                    threadX + (threadW / 2), threadY + (threadH / 2) - 4, TEXT_DIM);
-            return;
+        if (isDm()) {
+            if (conversation == null) {
+                graphics.centeredText(this.font, "Pick a conversation on the left",
+                        threadX + (threadW / 2), threadY + (threadH / 2) - 4, TEXT_DIM);
+                return;
+            }
+            PlayerFaceExtractor.extractRenderState(graphics,
+                    PlayerFaces.skinFor(conversation.name), threadX, railY, FACE);
+            graphics.text(this.font, conversation.name, threadX + FACE + 6, railY + 4, TEXT);
+        } else {
+            graphics.text(this.font, channelTitle(), threadX, railY + 4, PINK);
         }
-
-        PlayerFaceExtractor.extractRenderState(graphics,
-                PlayerFaces.skinFor(conversation.name), threadX, railY, FACE);
-        graphics.text(this.font, conversation.name, threadX + FACE + 6, railY + 4, TEXT);
         graphics.fill(threadX, railY + 18, threadX + threadW, railY + 19, 0x33FFFFFF);
 
         String hint = System.currentTimeMillis() - copiedAt < COPIED_MS
@@ -483,7 +587,9 @@ public class QZAChatScreen extends Screen {
                 threadX + threadW - this.font.width(hint), railY + 4, hintColour);
 
         if (bubbles.isEmpty()) {
-            graphics.centeredText(this.font, "No messages in this conversation",
+            graphics.centeredText(this.font,
+                    isDm() ? "No messages in this conversation"
+                            : "Nothing in this channel yet this session",
                     threadX + (threadW / 2), threadY + (threadH / 2) - 4, TEXT_DIM);
             return;
         }
@@ -503,9 +609,15 @@ public class QZAChatScreen extends Screen {
             outline(graphics, x, y, bubble.w, bubble.h,
                     bubble.outgoing ? OUT_BORDER : IN_BORDER);
 
+            if (bubble.speaker != null && bubble.faceRoom > 0) {
+                PlayerFaceExtractor.extractRenderState(graphics,
+                        PlayerFaces.skinFor(bubble.speaker),
+                        x + BUBBLE_PAD, y + BUBBLE_PAD, SMALL_FACE);
+            }
+
             int lineY = y + BUBBLE_PAD;
             for (FormattedCharSequence line : bubble.lines) {
-                graphics.text(this.font, line, x + BUBBLE_PAD, lineY, TEXT);
+                graphics.text(this.font, line, x + BUBBLE_PAD + bubble.faceRoom, lineY, TEXT);
                 lineY += LINE_H;
             }
         }
@@ -528,7 +640,7 @@ public class QZAChatScreen extends Screen {
         outline(graphics, threadX, inputY, boxW, INPUT_H, BOX_BORDER);
 
         int[] send = sendRect();
-        boolean ready = current() != null && !input.getValue().trim().isEmpty();
+        boolean ready = !input.getValue().trim().isEmpty() && (!isDm() || current() != null);
         boolean hovered = mouseX >= send[0] && mouseX <= send[0] + send[2]
                 && mouseY >= send[1] && mouseY <= send[1] + send[3];
 
@@ -582,15 +694,21 @@ public class QZAChatScreen extends Screen {
     }
 
     private void sendCurrent() {
-        ChatConversation conversation = current();
-        if (conversation == null) {
-            return;
-        }
         String text = input.getValue().trim();
         if (text.isEmpty()) {
             return;
         }
-        ChatHistory.send(conversation.name, text);
+
+        if (isDm()) {
+            ChatConversation conversation = current();
+            if (conversation == null) {
+                return;
+            }
+            ChatHistory.send(conversation.name, text);
+        } else {
+            ChatUtil.sendCommand(ChannelHistory.command(selectedTab) + " " + text);
+        }
+        ChatFocus.sent(selectedTab);
         input.setValue("");
     }
 
@@ -652,14 +770,23 @@ public class QZAChatScreen extends Screen {
             return false;
         }
 
-        if (adding) {
-            if (inside(mouseX, mouseY, goRect())) {
-                confirmAdd();
+        for (int i = 0; i < TAB_KEYS.length; i++) {
+            if (inside(mouseX, mouseY, tabRect(i))) {
+                selectTab(TAB_KEYS[i]);
                 return true;
             }
-        } else if (inside(mouseX, mouseY, addRect())) {
-            setAdding(true);
-            return true;
+        }
+
+        if (isDm()) {
+            if (adding) {
+                if (inside(mouseX, mouseY, goRect())) {
+                    confirmAdd();
+                    return true;
+                }
+            } else if (inside(mouseX, mouseY, addRect())) {
+                setAdding(true);
+                return true;
+            }
         }
 
         if (inside(mouseX, mouseY, sendRect())) {
@@ -667,7 +794,7 @@ public class QZAChatScreen extends Screen {
             return true;
         }
 
-        if (mouseX >= railX - 2 && mouseX <= railX + RAIL_W
+        if (isDm() && mouseX >= railX - 2 && mouseX <= railX + RAIL_W
                 && mouseY >= railY && mouseY <= railY + railH) {
             ChatConversation hit = contactAt(mouseX, mouseY);
             if (hit != null) {
@@ -699,18 +826,23 @@ public class QZAChatScreen extends Screen {
     }
 
     private void copy(Bubble bubble) {
-        ChatConversation conversation = current();
-        if (conversation == null) {
-            return;
+        String line;
+        if (isDm()) {
+            ChatConversation conversation = current();
+            if (conversation == null) {
+                return;
+            }
+            line = (bubble.outgoing ? "To " : "From ")
+                    + conversation.name + ": " + bubble.text;
+        } else {
+            line = bubble.text;
         }
-        String line = (bubble.outgoing ? "To " : "From ")
-                + conversation.name + ": " + bubble.text;
         this.minecraft.keyboardHandler.setClipboard(line);
         copiedAt = System.currentTimeMillis();
     }
 
     private ChatConversation contactAt(double x, double y) {
-        if (x < railX - 2 || x > railX + RAIL_W || y < railY || y > railY + railH) {
+        if (!isDm() || x < railX - 2 || x > railX + RAIL_W || y < railY || y > railY + railH) {
             return null;
         }
         List<ChatConversation> all = ChatHistory.conversations();
@@ -727,7 +859,8 @@ public class QZAChatScreen extends Screen {
         double mx = (mouseX - offsetX()) / s;
         double my = (mouseY - offsetY()) / s;
 
-        if (mx >= railX - 2 && mx <= railX + RAIL_W + 6 && my >= railY && my <= railY + railH) {
+        if (isDm() && mx >= railX - 2 && mx <= railX + RAIL_W + 6
+                && my >= railY && my <= railY + railH) {
             railScroll -= verticalAmount * CONTACT_H;
             clampRailScroll();
             return true;
@@ -773,14 +906,19 @@ public class QZAChatScreen extends Screen {
     private static final class Bubble {
         final boolean outgoing;
         final String text;
+        final String speaker;
+        final int faceRoom;
         final List<FormattedCharSequence> lines;
         final int w;
         final int h;
         int y;
 
-        Bubble(boolean outgoing, String text, List<FormattedCharSequence> lines, int w, int h) {
+        Bubble(boolean outgoing, String text, String speaker, int faceRoom,
+               List<FormattedCharSequence> lines, int w, int h) {
             this.outgoing = outgoing;
             this.text = text;
+            this.speaker = speaker;
+            this.faceRoom = faceRoom;
             this.lines = lines;
             this.w = w;
             this.h = h;
