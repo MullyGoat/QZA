@@ -51,3 +51,17 @@ and drop it into your `mods` folder alongside Fabric API.
 
 Settings, the shitter list, your saved DMs and your music live in `config/qza/`, so
 updating the mod never touches them.
+
+## Music formats
+
+Drop `.mp3`, `.ogg`, `.wav`, `.aiff` or `.au` files into `config/qza/music/` and they
+play as-is. No converting, and nothing extra to install.
+
+## Third-party code
+
+QZA bundles two audio decoders as nested jars so nothing has to be installed separately:
+
+- [JLayer](http://www.javazoom.net/javalayer/javalayer.html) by JavaZoom — mp3 decoding, LGPL
+- [Concentus](https://github.com/lostromb/concentus) by Logan Stromberg — Opus decoding, BSD
+
+Both ship as separate jars inside `META-INF/jars/`, so either can be swapped out.

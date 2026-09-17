@@ -14,6 +14,7 @@ final class JavaSoundPcmStream implements PcmStream {
     private final AudioInputStream stream;
     private final int sampleRate;
     private final int channels;
+    private final double lengthSeconds;
 
     JavaSoundPcmStream(Path path) throws IOException {
         InputStream raw = new BufferedInputStream(Files.newInputStream(path), 1 << 16);
@@ -22,7 +23,7 @@ final class JavaSoundPcmStream implements PcmStream {
             source = AudioSystem.getAudioInputStream(raw);
         } catch (UnsupportedAudioFileException e) {
             raw.close();
-            throw new IOException("Not a readable audio file: " + path.getFileName(), e);
+            throw new IOException("Song is not a readable audio file", e);
         }
 
         AudioFormat in = source.getFormat();
@@ -38,9 +39,17 @@ final class JavaSoundPcmStream implements PcmStream {
                 rate,
                 false );
 
+        long frames = source.getFrameLength();
+        this.lengthSeconds = frames > 0 ? frames / (double) rate : 0.0;
+
         this.stream = AudioSystem.getAudioInputStream(target, source);
         this.sampleRate = (int) rate;
         this.channels = ch;
+    }
+
+    @Override
+    public double lengthSeconds() {
+        return lengthSeconds;
     }
 
     @Override

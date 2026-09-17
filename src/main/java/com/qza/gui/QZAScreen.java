@@ -44,6 +44,7 @@ public class QZAScreen extends Screen {
     private static final int SLIDER_H = 10;
     private static final int BUTTON_W = 88;
     private static final int BUTTON_H = 18;
+    private static final int PENCIL_W = 18;
 
     private static final float TITLE_SCALE = 1.5f;
 
@@ -182,7 +183,7 @@ public class QZAScreen extends Screen {
             return SLIDER_W + sliderLabelReserve(slider);
         }
         if (setting instanceof DropdownSetting dropdown) {
-            return dropdown.width;
+            return dropdown.width + (dropdown.hasEdit() ? PENCIL_W + 4 : 0);
         }
         if (setting instanceof ActionSetting action && action.buttonWidth > 0) {
             return action.buttonWidth;
@@ -365,9 +366,13 @@ public class QZAScreen extends Screen {
                     r[0] - this.font.width(label) - 6, r[1] + 1, TEXT);
             drawSlider(graphics, r[0], r[1], slider.fraction());
         } else if (setting instanceof DropdownSetting dropdown) {
-            int[] r = buttonRect(row, y);
+            int[] r = dropdownRect(row, y);
             drawDropdownButton(graphics, r[0], r[1], r[2],
                     dropdown.currentLabel(), inside(mouseX, mouseY, r));
+            if (dropdown.hasEdit()) {
+                int[] p = pencilRect(row, y);
+                drawPencil(graphics, p, inside(mouseX, mouseY, p));
+            }
         } else if (setting instanceof ActionSetting action) {
             int[] r = buttonRect(row, y);
             drawButton(graphics, r[0], r[1], r[2], action.buttonLabel(), inside(mouseX, mouseY, r));
@@ -536,6 +541,34 @@ public class QZAScreen extends Screen {
         return new int[]{x, y + ((row.height - BUTTON_H) / 2), w, BUTTON_H};
     }
 
+    private int[] dropdownRect(Row row, int y) {
+        int[] r = buttonRect(row, y);
+        if (row.setting instanceof DropdownSetting dropdown && dropdown.hasEdit()) {
+            return new int[]{r[0] + PENCIL_W + 4, r[1], dropdown.width, r[3]};
+        }
+        return r;
+    }
+
+    private int[] pencilRect(Row row, int y) {
+        int[] r = buttonRect(row, y);
+        return new int[]{r[0], r[1], PENCIL_W, r[3]};
+    }
+
+    private void drawPencil(GuiGraphicsExtractor graphics, int[] r, boolean hovered) {
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3],
+                hovered ? 0xAA3C5A70 : 0x99223140);
+        outline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFAFD4EC : 0xFF6A8CA8);
+
+        int colour = hovered ? 0xFFFFFFFF : 0xFFCCCCCC;
+        int x = r[0] + 4;
+        int y = r[1] + r[3] - 5;
+
+        for (int i = 0; i < 6; i++) {
+            graphics.fill(x + i, y - i, x + i + 2, y - i + 2, colour);
+        }
+        graphics.fill(x, y + 1, x + 2, y + 3, PINK);
+    }
+
     private static boolean inside(double mouseX, double mouseY, int[] rect) {
         return mouseX >= rect[0] && mouseX <= rect[0] + rect[2]
                 && mouseY >= rect[1] && mouseY <= rect[1] + rect[3];
@@ -635,7 +668,11 @@ public class QZAScreen extends Screen {
                     return true;
                 }
             } else if (row.setting instanceof DropdownSetting dropdown) {
-                int[] r = buttonRect(row, y);
+                if (dropdown.hasEdit() && inside(mouseX, mouseY, pencilRect(row, y))) {
+                    dropdown.edit();
+                    return true;
+                }
+                int[] r = dropdownRect(row, y);
                 if (inside(mouseX, mouseY, r)) {
                     openDropdownAt(dropdown, r);
                     return true;

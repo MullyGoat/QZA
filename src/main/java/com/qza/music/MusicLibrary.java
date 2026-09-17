@@ -18,9 +18,9 @@ public final class MusicLibrary {
     private static final String README = """
             Drop your terminal-phase music in this folder.
 
-            Supported formats: .ogg (recommended), .wav, .aiff, .au
-            MP3 is not decodable by the JDK -- convert it to .ogg first
-            (Audacity: File > Export > Export as OGG).
+            Supported formats: .mp3, .ogg, .wav, .aiff, .au
+
+            No converting needed -- drop the file in and it plays.
 
             Multiple files become a playlist. Shuffle and looping are
             toggleable in /qza under the Music category.
@@ -40,7 +40,9 @@ public final class MusicLibrary {
         try {
             Files.createDirectories(dir);
             Path readme = dir.resolve("README.txt");
-            if (!Files.exists(readme)) {
+            String existing = Files.isRegularFile(readme)
+                    ? Files.readString(readme, StandardCharsets.UTF_8) : null;
+            if (!README.equals(existing)) {
                 Files.writeString(readme, README, StandardCharsets.UTF_8);
             }
         } catch (IOException e) {

@@ -1,5 +1,8 @@
 package com.qza.config;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public class QZAConfig {
     public boolean shitterListEnabled = true;
 
@@ -14,6 +17,10 @@ public class QZAConfig {
     public boolean shuffleMode = true;
 
     public String selectedTrack = "";
+
+    public Map<String, String> trackNames = new LinkedHashMap<>();
+
+    public Map<String, com.qza.music.TrackTrim> trackTrims = new LinkedHashMap<>();
 
     public double musicVolume = 60.0;
 

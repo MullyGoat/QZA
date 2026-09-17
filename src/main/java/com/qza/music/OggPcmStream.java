@@ -8,8 +8,6 @@ import org.lwjgl.system.MemoryUtil;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ShortBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 final class OggPcmStream implements PcmStream {
     private ByteBuffer fileData;
@@ -19,8 +17,7 @@ final class OggPcmStream implements PcmStream {
     private final int sampleRate;
     private final int channels;
 
-    OggPcmStream(Path path) throws IOException {
-        byte[] bytes = Files.readAllBytes(path);
+    OggPcmStream(byte[] bytes) throws IOException {
         this.fileData = MemoryUtil.memAlloc(bytes.length);
         this.fileData.put(bytes);
         this.fileData.flip();
@@ -31,8 +28,8 @@ final class OggPcmStream implements PcmStream {
             if (handle == MemoryUtil.NULL) {
                 MemoryUtil.memFree(fileData);
                 fileData = null;
-                throw new IOException("stb_vorbis could not open " + path.getFileName()
-                        + " (error " + error.get(0) + ")");
+                throw new IOException("Song could not be decoded (stb_vorbis error "
+                        + error.get(0) + ")");
             }
 
             STBVorbisInfo info = STBVorbisInfo.malloc(stack);
@@ -40,6 +37,23 @@ final class OggPcmStream implements PcmStream {
             this.channels = info.channels();
             this.sampleRate = info.sample_rate();
         }
+    }
+
+    @Override
+    public double lengthSeconds() {
+        if (handle == MemoryUtil.NULL) {
+            return 0.0;
+        }
+        return STBVorbis.stb_vorbis_stream_length_in_seconds(handle);
+    }
+
+    @Override
+    public boolean seekSeconds(double seconds) {
+        if (handle == MemoryUtil.NULL || seconds <= 0.0 || sampleRate <= 0) {
+            return false;
+        }
+        int target = (int) Math.round(seconds * sampleRate);
+        return STBVorbis.stb_vorbis_seek(handle, target);
     }
 
     @Override

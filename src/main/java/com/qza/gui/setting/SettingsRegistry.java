@@ -6,7 +6,9 @@ import com.qza.chat.ChatKeybind;
 import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.QZAChatScreen;
+import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationGate;
@@ -98,10 +100,14 @@ public final class SettingsRegistry {
                     cfg.selectedTrack = v;
                     ConfigManager.save();
                 },
-                SettingsRegistry::stripExtension,
+                MusicAliases::display,
                 MusicLibrary::reload,
                 "(no music)",
-                170)
+                170,
+                () -> {
+                    MusicLibrary.reload();
+                    Minecraft.getInstance().setScreen(new MusicNamesScreen());
+                })
                 .visibleWhen(() -> cfg.terminalMusicEnabled && !cfg.shuffleMode));
 
         settings.add(new ToggleSetting(f7, "Necron Timer", "Necron Kill Time",
@@ -133,6 +139,8 @@ public final class SettingsRegistry {
         settings.add(new ActionSetting(music, "Library", "Add Music",
                 Component.literal("Opens QZA's music folder - Only drag and drop ")
                         .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(".mp3").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(", ").withStyle(ChatFormatting.GRAY))
                         .append(Component.literal(".ogg").withStyle(ChatFormatting.GREEN))
                         .append(Component.literal(" or ").withStyle(ChatFormatting.GRAY))
                         .append(Component.literal(".wav").withStyle(ChatFormatting.GREEN))
@@ -142,7 +150,7 @@ public final class SettingsRegistry {
 
         settings.add(new ActionSetting(music, "Library", "Reload Playlist",
                 Component.literal("Re-scan the folder after adding files.").withStyle(ChatFormatting.GRAY),
-                () -> MusicLibrary.count() + " track" + (MusicLibrary.count() == 1 ? "" : "s"),
+                "Refresh",
                 () -> {
                     int found = MusicLibrary.reload().size();
                     ChatUtil.success("Found " + found + " track" + (found == 1 ? "" : "s") + ".");
@@ -434,8 +442,4 @@ public final class SettingsRegistry {
         return "client".equals(raw) ? "Client Notification" : "Announce to Party";
     }
 
-    private static String stripExtension(String name) {
-        int dot = name.lastIndexOf('.');
-        return dot > 0 ? name.substring(0, dot) : name;
-    }
 }

@@ -13,6 +13,7 @@ public class DropdownSetting extends Setting {
     private final Consumer<String> setter;
     private final Function<String, String> display;
     private final Runnable onOpen;
+    private final Runnable editAction;
 
     public final String emptyLabel;
     public final int width;
@@ -25,6 +26,19 @@ public class DropdownSetting extends Setting {
                            Runnable onOpen,
                            String emptyLabel,
                            int width) {
+        this(category, section, title, description, options, getter, setter,
+                display, onOpen, emptyLabel, width, null);
+    }
+
+    public DropdownSetting(String category, String section, String title, Component description,
+                           Supplier<List<String>> options,
+                           Supplier<String> getter,
+                           Consumer<String> setter,
+                           Function<String, String> display,
+                           Runnable onOpen,
+                           String emptyLabel,
+                           int width,
+                           Runnable editAction) {
         super(category, section, title, description);
         this.options = options;
         this.getter = getter;
@@ -33,6 +47,17 @@ public class DropdownSetting extends Setting {
         this.onOpen = onOpen;
         this.emptyLabel = emptyLabel;
         this.width = width;
+        this.editAction = editAction;
+    }
+
+    public boolean hasEdit() {
+        return editAction != null;
+    }
+
+    public void edit() {
+        if (editAction != null) {
+            editAction.run();
+        }
     }
 
     public List<String> options() {

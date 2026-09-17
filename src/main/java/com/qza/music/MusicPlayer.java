@@ -1,6 +1,7 @@
 package com.qza.music;
 
 import com.qza.QZA;
+import com.qza.util.ChatUtil;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -88,6 +89,7 @@ public final class MusicPlayer {
         try {
             int index = 0;
             boolean firstTrack = true;
+            int failures = 0;
             while (!stopRequested) {
                 if (index >= playlist.size()) {
                     if (!loop) {
@@ -97,8 +99,17 @@ public final class MusicPlayer {
                 }
                 Path track = playlist.get(index++);
                 currentTrack = track;
-                playTrack(track, firstTrack ? fadeMillis : 0);
+                boolean played = playTrack(track, firstTrack ? fadeMillis : 0);
                 firstTrack = false;
+
+                if (played) {
+                    failures = 0;
+                    continue;
+                }
+                if (fadeOutRequested || ++failures >= playlist.size()) {
+                    QZA.LOGGER.error("No playable tracks left - stopping music");
+                    break;
+                }
             }
         } catch (Throwable t) {
             QZA.LOGGER.error("Music thread died", t);
@@ -107,10 +118,11 @@ public final class MusicPlayer {
         }
     }
 
-    private void playTrack(Path track, int fadeInMillis) {
+    private boolean playTrack(Path track, int fadeInMillis) {
         PcmStream stream = null;
         SourceDataLine line = null;
         boolean hardStop = false;
+        boolean played = false;
 
         try {
             stream = PcmStream.open(track);
@@ -126,6 +138,16 @@ public final class MusicPlayer {
             line.start();
 
             byte[] buffer = new byte[align(BUFFER_BYTES, frameBytes)];
+
+            String fileName = track.getFileName().toString();
+            double trimStart = MusicTrims.start(fileName);
+            double trimEnd = MusicTrims.end(fileName);
+            if (trimStart > 0 && !stream.seekSeconds(trimStart)) {
+                skipSeconds(stream, buffer, trimStart, rate, frameBytes);
+            }
+            long limitFrames = trimEnd > trimStart
+                    ? Math.round((trimEnd - trimStart) * rate) : -1L;
+
             long framesPlayed = 0;
             long fadeInFrames = (long) fadeInMillis * rate / 1000L;
             long fadeOutFrames = Math.max(1L, (long) fadeMillis * rate / 1000L);
@@ -140,15 +162,26 @@ public final class MusicPlayer {
                     fadeOutStartFrame = framesPlayed;
                 }
 
+                if (limitFrames > 0 && framesPlayed >= limitFrames) {
+                    break;
+                }
+
                 int read = stream.read(buffer, 0, buffer.length);
                 if (read <= 0) {
                     break;
+                }
+                if (limitFrames > 0) {
+                    long room = (limitFrames - framesPlayed) * frameBytes;
+                    if (read > room) {
+                        read = (int) room;
+                    }
                 }
 
                 applyGain(buffer, read, frameBytes, channels,
                         framesPlayed, fadeInFrames, fadeOutStartFrame, fadeOutFrames);
                 line.write(buffer, 0, read);
                 framesPlayed += read / frameBytes;
+                played = true;
 
                 if (fadeOutStartFrame >= 0 && framesPlayed - fadeOutStartFrame >= fadeOutFrames) {
                     stopRequested = true;
@@ -158,6 +191,7 @@ public final class MusicPlayer {
             }
         } catch (Exception e) {
             QZA.LOGGER.error("Could not play {}", track.getFileName(), e);
+            ChatUtil.error("Could not play " + track.getFileName() + " - " + e.getMessage());
         } finally {
             if (line != null) {
                 try {
@@ -177,6 +211,24 @@ public final class MusicPlayer {
             if (stream != null) {
                 stream.close();
             }
+        }
+        return played;
+    }
+
+    private void skipSeconds(PcmStream stream, byte[] buffer,
+                             double seconds, int rate, int frameBytes) throws Exception {
+        long wanted = Math.round(seconds * rate) * frameBytes;
+        while (wanted > 0 && !stopRequested) {
+            int chunk = (int) Math.min(buffer.length, wanted);
+            chunk = (chunk / frameBytes) * frameBytes;
+            if (chunk <= 0) {
+                return;
+            }
+            int read = stream.read(buffer, 0, chunk);
+            if (read <= 0) {
+                return;
+            }
+            wanted -= read;
         }
     }
 
