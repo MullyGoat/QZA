@@ -2,10 +2,15 @@ package com.qza.chat;
 
 import com.qza.util.IgnUtil;
 
+import java.util.Locale;
+import java.util.Set;
+
 public final class WhisperParser {
     private static final String FROM = "From ";
     private static final String TO = "To ";
     private static final int MAX_LENGTH = 512;
+
+    private static final Set<String> RESERVED_NAMES = Set.of("stash");
 
     private WhisperParser() {
     }
@@ -44,6 +49,9 @@ public final class WhisperParser {
 
         String ign = IgnUtil.trailingName(who);
         if (ign == null || !isRankOnly(who.substring(0, IgnUtil.nameStart(who, ign)))) {
+            return null;
+        }
+        if (RESERVED_NAMES.contains(ign.toLowerCase(Locale.ROOT))) {
             return null;
         }
 
