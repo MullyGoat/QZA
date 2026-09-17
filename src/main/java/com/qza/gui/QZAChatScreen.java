@@ -12,6 +12,7 @@ import com.qza.util.PlayerFaces;
 import com.qza.util.PlayerLookup;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
@@ -82,6 +83,8 @@ public class QZAChatScreen extends Screen {
     private EditBox ignInput;
     private boolean adding;
     private boolean inviting;
+
+    private CommandSuggestions commandSuggestions;
 
     private String menuFor;
     private int menuX;
@@ -170,6 +173,14 @@ public class QZAChatScreen extends Screen {
 
         setInitialFocus(input);
 
+        // Vanilla's own component, so the popup, the highlight, the grey ghost
+        // text and the argument usage hints all look and behave exactly as
+        // they do in normal chat. Same arguments vanilla's ChatScreen uses.
+        commandSuggestions = new CommandSuggestions(this.minecraft, this, input, this.font,
+                false, false, 1, 10, true, 0xD0000000);
+        input.setResponder(text -> refreshSuggestions());
+        refreshSuggestions();
+
         builtFor = null;
         rebuildBubbles(true);
     }
@@ -241,10 +252,70 @@ public class QZAChatScreen extends Screen {
         menuFor = null;
         inviting = false;
         setAdding(false);
+        refreshSuggestions();
         layout();
         repositionInput();
         builtFor = null;
         rebuildBubbles(true);
+    }
+
+    /**
+     * True while the box holds nothing but a slash, where a list of every
+     * command on the server would only be noise.
+     */
+    private static boolean isBareSlash(String text) {
+        return text != null && text.startsWith("/") && text.substring(1).isBlank();
+    }
+
+    /** Completion is for running commands, which the DMs tab does not do. */
+    private boolean suggestionsAllowed() {
+        return !isDm() && !adding && !inviting && menuFor == null;
+    }
+
+    /**
+     * Vanilla anchors the popup and the usage hint to {@code screen.height - 12},
+     * which is where its own chat box sits at the bottom of the screen. QZA's box
+     * is partway up inside the panel, so everything it draws is shifted by the
+     * difference to land just above the box instead of on top of it.
+     */
+    private int suggestionShiftY() {
+        return inputY - (this.height - 12);
+    }
+
+    /** Recomputes the popup and the grey ghost text after the line changes. */
+    private void refreshSuggestions() {
+        if (commandSuggestions == null || input == null) {
+            return;
+        }
+        if (!suggestionsAllowed()) {
+            commandSuggestions.setAllowSuggestions(false);
+            input.setSuggestion(null);
+            return;
+        }
+
+        commandSuggestions.setAllowSuggestions(true);
+        commandSuggestions.updateCommandInfo();
+
+        if (isBareSlash(input.getValue())) {
+            commandSuggestions.hide();
+            input.setSuggestion(null);
+        }
+    }
+
+    /**
+     * Keeps the gate honest between keystrokes, since opening a menu or the
+     * IGN field does not change the text.
+     */
+    private void updateSuggestionGate() {
+        if (commandSuggestions == null || input == null) {
+            return;
+        }
+        if (!suggestionsAllowed()) {
+            commandSuggestions.setAllowSuggestions(false);
+            input.setSuggestion(null);
+        } else {
+            commandSuggestions.setAllowSuggestions(true);
+        }
     }
 
     private void repositionInput() {
@@ -366,6 +437,7 @@ public class QZAChatScreen extends Screen {
         int my = Math.round((mouseY - offsetY()) / s);
 
         updateHover(mx, my);
+        updateSuggestionGate();
 
         graphics.pose().pushMatrix();
         graphics.pose().translate(offsetX(), offsetY());
@@ -393,6 +465,15 @@ public class QZAChatScreen extends Screen {
 
         drawHoverText(graphics);
         drawMenu(graphics, mx, my);
+
+        // Last, so the list sits above the thread while it is open.
+        if (commandSuggestions != null && suggestionsAllowed()) {
+            int shift = suggestionShiftY();
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(0f, (float) shift);
+            commandSuggestions.extractRenderState(graphics, mx, my - shift);
+            graphics.pose().popMatrix();
+        }
 
         graphics.pose().popMatrix();
     }
@@ -465,6 +546,23 @@ public class QZAChatScreen extends Screen {
                 valid ? (hovered ? PINK : 0xFFB05CB8) : 0xFF5A5A5A);
         graphics.centeredText(this.font, "Go", go[0] + (go[2] / 2), go[1] + 4,
                 valid ? TEXT : TEXT_FAINT);
+    }
+
+    private int[] kebabRect(int rowY) {
+        return new int[]{railX + RAIL_W - 13, rowY + 2, 11, 13};
+    }
+
+    private void drawKebab(GuiGraphicsExtractor graphics, int[] r, boolean hovered) {
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3],
+                hovered ? 0xAA3C5A70 : 0x44223140);
+        outline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFAFD4EC : 0x666A8CA8);
+
+        int colour = hovered ? 0xFFFFFFFF : 0xFFCCCCCC;
+        int x = r[0] + 5;
+        int y = r[1] + 3;
+        graphics.fill(x, y, x + 2, y + 2, colour);
+        graphics.fill(x, y + 3, x + 2, y + 5, colour);
+        graphics.fill(x, y + 6, x + 2, y + 8, colour);
     }
 
     private void drawMenu(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -611,10 +709,15 @@ public class QZAChatScreen extends Screen {
             graphics.text(this.font, trim(conversation.preview(), room + 20), nameX, y + 15,
                     TEXT_FAINT);
 
-            String when = ago(conversation.lastActivity);
-            if (!when.isEmpty()) {
-                graphics.text(this.font, when,
-                        railX + RAIL_W - this.font.width(when) - 4, y + 4, TEXT_FAINT);
+            if (hovered) {
+                int[] kebab = kebabRect(y);
+                drawKebab(graphics, kebab, inside(mouseX, mouseY, kebab));
+            } else {
+                String when = ago(conversation.lastActivity);
+                if (!when.isEmpty()) {
+                    graphics.text(this.font, when,
+                            railX + RAIL_W - this.font.width(when) - 4, y + 4, TEXT_FAINT);
+                }
             }
             if (conversation.unread > 0) {
                 String badge = conversation.unread > 9 ? "9+" : String.valueOf(conversation.unread);
@@ -890,6 +993,14 @@ public class QZAChatScreen extends Screen {
         double mouseX = local.x();
         double mouseY = local.y();
 
+        if (commandSuggestions != null && suggestionsAllowed()) {
+            MouseButtonEvent shifted = new MouseButtonEvent(local.x(),
+                    local.y() - suggestionShiftY(), local.buttonInfo());
+            if (commandSuggestions.mouseClicked(shifted)) {
+                return true;
+            }
+        }
+
         if (menuFor != null) {
             boolean inMenu = mouseX >= menuX && mouseX <= menuX + MENU_W
                     && mouseY >= menuY && mouseY <= menuY + menuHeight();
@@ -982,6 +1093,10 @@ public class QZAChatScreen extends Screen {
         if (isDm() && mouseX >= railX - 2 && mouseX <= railX + RAIL_W
                 && mouseY >= railY && mouseY <= railY + railH) {
             ChatConversation hit = contactAt(mouseX, mouseY);
+            if (hit != null && inside(mouseX, mouseY, kebabRect(contactRowY(hit)))) {
+                openMenu(hit.name, mouseX, mouseY);
+                return true;
+            }
             if (hit != null) {
                 selected = hit.name;
                 ChatHistory.markRead(selected);
@@ -1196,6 +1311,17 @@ public class QZAChatScreen extends Screen {
         copiedAt = System.currentTimeMillis();
     }
 
+    private int contactRowY(ChatConversation conversation) {
+        List<ChatConversation> all = ChatHistory.conversations();
+        int top = railY - (int) Math.round(railScroll);
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i) == conversation) {
+                return top + (i * CONTACT_H);
+            }
+        }
+        return Integer.MIN_VALUE;
+    }
+
     private ChatConversation contactAt(double x, double y) {
         if (!isDm() || x < railX - 2 || x > railX + RAIL_W || y < railY || y > railY + railH) {
             return null;
@@ -1219,6 +1345,11 @@ public class QZAChatScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY,
                                  double horizontalAmount, double verticalAmount) {
+        if (commandSuggestions != null && suggestionsAllowed()
+                && commandSuggestions.mouseScrolled(verticalAmount)) {
+            return true;
+        }
+
         menuFor = null;
 
         float s = scale();
@@ -1243,6 +1374,14 @@ public class QZAChatScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        // The popup takes the arrows, Tab and Escape while it is open. It never
+        // takes Enter, so sending still works. Suppressed on a bare slash so
+        // Tab cannot force the full command list open either.
+        if (commandSuggestions != null && suggestionsAllowed()
+                && !isBareSlash(input.getValue())
+                && commandSuggestions.keyPressed(event)) {
+            return true;
+        }
         if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
             if (adding) {
                 confirmAdd();
