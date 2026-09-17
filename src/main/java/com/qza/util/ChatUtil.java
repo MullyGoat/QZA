@@ -54,7 +54,7 @@ public final class ChatUtil {
                 return;
             }
             if (message.startsWith("/")) {
-                connection.sendCommand(message.substring(1));
+                connection.sendUnattendedCommand(message.substring(1), client.screen);
             } else {
                 connection.sendChat(message);
             }

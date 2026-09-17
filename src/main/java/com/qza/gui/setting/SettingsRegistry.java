@@ -196,20 +196,14 @@ public final class SettingsRegistry {
                 () -> Minecraft.getInstance().setScreen(new QZAChatScreen()))
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
-        settings.add(new DropdownSetting(chat, "History", "DM History",
-                Component.literal("Wipes DM History after closing game or keeps it forever")
+        settings.add(new ToggleSetting(chat, "QZA Chat", "Hide Vanilla Chat",
+                Component.literal("Hides Minecraft's chat in the corner while QZA Chat is open")
                         .withStyle(ChatFormatting.GRAY),
-                () -> List.of(ChatHistory.MODE_FOREVER, ChatHistory.MODE_SESSION),
-                () -> cfg.chatHistoryMode,
+                () -> cfg.hideVanillaChat,
                 v -> {
-                    cfg.chatHistoryMode = v;
+                    cfg.hideVanillaChat = v;
                     ConfigManager.save();
-                    ChatHistory.save();
-                },
-                SettingsRegistry::historyModeLabel,
-                null,
-                "(none)",
-                170)
+                })
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
         settings.add(new DropdownSetting(chat, "Open Chat", "Default Tab",
@@ -248,6 +242,22 @@ public final class SettingsRegistry {
                 () -> ChatKeybind.capturing() ? "Press a key..." : ChatKeybind.label(),
                 ChatKeybind::arm)
                 .visibleWhen(() -> cfg.qzaChatEnabled && !cfg.openChatWithT));
+
+        settings.add(new DropdownSetting(chat, "History", "DM History",
+                Component.literal("Wipes DM History after closing game or keeps it forever")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> List.of(ChatHistory.MODE_FOREVER, ChatHistory.MODE_SESSION),
+                () -> cfg.chatHistoryMode,
+                v -> {
+                    cfg.chatHistoryMode = v;
+                    ConfigManager.save();
+                    ChatHistory.save();
+                },
+                SettingsRegistry::historyModeLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.qzaChatEnabled));
 
         boolean[] confirmClear = {false};
         settings.add(new ActionSetting(chat, "History", "Clear DMs",

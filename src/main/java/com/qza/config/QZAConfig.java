@@ -45,6 +45,8 @@ public class QZAConfig {
 
     public String chatDefaultTab = "everything";
 
+    public boolean hideVanillaChat = false;
+
     public boolean openChatWithT = false;
 
     public int chatKeyCode = -1;

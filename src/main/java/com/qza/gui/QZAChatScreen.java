@@ -21,6 +21,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Util;
@@ -390,6 +391,7 @@ public class QZAChatScreen extends Screen {
 
         super.extractRenderState(graphics, mx, my, delta);
 
+        drawHoverText(graphics);
         drawMenu(graphics, mx, my);
 
         graphics.pose().popMatrix();
@@ -695,7 +697,8 @@ public class QZAChatScreen extends Screen {
                 lineY += LINE_H;
             }
 
-            if (bubble == hoverBubble && hoverSegment != null) {
+            if (bubble == hoverBubble && hoverSegment != null
+                    && hoverSegment.style().getClickEvent() != null) {
                 int underlineY = y + BUBBLE_PAD + (hoverSegment.line() * LINE_H) + 9;
                 graphics.fill(textX + Math.round(hoverSegment.start()), underlineY,
                         textX + Math.round(hoverSegment.end()), underlineY + 1, 0xFFFFFFFF);
@@ -1056,12 +1059,61 @@ public class QZAChatScreen extends Screen {
             return;
         }
         Segment segment = segmentAtBubble(bubble, mouseX, mouseY);
-        boolean clickable = segment != null && segment.style().getClickEvent() != null;
-        if (clickable) {
+        if (segment == null) {
+            applyHandCursor(false);
+            return;
+        }
+
+        boolean clickable = segment.style().getClickEvent() != null;
+        if (clickable || segment.style().getHoverEvent() != null) {
             hoverBubble = bubble;
             hoverSegment = segment;
         }
         applyHandCursor(clickable);
+    }
+
+    private void drawHoverText(GuiGraphicsExtractor graphics) {
+        if (hoverBubble == null || hoverSegment == null) {
+            return;
+        }
+        if (!(hoverSegment.style().getHoverEvent() instanceof HoverEvent.ShowText show)) {
+            return;
+        }
+
+        List<FormattedCharSequence> lines =
+                this.font.split(show.value(), Math.max(120, (int) (threadW * 0.8)));
+        if (lines.isEmpty()) {
+            return;
+        }
+
+        int widest = 0;
+        for (FormattedCharSequence line : lines) {
+            widest = Math.max(widest, this.font.width(line));
+        }
+
+        int top = threadY - (int) Math.round(threadScroll);
+        int bubbleX = hoverBubble.outgoing
+                ? threadX + threadW - hoverBubble.w : threadX;
+        int textX = bubbleX + BUBBLE_PAD + hoverBubble.faceRoom;
+
+        int w = widest + 8;
+        int h = (lines.size() * LINE_H) + 6;
+        int x = Math.max(panelX + 4,
+                Math.min(textX + Math.round(hoverSegment.start()),
+                        panelX + panelW - w - 4));
+        int y = top + hoverBubble.y + BUBBLE_PAD + (hoverSegment.line() * LINE_H) + LINE_H + 2;
+        if (y + h > panelY + panelH - 4) {
+            y = top + hoverBubble.y + BUBBLE_PAD + (hoverSegment.line() * LINE_H) - h - 2;
+        }
+
+        graphics.fill(x, y, x + w, y + h, 0xF00E1218);
+        outline(graphics, x, y, w, h, PINK);
+
+        int lineY = y + 4;
+        for (FormattedCharSequence line : lines) {
+            graphics.text(this.font, line, x + 4, lineY, TEXT);
+            lineY += LINE_H;
+        }
     }
 
     private void applyHandCursor(boolean hand) {
@@ -1101,7 +1153,6 @@ public class QZAChatScreen extends Screen {
 
         if (event instanceof ClickEvent.RunCommand run) {
             ChatUtil.sendChat(run.command());
-            this.minecraft.setScreen(null);
             return true;
         }
         if (event instanceof ClickEvent.SuggestCommand suggest) {

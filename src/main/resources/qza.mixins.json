@@ -8,6 +8,7 @@
   ],
   "client": [
     "ChatCaptureMixin",
+    "ChatHideMixin",
     "ChatKeyMixin"
   ],
   "injectors": {
