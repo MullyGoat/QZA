@@ -54,7 +54,12 @@ public final class ChatUtil {
                 return;
             }
             if (message.startsWith("/")) {
-                connection.sendUnattendedCommand(message.substring(1), client.screen);
+                // sendCommand, not sendUnattendedCommand: the latter verifies
+                // against the server's command tree and refuses anything it
+                // does not recognise, which breaks Hypixel aliases like /d that
+                // are never advertised. This is the path vanilla chat uses, and
+                // Fabric hooks it too, so client commands still get caught.
+                connection.sendCommand(message.substring(1));
             } else {
                 connection.sendChat(message);
             }
