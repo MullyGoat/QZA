@@ -31,7 +31,7 @@ public final class SettingsRegistry {
             "F7 / M7",
             "Music",
             "Chat",
-            "Auto Invite",
+            "Auto Check Stats",
             "Notifications",
             "Miscellaneous");
 
@@ -287,11 +287,11 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
-        String invite = "Auto Invite";
+        String invite = "Auto Check Stats";
 
-        settings.add(new ToggleSetting(invite, "Auto Invite", "Auto Invite",
-                Component.literal("Automatically invites players who meet requirements "
-                                + "and replies No to players who do not")
+        settings.add(new ToggleSetting(invite, "Stats", "Auto Check Stats",
+                Component.literal("When a player whispers \"lf inv\", automatically "
+                                + "check their stats for selected floor")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.autoInviteEnabled,
                 v -> {
@@ -299,12 +299,10 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(new ToggleSetting(invite, "Auto Invite", "Auto Response",
-                Component.literal("Invites players who pass and replies ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("No").withStyle(ChatFormatting.RED))
-                        .append(Component.literal(" to those who do not - off means report only")
-                                .withStyle(ChatFormatting.GRAY)),
+        settings.add(new ToggleSetting(invite, "Stats", "Auto Invite",
+                Component.literal("Automatically invites players who meets requirements "
+                                + "and replies No to those who do not")
+                        .withStyle(ChatFormatting.GRAY),
                 () -> cfg.autoInviteRespond,
                 v -> {
                     cfg.autoInviteRespond = v;
