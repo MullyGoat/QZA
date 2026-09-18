@@ -9,7 +9,8 @@
   "client": [
     "ChatCaptureMixin",
     "ChatHideMixin",
-    "ChatKeyMixin"
+    "ChatKeyMixin",
+    "TooltipHighlightMixin"
   ],
   "injectors": {
     "defaultRequire": 0
