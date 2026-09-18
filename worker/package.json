@@ -1,0 +1,10 @@
+{
+  "name": "qza-stats",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Stats proxy for the QZA mod - holds the Hypixel API key server side",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  }
+}

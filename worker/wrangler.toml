@@ -1,0 +1,10 @@
+name = "qza-stats"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# The Hypixel API key is NOT configured here. It is a secret, set once with:
+#   wrangler secret put HYPIXEL_API_KEY
+# That stores it on Cloudflare's side, so it never enters this repo or the jar.
+
+[observability]
+enabled = true
