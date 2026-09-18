@@ -9,8 +9,7 @@ Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other vers
 - Minecraft 26.1.2
 - Fabric Loader 0.19.0 or newer
 - Fabric API
-- [Hypixel Mod API](https://modrinth.com/mod/hypixel-mod-api) - auto invite reads
-  your party from it, and Fabric will not load QZA without it
+- [Hypixel Mod API](https://modrinth.com/mod/hypixel-mod-api)
 - Java 25
 
 ## Install
