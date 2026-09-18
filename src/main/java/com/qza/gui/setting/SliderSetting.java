@@ -3,11 +3,13 @@ package com.qza.gui.setting;
 import net.minecraft.network.chat.Component;
 
 import java.util.function.Consumer;
+import java.util.function.DoubleFunction;
 import java.util.function.DoubleSupplier;
 
 public class SliderSetting extends Setting {
     private final DoubleSupplier getter;
     private final Consumer<Double> setter;
+    private final DoubleFunction<String> format;
     public final double min;
     public final double max;
     public final double step;
@@ -16,6 +18,18 @@ public class SliderSetting extends Setting {
     public SliderSetting(String category, String section, String title, Component description,
                          double min, double max, double step, String suffix,
                          DoubleSupplier getter, Consumer<Double> setter) {
+        this(category, section, title, description, min, max, step, suffix,
+                getter, setter, null);
+    }
+
+    /**
+     * The format overload is for values that do not read as plain numbers, such
+     * as a run time that belongs on screen as 5:00 rather than 300.
+     */
+    public SliderSetting(String category, String section, String title, Component description,
+                         double min, double max, double step, String suffix,
+                         DoubleSupplier getter, Consumer<Double> setter,
+                         DoubleFunction<String> format) {
         super(category, section, title, description);
         this.min = min;
         this.max = max;
@@ -23,6 +37,7 @@ public class SliderSetting extends Setting {
         this.suffix = suffix;
         this.getter = getter;
         this.setter = setter;
+        this.format = format;
     }
 
     public double value() {
@@ -44,6 +59,9 @@ public class SliderSetting extends Setting {
     }
 
     public String labelFor(double v) {
+        if (format != null) {
+            return format.apply(v) + suffix;
+        }
         String number = (step >= 1 && v == Math.rint(v))
                 ? String.valueOf((long) v)
                 : String.format("%.2f", v);

@@ -7,6 +7,7 @@ import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.gui.MusicNamesScreen;
+import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.gui.QZAChatScreen;
 import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;
@@ -15,6 +16,8 @@ import com.qza.notify.NotificationGate;
 import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterList;
 import com.qza.shitter.ShitterListPage;
+import com.qza.stats.AutoInvite;
+import com.qza.stats.DungeonFloor;
 import com.qza.util.ChatUtil;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -30,6 +33,7 @@ public final class SettingsRegistry {
             "F7 / M7",
             "Music",
             "Chat",
+            "Auto Invite",
             "Notifications",
             "Miscellaneous");
 
@@ -284,6 +288,87 @@ public final class SettingsRegistry {
                     ChatUtil.success("Cleared saved messages.");
                 })
                 .visibleWhen(() -> cfg.qzaChatEnabled));
+
+        String invite = "Auto Invite";
+
+        settings.add(new ToggleSetting(invite, "Auto Invite", "Auto Invite",
+                Component.literal("Automatically invites players who meet requirements "
+                                + "and replies No to players who do not")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.autoInviteEnabled,
+                v -> {
+                    cfg.autoInviteEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(invite, "Auto Invite", "Auto Response",
+                Component.literal("Invites players who pass and replies ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("No").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" to those who do not - off means report only")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.autoInviteRespond,
+                v -> {
+                    cfg.autoInviteRespond = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.autoInviteEnabled));
+
+        settings.add(new NumberSetting(invite, "Requirements", "Cata Level",
+                Component.literal("Catacomb level requirement. 0 = Any Cata Level")
+                        .withStyle(ChatFormatting.GRAY),
+                List.of(new NumberSetting.Field("", 60, 2)),
+                "",
+                () -> new int[]{(int) Math.round(cfg.autoInviteCataReq)},
+                v -> cfg.autoInviteCataReq = v[0])
+                .visibleWhen(() -> cfg.autoInviteEnabled));
+
+        settings.add(new DropdownSetting(invite, "Requirements", "Floor",
+                Component.literal("Which floor the best time is checked on")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> DungeonFloor.NUMBERS,
+                () -> String.valueOf(DungeonFloor.number(cfg.autoInviteFloor)),
+                v -> {
+                    boolean master = DungeonFloor.master(cfg.autoInviteFloor);
+                    cfg.autoInviteFloor = DungeonFloor.key(NumberSetting.parse(v), master);
+                    ConfigManager.save();
+                },
+                // Labelled through the toggle, so the list reads F1-F7 or M1-M7.
+                n -> (DungeonFloor.master(cfg.autoInviteFloor) ? "M" : "F") + n,
+                null,
+                "M7",
+                70)
+                .visibleWhen(() -> cfg.autoInviteEnabled));
+
+        settings.add(new ToggleSetting(invite, "Requirements", "Master Mode",
+                Component.literal("Switches the floors between Catacombs and Master Mode")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> DungeonFloor.master(cfg.autoInviteFloor),
+                v -> {
+                    cfg.autoInviteFloor =
+                            DungeonFloor.key(DungeonFloor.number(cfg.autoInviteFloor), v);
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.autoInviteEnabled));
+
+        settings.add(new NumberSetting(invite, "Requirements", "Best Time",
+                Component.literal("Slowest S+ time you will accept on that floor - 0 ignores it")
+                        .withStyle(ChatFormatting.GRAY),
+                List.of(new NumberSetting.Field("min", 59, 2),
+                        new NumberSetting.Field("sec", 59, 2)),
+                "",
+                () -> {
+                    int total = (int) Math.round(cfg.autoInvitePbSeconds);
+                    return new int[]{total / 60, total % 60};
+                },
+                v -> cfg.autoInvitePbSeconds = (v[0] * 60) + v[1])
+                .visibleWhen(() -> cfg.autoInviteEnabled));
+
+        settings.add(new ActionSetting(invite, "Stats", "Stats Source",
+                Component.literal("Where dungeon stats are read from")
+                        .withStyle(ChatFormatting.GRAY),
+                "Check",
+                AutoInvite::reportSource));
 
         String notify = "Notifications";
 

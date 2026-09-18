@@ -4,6 +4,7 @@ import com.qza.chat.ChatKeybind;
 import com.qza.config.ConfigManager;
 import com.qza.gui.setting.ActionSetting;
 import com.qza.gui.setting.DropdownSetting;
+import com.qza.gui.setting.NumberSetting;
 import com.qza.gui.setting.Setting;
 import com.qza.gui.setting.SettingsRegistry;
 import com.qza.gui.setting.SliderSetting;
@@ -12,10 +13,12 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +57,10 @@ public class QZAScreen extends Screen {
     private List<Setting> allSettings = List.of();
     private final List<Row> rows = new ArrayList<>();
     private EditBox search;
+
+    private NumberSetting numberFocus;
+    private int numberBox = -1;
+    private String numberText = "";
     private String lastQuery = "";
 
     private SliderSetting draggingSlider;
@@ -185,10 +192,106 @@ public class QZAScreen extends Screen {
         if (setting instanceof DropdownSetting dropdown) {
             return dropdown.width + (dropdown.hasEdit() ? PENCIL_W + 4 : 0);
         }
+        if (setting instanceof NumberSetting number) {
+            return numberWidth(number);
+        }
         if (setting instanceof ActionSetting action && action.buttonWidth > 0) {
             return action.buttonWidth;
         }
         return BUTTON_W;
+    }
+
+    private int numberWidth(NumberSetting number) {
+        int width = 0;
+        for (int i = 0; i < number.fields.size(); i++) {
+            if (i > 0) {
+                width += number.separator.isEmpty()
+                        ? 6 : this.font.width(number.separator) + 6;
+            }
+            width += NumberSetting.BOX_W;
+            String unit = number.field(i).unit();
+            if (!unit.isEmpty()) {
+                width += this.font.width(unit) + 4;
+            }
+        }
+        return width;
+    }
+
+    /** Left edge of each box, laid out right to left from the control column. */
+    private int[] numberBoxRect(NumberSetting number, Row row, int y, int index) {
+        int x = contentX + contentW - CONTROL_PAD - numberWidth(number);
+        for (int i = 0; i < number.fields.size(); i++) {
+            if (i > 0) {
+                x += number.separator.isEmpty()
+                        ? 6 : this.font.width(number.separator) + 6;
+            }
+            if (i == index) {
+                return new int[]{x, y + ((row.height - NumberSetting.BOX_H) / 2),
+                        NumberSetting.BOX_W, NumberSetting.BOX_H};
+            }
+            x += NumberSetting.BOX_W;
+            String unit = number.field(i).unit();
+            if (!unit.isEmpty()) {
+                x += this.font.width(unit) + 4;
+            }
+        }
+        return new int[]{x, y, 0, 0};
+    }
+
+    private String numberTextFor(NumberSetting number, int index) {
+        if (numberFocus == number && numberBox == index) {
+            return numberText;
+        }
+        return String.valueOf(number.values()[index]);
+    }
+
+    private void focusNumber(NumberSetting number, int index) {
+        commitNumber();
+        numberFocus = number;
+        numberBox = index;
+        numberText = String.valueOf(number.values()[index]);
+    }
+
+    /** Pushes a valid in-progress value through, then drops focus. */
+    private void commitNumber() {
+        if (numberFocus != null) {
+            numberFocus.commit(numberBox, numberText);
+            ConfigManager.save();
+        }
+        numberFocus = null;
+        numberBox = -1;
+        numberText = "";
+    }
+
+    private void drawNumberBoxes(GuiGraphicsExtractor graphics, NumberSetting number,
+                                 Row row, int y, int mouseX, int mouseY) {
+        for (int i = 0; i < number.fields.size(); i++) {
+            int[] r = numberBoxRect(number, row, y, i);
+            String text = numberTextFor(number, i);
+            boolean focused = numberFocus == number && numberBox == i;
+            boolean bad = !number.validFor(i, text);
+
+            graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], 0x66000000);
+            int border = bad ? 0xFFE05555
+                    : focused ? 0xFFAFD4EC
+                    : inside(mouseX, mouseY, r) ? 0xFF8FB4CC : 0xFF6A8CA8;
+            outline(graphics, r[0], r[1], r[2], r[3], border);
+
+            String shown = focused ? text + "_" : text;
+            graphics.centeredText(this.font, Component.literal(shown),
+                    r[0] + (r[2] / 2), r[1] + 4, bad ? 0xFFFF9B9B : TEXT);
+
+            if (i > 0 && !number.separator.isEmpty()) {
+                graphics.text(this.font, Component.literal(number.separator),
+                        r[0] - this.font.width(number.separator) - 3, r[1] + 4, TEXT_DIM);
+            }
+
+            String unit = number.field(i).unit();
+            if (!unit.isEmpty()) {
+                graphics.text(this.font, Component.literal(unit),
+                        r[0] + r[2] + 3, r[1] + 4, TEXT_DIM);
+            }
+        }
     }
 
     private int sliderLabelReserve(SliderSetting slider) {
@@ -373,6 +476,8 @@ public class QZAScreen extends Screen {
                 int[] p = pencilRect(row, y);
                 drawPencil(graphics, p, inside(mouseX, mouseY, p));
             }
+        } else if (setting instanceof NumberSetting number) {
+            drawNumberBoxes(graphics, number, row, y, mouseX, mouseY);
         } else if (setting instanceof ActionSetting action) {
             int[] r = buttonRect(row, y);
             drawButton(graphics, r[0], r[1], r[2], action.buttonLabel(), inside(mouseX, mouseY, r));
@@ -677,6 +782,13 @@ public class QZAScreen extends Screen {
                     openDropdownAt(dropdown, r);
                     return true;
                 }
+            } else if (row.setting instanceof NumberSetting number) {
+                for (int i = 0; i < number.fields.size(); i++) {
+                    if (inside(mouseX, mouseY, numberBoxRect(number, row, y, i))) {
+                        focusNumber(number, i);
+                        return true;
+                    }
+                }
             } else if (row.setting instanceof ActionSetting action) {
                 if (inside(mouseX, mouseY, buttonRect(row, y))) {
                     action.run();
@@ -685,6 +797,9 @@ public class QZAScreen extends Screen {
             }
             break;
         }
+
+        // A click anywhere else puts the typed value away.
+        commitNumber();
         return false;
     }
 
@@ -739,7 +854,55 @@ public class QZAScreen extends Screen {
             ChatKeybind.swallowNextChar();
             return true;
         }
+
+        if (numberFocus != null) {
+            if (event.key() == GLFW.GLFW_KEY_BACKSPACE) {
+                if (!numberText.isEmpty()) {
+                    numberText = numberText.substring(0, numberText.length() - 1);
+                    numberFocus.commit(numberBox, numberText);
+                    ConfigManager.save();
+                }
+                return true;
+            }
+            if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
+                commitNumber();
+                return true;
+            }
+            if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+                // Leave the stored value alone rather than keeping a bad entry.
+                numberFocus = null;
+                numberBox = -1;
+                numberText = "";
+                return true;
+            }
+            if (event.key() == GLFW.GLFW_KEY_TAB) {
+                NumberSetting current = numberFocus;
+                int next = (numberBox + 1) % current.fields.size();
+                focusNumber(current, next);
+                return true;
+            }
+        }
+
         return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        if (numberFocus != null) {
+            int typed = event.codepoint();
+            if (typed >= '0' && typed <= '9') {
+                if (numberText.length() < numberFocus.field(numberBox).digits()) {
+                    // Drop a leading zero so typing over "0" reads naturally.
+                    String base = "0".equals(numberText) ? "" : numberText;
+                    numberText = base + (char) typed;
+                    numberFocus.commit(numberBox, numberText);
+                    ConfigManager.save();
+                }
+                return true;
+            }
+            return true;
+        }
+        return super.charTyped(event);
     }
 
     @Override

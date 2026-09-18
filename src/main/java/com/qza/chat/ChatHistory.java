@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.qza.QZA;
 import com.qza.config.ConfigManager;
+import com.qza.stats.AutoInvite;
 import com.qza.util.ChatUtil;
 import com.qza.util.PlayerLookup;
 import net.minecraft.network.chat.Component;
@@ -121,6 +122,7 @@ public final class ChatHistory {
         } else {
             ChatFocus.received(ChatFocus.TAB_DM);
             ChatNotification.show(whisper.ign(), whisper.text());
+            AutoInvite.onWhisper(whisper.ign(), whisper.text());
         }
     }
 
@@ -252,6 +254,27 @@ public final class ChatHistory {
         if (!outgoing) {
             conversation.unread++;
         }
+
+        save();
+    }
+
+    /**
+     * A locally generated line in a conversation, such as a stats check result.
+     * Sits on the sent side so it never raises an unread badge for something
+     * the player did themselves.
+     */
+    public static void note(String ign, String text) {
+        if (ign == null || ign.isBlank() || text == null || text.isBlank()) {
+            return;
+        }
+
+        ChatConversation conversation = resolve(ign);
+        conversation.messages.add(new ChatMessage(true, text, System.currentTimeMillis()));
+        while (conversation.messages.size() > MAX_MESSAGES) {
+            conversation.messages.remove(0);
+        }
+        conversation.lastActivity = System.currentTimeMillis();
+        conversation.hidden = false;
 
         save();
     }

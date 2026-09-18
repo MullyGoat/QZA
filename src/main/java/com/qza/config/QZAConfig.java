@@ -74,5 +74,17 @@ public class QZAConfig {
 
     public String dungeonOnlyScope = "both";
 
+    public boolean autoInviteEnabled = false;
+
+    public boolean autoInviteRespond = false;
+
+    public double autoInviteCataReq = 40.0;
+
+    public String autoInviteFloor = "m7";
+
+    public double autoInvitePbSeconds = 0.0;
+
+    public String statsProxyUrl = "";
+
     public double guiScale = 100.0;
 }

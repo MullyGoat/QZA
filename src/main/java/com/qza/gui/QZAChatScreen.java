@@ -5,6 +5,8 @@ import com.qza.chat.ChatConversation;
 import com.qza.chat.ChatFocus;
 import com.qza.chat.ChatHistory;
 import com.qza.chat.ChatMessage;
+import com.qza.party.PartyInvite;
+import com.qza.stats.AutoInvite;
 import com.qza.config.ConfigManager;
 import com.qza.util.ChatUtil;
 import com.qza.util.IgnUtil;
@@ -73,8 +75,9 @@ public class QZAChatScreen extends Screen {
     private static String selected;
     private static String selectedTab = TAB_DM;
 
-    private static final int MENU_W = 58;
+    private static final int MENU_W = 92;
     private static final int MENU_ROW_H = 12;
+    private static final String[] MENU_LABELS = {"Hide", "Delete", "Run Stats Check"};
     private static final long COPIED_MS = 1500L;
     private static final int INVITE_FIELD_W = 110;
     private static final int INVITE_GO_W = 27;
@@ -117,6 +120,8 @@ public class QZAChatScreen extends Screen {
     private int threadH;
     private int inputY;
 
+    private String prefill;
+
     public QZAChatScreen() {
         super(Component.literal("QZA Chat"));
 
@@ -127,6 +132,23 @@ public class QZAChatScreen extends Screen {
                 break;
             }
         }
+    }
+
+    /**
+     * Opens on a set tab with the box already filled in, ignoring the Default
+     * Tab preference. The slash key uses this so it always lands on Everything
+     * ready to type a command, the way vanilla chat does.
+     */
+    public QZAChatScreen(String tab, String text) {
+        super(Component.literal("QZA Chat"));
+
+        for (String key : TAB_KEYS) {
+            if (key.equals(tab)) {
+                selectedTab = tab;
+                break;
+            }
+        }
+        this.prefill = text;
     }
 
     private static float scale() {
@@ -180,6 +202,13 @@ public class QZAChatScreen extends Screen {
                 false, false, 1, 10, true, 0xD0000000);
         input.setResponder(text -> refreshSuggestions());
         refreshSuggestions();
+
+        // Cleared once applied, so a resize does not wipe what has been typed.
+        if (prefill != null) {
+            input.setValue(prefill);
+            input.moveCursorToEnd(false);
+            prefill = null;
+        }
 
         builtFor = null;
         rebuildBubbles(true);
@@ -570,25 +599,28 @@ public class QZAChatScreen extends Screen {
             return;
         }
 
-        int h = (MENU_ROW_H * 2) + 2;
+        int h = menuHeight();
         graphics.fill(menuX, menuY, menuX + MENU_W, menuY + h, 0xF00E1218);
         outline(graphics, menuX, menuY, MENU_W, h, PINK);
 
-        String[] labels = {"Hide", "Delete"};
-        for (int i = 0; i < labels.length; i++) {
+        for (int i = 0; i < MENU_LABELS.length; i++) {
             int rowY = menuY + 1 + (i * MENU_ROW_H);
             boolean hovered = mouseX >= menuX && mouseX <= menuX + MENU_W
                     && mouseY >= rowY && mouseY < rowY + MENU_ROW_H;
             if (hovered) {
                 graphics.fill(menuX + 1, rowY, menuX + MENU_W - 1, rowY + MENU_ROW_H, 0x663C5A70);
             }
-            graphics.text(this.font, labels[i], menuX + 5, rowY + 2,
-                    i == 1 ? (hovered ? 0xFFFF7B7B : 0xFFE08A8A) : (hovered ? TEXT : 0xFFCCCCCC));
+            int colour = switch (i) {
+                case 1 -> hovered ? 0xFFFF7B7B : 0xFFE08A8A;
+                case 2 -> hovered ? 0xFF9BE8A0 : 0xFF7FBF86;
+                default -> hovered ? TEXT : 0xFFCCCCCC;
+            };
+            graphics.text(this.font, MENU_LABELS[i], menuX + 5, rowY + 2, colour);
         }
     }
 
     private int menuHeight() {
-        return (MENU_ROW_H * 2) + 2;
+        return (MENU_ROW_H * MENU_LABELS.length) + 2;
     }
 
     private void openMenu(String ign, double x, double y) {
@@ -900,13 +932,13 @@ public class QZAChatScreen extends Screen {
         input.setValue("");
     }
 
+    /**
+     * Parties only. Guild and coop invites are rare enough that a button is no
+     * real saving, and a misclicked coop invite is not something the recipient
+     * can easily be taken back out of.
+     */
     private String inviteLabel() {
-        return switch (selectedTab) {
-            case ChannelHistory.PARTY -> "Invite to Party";
-            case ChannelHistory.GUILD -> "Invite to Guild";
-            case ChannelHistory.COOP -> "Invite to Coop";
-            default -> null;
-        };
+        return ChannelHistory.PARTY.equals(selectedTab) ? "Invite to Party" : null;
     }
 
     private int[] inviteRect() {
@@ -973,7 +1005,11 @@ public class QZAChatScreen extends Screen {
         if (invite == null || ign == null) {
             return;
         }
-        ChatUtil.sendCommand(invite + " " + ign);
+        if (ChannelHistory.PARTY.equals(selectedTab)) {
+            PartyInvite.send(ign);
+        } else {
+            ChatUtil.sendCommand(invite + " " + ign);
+        }
         setInviting(false);
     }
 
@@ -1015,6 +1051,8 @@ public class QZAChatScreen extends Screen {
                 } else if (index == 1) {
                     ChatHistory.delete(target);
                     afterRemoval();
+                } else if (index == 2) {
+                    AutoInvite.check(target);
                 }
             }
             if (inMenu) {

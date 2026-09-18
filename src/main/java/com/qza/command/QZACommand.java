@@ -1,7 +1,9 @@
 package com.qza.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.qza.config.ConfigManager;
+import com.qza.stats.AutoInvite;
 import com.qza.gui.GuiEditScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.QZAScreen;
@@ -14,6 +16,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
 
 public final class QZACommand {
@@ -43,6 +46,15 @@ public final class QZACommand {
                     openChat();
                     return 1;
                 }))
+                .then(literal("stats")
+                        .executes(ctx -> {
+                            AutoInvite.reportSource();
+                            return 1;
+                        })
+                        .then(argument("ign", StringArgumentType.word()).executes(ctx -> {
+                            AutoInvite.check(StringArgumentType.getString(ctx, "ign"));
+                            return 1;
+                        })))
                 .then(literal("gui")
                         .executes(ctx -> {
                             openEditor();
@@ -134,6 +146,8 @@ public final class QZACommand {
         entry("/qza music stop", "Stop the music");
         entry("/qza music folder", "Open the music folder");
         entry("/qza music reload", "Re-scan the music folder");
+        entry("/qza stats", "Check the stats source against your own profile");
+        entry("/qza stats <ign>", "Show someone's cata, floor PB and secret average");
         entry("/qza reload", "Reload config and list from disk");
         entry("/qza help", "Print this list in game");
         entry("/shitter", "Show the shitter list commands");

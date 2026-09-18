@@ -1,6 +1,8 @@
 package com.qza.mixin;
 
+import com.qza.chat.ChannelHistory;
 import com.qza.chat.ChatKeybind;
+import com.qza.config.ConfigManager;
 import com.qza.gui.QZAChatScreen;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
@@ -22,11 +24,6 @@ public class ChatKeyMixin {
             return;
         }
 
-        int bind = ChatKeybind.key();
-        if (bind == ChatKeybind.NONE || event.key() != bind) {
-            return;
-        }
-
         Minecraft client = Minecraft.getInstance();
         if (client.screen != null || client.player == null) {
             return;
@@ -35,9 +32,24 @@ public class ChatKeyMixin {
             return;
         }
 
-        client.setScreen(new QZAChatScreen());
-        ChatKeybind.swallowNextChar();
-        ci.cancel();
+        int bind = ChatKeybind.key();
+        if (bind != ChatKeybind.NONE && event.key() == bind) {
+            client.setScreen(new QZAChatScreen());
+            ChatKeybind.swallowNextChar();
+            ci.cancel();
+            return;
+        }
+
+        // Cancelling here stops KeyMapping registering the click, so vanilla
+        // never opens its own chat for the slash. Reads the bound key rather
+        // than assuming slash, in case it has been rebound.
+        if (ConfigManager.get().qzaChatEnabled
+                && client.options != null
+                && client.options.keyCommand.matches(event)) {
+            client.setScreen(new QZAChatScreen(ChannelHistory.EVERYTHING, "/"));
+            ChatKeybind.swallowNextChar();
+            ci.cancel();
+        }
     }
 
     @Inject(method = "charTyped(JLnet/minecraft/client/input/CharacterEvent;)V",
