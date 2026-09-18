@@ -11,8 +11,11 @@ import java.util.Map;
 public record PlayerStats(
         String name,
         String uuid,
+        String dungeonClass,
         long cataExp,
         long secrets,
+        /** Null when it could not be read, which usually means their API is off. */
+        Integer magicalPower,
         Map<Integer, Long> pbCata,
         Map<Integer, Long> pbMaster,
         Map<Integer, Integer> runsCata,
@@ -20,6 +23,16 @@ public record PlayerStats(
 
     public int cataLevel() {
         return CataLevel.of(cataExp);
+    }
+
+    /** Their selected class as a canonical name, or null when they have none. */
+    public String role() {
+        return DungeonClass.of(dungeonClass);
+    }
+
+    /** "1420", or "API Off" when the accessory bag could not be read. */
+    public String magicalPowerLabel() {
+        return magicalPower == null ? "API Off" : String.valueOf(magicalPower);
     }
 
     /** Every completion on every floor, entrance included, as the community counts it. */

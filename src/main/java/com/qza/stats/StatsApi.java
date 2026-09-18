@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
@@ -113,21 +114,32 @@ public final class StatsApi {
             return CompletableFuture.completedFuture(
                     Result.failed("\"" + ign + "\" is not a valid name"));
         }
+        return lookup("name=" + URLEncoder.encode(ign, StandardCharsets.UTF_8),
+                ign.toLowerCase(java.util.Locale.ROOT), ign);
+    }
 
+    /** Party members arrive as uuids, which the proxy accepts directly. */
+    public static CompletableFuture<Result> fetchByUuid(UUID uuid) {
+        if (uuid == null) {
+            return CompletableFuture.completedFuture(Result.failed("No uuid"));
+        }
+        String flat = uuid.toString().replace("-", "");
+        return lookup("uuid=" + flat, "uuid:" + flat, flat);
+    }
+
+    private static CompletableFuture<Result> lookup(String query, String key, String label) {
         String base = baseUrl();
         if (base.isEmpty()) {
             return CompletableFuture.completedFuture(Result.failed(
                     "Stats proxy is not set up - see worker/README.md"));
         }
 
-        String key = ign.toLowerCase(java.util.Locale.ROOT);
         Result hit = cached(key);
         if (hit != null) {
             return CompletableFuture.completedFuture(hit);
         }
 
-        URI uri = URI.create(base + "/stats?name="
-                + URLEncoder.encode(ign, StandardCharsets.UTF_8));
+        URI uri = URI.create(base + "/stats?" + query);
 
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(12))
@@ -138,7 +150,7 @@ public final class StatsApi {
 
         return http().sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .handle((response, error) -> {
-                    Result result = interpret(response, error, ign);
+                    Result result = interpret(response, error, label);
                     remember(key, result);
                     return result;
                 });
@@ -170,8 +182,10 @@ public final class StatsApi {
             return Result.of(new PlayerStats(
                     string(body, "name", ign),
                     string(body, "uuid", ""),
+                    string(body, "class", ""),
                     longOf(body, "cataExp"),
                     longOf(body, "secrets"),
+                    nullableInt(body, "magicalPower"),
                     longMap(object(pb, "cata")),
                     longMap(object(pb, "master")),
                     intMap(object(runs, "cata")),
@@ -203,6 +217,22 @@ public final class StatsApi {
             }
         }
         return fallback;
+    }
+
+    /**
+     * Null stays null rather than becoming zero, so a value the proxy could not
+     * read is never shown as a real number.
+     */
+    private static Integer nullableInt(JsonObject source, String key) {
+        if (!source.has(key) || source.get(key).isJsonNull()
+                || !source.get(key).isJsonPrimitive()) {
+            return null;
+        }
+        try {
+            return Math.max(0, source.get(key).getAsInt());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static long longOf(JsonObject source, String key) {

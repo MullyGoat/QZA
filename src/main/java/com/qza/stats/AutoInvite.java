@@ -4,6 +4,7 @@ import com.qza.chat.ChatHistory;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.party.PartyInvite;
+import com.qza.party.PartyState;
 import com.qza.util.ChatUtil;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -11,9 +12,16 @@ import net.minecraft.client.User;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -27,22 +35,42 @@ import java.util.regex.Pattern;
 public final class AutoInvite {
     private static final long COOLDOWN_MILLIS = 30_000L;
 
-    private static final Map<String, Long> lastHandled = new HashMap<>();
-
-    private AutoInvite() {
-    }
-
     /**
      * Spelled with or without the space, which is how people actually type it.
      * Anchored to a word boundary so something like "golf inv" does not count.
      */
     private static final Pattern REQUEST = Pattern.compile("\\blf\\s*inv");
 
+    private static final Map<String, Long> lastHandled = new HashMap<>();
+
+    private AutoInvite() {
+    }
+
     public static boolean isRequest(String text) {
+        return text != null && REQUEST.matcher(text.toLowerCase(Locale.ROOT)).find();
+    }
+
+    /**
+     * The class they are offering to play, as in "lf inv healer". Only what
+     * follows the request is read, so a floor like "m7" is not mistaken for a
+     * class. Null when they did not name one.
+     */
+    public static String requestedRole(String text) {
         if (text == null) {
-            return false;
+            return null;
         }
-        return REQUEST.matcher(text.toLowerCase(Locale.ROOT)).find();
+        String lower = text.toLowerCase(Locale.ROOT);
+        Matcher matcher = REQUEST.matcher(lower);
+        if (!matcher.find()) {
+            return null;
+        }
+        for (String word : lower.substring(matcher.end()).split("[^a-z]+")) {
+            String role = DungeonClass.of(word);
+            if (role != null) {
+                return role;
+            }
+        }
+        return null;
     }
 
     public static void onWhisper(String ign, String text) {
@@ -52,7 +80,7 @@ public final class AutoInvite {
         if (onCooldown(ign)) {
             return;
         }
-        run(ign, true, true);
+        run(ign, true, true, requestedRole(text));
     }
 
     /**
@@ -62,13 +90,13 @@ public final class AutoInvite {
      */
     public static void check(String ign) {
         ChatUtil.info("Checking " + ign + "...");
-        run(ign, false, true);
+        run(ign, false, true, null);
     }
 
     /**
-     * The Check button in the settings. Looks the player up against their own
-     * name, which both proves the proxy works and shows what a report reads
-     * like before anything is aimed at someone else.
+     * Looks the player up against their own name, which both proves the proxy
+     * works and shows what a report reads like before anything is aimed at
+     * someone else.
      */
     public static void reportSource() {
         if (!StatsApi.configured()) {
@@ -86,7 +114,7 @@ public final class AutoInvite {
         }
 
         ChatUtil.info("Testing the stats proxy against your own profile...");
-        run(self, false, false);
+        run(self, false, false, null);
     }
 
     private static synchronized boolean onCooldown(String ign) {
@@ -100,7 +128,7 @@ public final class AutoInvite {
         return false;
     }
 
-    private static void run(String ign, boolean mayReply, boolean intoDm) {
+    private static void run(String ign, boolean mayReply, boolean intoDm, String requested) {
         StatsApi.fetch(ign).thenAccept(result -> {
             if (!result.ok()) {
                 ChatUtil.error(ign + " - " + result.error());
@@ -115,34 +143,87 @@ public final class AutoInvite {
             String floor = DungeonFloor.normalise(cfg.autoInviteFloor);
             String failure = firstFailure(stats, cfg, floor);
 
-            ChatUtil.raw(report(stats, cfg, floor, failure));
+            // What they offered to play is what they will be, so a tank asking
+            // "lf inv healer" is reported as the healer.
+            String shown = requested != null ? requested : stats.dungeonClass();
+
+            ChatUtil.raw(report(stats, cfg, floor, failure, shown));
             if (intoDm) {
-                ChatHistory.note(ign, "[QZA] " + plainReport(stats, cfg, floor, failure));
+                ChatHistory.note(ign, "[QZA] " + plainReport(stats, cfg, floor, failure, shown));
             }
 
-            if (!mayReply || !cfg.autoInviteRespond) {
-                return;
-            }
-
-            if (failure == null) {
-                ChatUtil.success("Inviting " + stats.name() + ".");
-                PartyInvite.send(stats.name());
-            } else {
-                ChatUtil.info("Turning down " + stats.name() + " - " + failure + ".");
-                ChatUtil.sendCommand("w " + stats.name() + " No");
+            if (mayReply && cfg.autoInviteRespond) {
+                decide(stats, requested, failure);
             }
         });
     }
 
-    /** The same numbers as the chat report, without the colours. */
-    private static String plainReport(PlayerStats stats, QZAConfig cfg,
-                                      String floor, String failure) {
-        long pb = stats.pbMillis(floor);
-        String line = "Cata " + stats.cataLevel()
-                + " | " + DungeonFloor.label(floor) + " "
-                + (pb > 0 ? DungeonFloor.time(pb) : "no S+")
-                + " | Secrets " + String.format(Locale.ROOT, "%.2f", stats.secretAverage()) + "/run";
-        return failure == null ? line : line + " | FAILS: " + failure;
+    /**
+     * A full party and a duplicate class both block an invite whatever the
+     * stats say. Requirements are judged before the class so someone who is
+     * simply not good enough is not told to switch class instead.
+     */
+    private static void decide(PlayerStats stats, String requested, String failure) {
+        PartyState.request().thenAccept(snapshot -> {
+            if (snapshot != null && snapshot.full()) {
+                decline(stats.name(), "No, party full",
+                        "party is " + snapshot.size() + "/" + PartyState.MAX_SIZE);
+                return;
+            }
+            if (failure != null) {
+                decline(stats.name(), "No", failure);
+                return;
+            }
+
+            // What they say they will play wins over what they have selected,
+            // so "lf inv healer" from a tank fills the empty healer slot.
+            String role = requested != null ? requested : stats.role();
+            if (role == null || snapshot == null || !snapshot.inParty()) {
+                PartyInvite.send(stats.name());
+                ChatUtil.success("Inviting " + stats.name() + ".");
+                return;
+            }
+
+            takenRoles(snapshot).thenAccept(taken -> {
+                if (taken.contains(role)) {
+                    decline(stats.name(), "No, dupe class",
+                            DungeonClass.label(role) + " is already taken");
+                } else {
+                    PartyInvite.send(stats.name());
+                    ChatUtil.success("Inviting " + stats.name()
+                            + " as " + DungeonClass.label(role) + ".");
+                }
+            });
+        });
+    }
+
+    /** Which classes the party already covers, this client included. */
+    private static CompletableFuture<Set<String>> takenRoles(PartyState.Snapshot snapshot) {
+        List<CompletableFuture<StatsApi.Result>> lookups = new ArrayList<>();
+        for (UUID member : snapshot.members()) {
+            lookups.add(StatsApi.fetchByUuid(member));
+        }
+
+        return CompletableFuture
+                .allOf(lookups.toArray(new CompletableFuture[0]))
+                .thenApply(ignored -> {
+                    Set<String> taken = new HashSet<>();
+                    for (CompletableFuture<StatsApi.Result> lookup : lookups) {
+                        StatsApi.Result result = lookup.getNow(null);
+                        if (result != null && result.ok()) {
+                            String role = result.stats().role();
+                            if (role != null) {
+                                taken.add(role);
+                            }
+                        }
+                    }
+                    return taken;
+                });
+    }
+
+    private static void decline(String name, String reply, String because) {
+        ChatUtil.info("Turning down " + name + " - " + because + ".");
+        ChatUtil.sendCommand("w " + name + " " + reply);
     }
 
     /** The first unmet requirement, or null when they pass everything. */
@@ -166,8 +247,21 @@ public final class AutoInvite {
         return null;
     }
 
+    /** The same numbers as the chat report, without the colours. */
+    static String plainReport(PlayerStats stats, QZAConfig cfg, String floor,
+                              String failure, String shownClass) {
+        long pb = stats.pbMillis(floor);
+        String line = "Cata " + stats.cataLevel()
+                + " | " + DungeonFloor.label(floor) + " "
+                + (pb > 0 ? DungeonFloor.time(pb) : "no S+")
+                + " | " + DungeonClass.label(shownClass)
+                + " | Secrets " + String.format(Locale.ROOT, "%.2f", stats.secretAverage()) + "/run"
+                + " | MP " + stats.magicalPowerLabel();
+        return failure == null ? line : line + " | FAILS: " + failure;
+    }
+
     private static MutableComponent report(PlayerStats stats, QZAConfig cfg,
-                                           String floor, String failure) {
+                                           String floor, String failure, String shownClass) {
         int requiredCata = (int) Math.round(cfg.autoInviteCataReq);
         long requiredSeconds = Math.round(cfg.autoInvitePbSeconds);
         long pb = stats.pbMillis(floor);
@@ -188,10 +282,18 @@ public final class AutoInvite {
                 .append(Component.literal(pb > 0 ? DungeonFloor.time(pb) : "no S+")
                         .withStyle(pbOk ? ChatFormatting.GREEN : ChatFormatting.RED))
                 .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(DungeonClass.label(shownClass))
+                        .withStyle(ChatFormatting.LIGHT_PURPLE))
+                .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
                 .append(Component.literal("Secrets ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(String.format(Locale.ROOT, "%.2f", stats.secretAverage()))
                         .withStyle(ChatFormatting.AQUA))
-                .append(Component.literal("/run").withStyle(ChatFormatting.DARK_GRAY));
+                .append(Component.literal("/run").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
+                .append(Component.literal("MP ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(stats.magicalPowerLabel())
+                        .withStyle(stats.magicalPower() == null
+                                ? ChatFormatting.RED : ChatFormatting.AQUA));
 
         if (failure != null) {
             line.append(Component.literal("  FAILS: ").withStyle(ChatFormatting.RED))

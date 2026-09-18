@@ -8,6 +8,13 @@ base {
 
 repositories {
     mavenCentral()
+    maven {
+        name = "Hypixel"
+        url = "https://repo.hypixel.net/repository/Hypixel/"
+        content {
+            includeGroup "net.hypixel"
+        }
+    }
 }
 
 dependencies {
@@ -22,6 +29,11 @@ dependencies {
 
     implementation("io.github.jaredmdobson:concentus:${project.concentus_version}") { transitive = false }
     include("io.github.jaredmdobson:concentus:${project.concentus_version}") { transitive = false }
+
+    // Party membership comes from Hypixel's own mod API. Compile only and not
+    // nested: the Hypixel Mod API mod is a declared dependency and ships these
+    // classes itself, so bundling them would just risk a version clash.
+    compileOnly("net.hypixel:mod-api:${project.hypixel_mod_api_version}") { transitive = false }
 }
 
 processResources {

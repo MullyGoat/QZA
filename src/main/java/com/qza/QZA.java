@@ -10,6 +10,7 @@ import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationHud;
 import com.qza.party.PartyNotification;
+import com.qza.party.PartyState;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
 import com.qza.timer.NecronTimer;
@@ -42,6 +43,7 @@ public class QZA implements ClientModInitializer {
         ChatHistory.load();
         MusicLibrary.ensureDir();
         MusicManager.get().applySettings();
+        PartyState.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
                 new NotificationHud());
