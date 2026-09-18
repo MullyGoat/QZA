@@ -74,9 +74,33 @@ Expect `{"ok":true,...}`. A repeat call within ten minutes returns
 Deliberately raw: cata level, secret average and all formatting are worked out
 in the mod, so changing how those read never needs a redeploy.
 
-## Rate limiting
+## Protecting the key
 
-Answers are cached for ten minutes per player, misses for two. Popular players
-get fetched once for everyone rather than once per user, which keeps this far
-under the Hypixel limit. If Hypixel does throttle, the Worker passes back a
-clear message rather than failing silently.
+The mod ships the Worker's URL, which anyone can read out of the jar, so this
+endpoint has to assume strangers will find it. Three things keep that from
+costing you your Hypixel key:
+
+- **Caching.** An hour per player, ten minutes for a name that does not exist.
+  A popular player is fetched once for everyone rather than once per user.
+- **A per-IP limit.** 30 lookups a minute per caller, checked before the cache,
+  so hammering an already-cached player still costs the caller their own
+  allowance rather than this Worker's request quota.
+- **An upstream budget.** At most 30 calls a minute are forwarded to Hypixel in
+  total. Past that the Worker refuses instead of spending the key, so abuse
+  degrades the abuser rather than taking stats down for everybody.
+
+Both limits are per-minute counters in the edge cache, keyed by the minute so
+they expire on their own. They are deliberately approximate: the cache is
+per-location and concurrent requests can read the same value, so a burst may
+slip a few through. That is fine for holding back sustained abuse, which is what
+they are for. If the counter itself errors the request is allowed, because a
+broken limiter must not take the service down.
+
+Note what this is *not*: a secret shipped inside a mod is not secret, so none of
+this proves the caller is really QZA. The only approach that does is verifying a
+Minecraft session against Mojang, which is what Odin and NoammAddons do. These
+limits bound what any caller can spend instead, which addresses the practical
+problem without pretending to be unbreakable.
+
+If Hypixel does throttle anyway, the Worker passes back a clear message rather
+than failing silently.

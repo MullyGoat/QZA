@@ -27,8 +27,17 @@
 const NAME_PATTERN = /^[A-Za-z0-9_]{1,16}$/;
 const UUID_PATTERN = /^[0-9a-fA-F]{32}$/;
 
-const CACHE_SECONDS = 600;
-const NOT_FOUND_CACHE_SECONDS = 120;
+// Dungeon records barely move, so an hour of caching costs nothing in
+// freshness and cuts upstream calls roughly sixfold.
+const CACHE_SECONDS = 3600;
+const NOT_FOUND_CACHE_SECONDS = 600;
+
+// What any single caller may ask for, and the hard ceiling on calls this
+// Worker will forward to Hypixel. The second one is what actually protects the
+// key: past the budget the Worker refuses rather than spending it, so abuse
+// degrades the abuser instead of taking the key down for everybody.
+const IP_LIMIT_PER_MINUTE = 30;
+const UPSTREAM_LIMIT_PER_MINUTE = 30;
 
 export default {
     async fetch(request, env, ctx) {
@@ -42,6 +51,13 @@ export default {
         }
         if (!env.HYPIXEL_API_KEY) {
             return fail('Proxy is missing its Hypixel API key', 500);
+        }
+
+        // Checked before the cache, so hammering a cached player still costs
+        // the caller their own allowance rather than this Worker's quota.
+        const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+        if (!await allow(`ip:${ip}`, IP_LIMIT_PER_MINUTE)) {
+            return retryLater('Too many stats lookups from your connection');
         }
 
         const rawName = (url.searchParams.get('name') || '').trim();
@@ -68,6 +84,11 @@ export default {
         const hit = await cache.match(cacheKey);
         if (hit) {
             return withHeader(hit, 'X-QZA-Cache', 'hit');
+        }
+
+        // A miss means real upstream calls, so it has to fit the budget.
+        if (!await allow('upstream', UPSTREAM_LIMIT_PER_MINUTE)) {
+            return retryLater('Stats are busy right now, try again in a minute');
         }
 
         let payload;
@@ -264,6 +285,42 @@ function json(body, status, cacheSeconds) {
 
 function fail(message, status) {
     return json({ ok: false, error: message }, status, 60);
+}
+
+function retryLater(message) {
+    const response = json({ ok: false, error: message }, 429, 0);
+    response.headers.set('Retry-After', '60');
+    response.headers.set('Cache-Control', 'no-store');
+    return response;
+}
+
+/**
+ * A per-minute counter kept in the edge cache. Buckets are keyed by the minute
+ * so they expire on their own.
+ *
+ * Approximate on purpose: the cache is per location and concurrent requests can
+ * read the same value, so a burst may slip a few past. That is fine for holding
+ * back sustained abuse, which is what this is for. If the counter itself fails
+ * the request is allowed, since a broken limiter must not take the service down.
+ */
+async function allow(bucket, limit) {
+    const minute = Math.floor(Date.now() / 60000);
+    const key = new Request(`https://qza.invalid/rl/${encodeURIComponent(bucket)}/${minute}`);
+    const cache = caches.default;
+
+    try {
+        const hit = await cache.match(key);
+        const count = hit ? Number(await hit.text()) || 0 : 0;
+        if (count >= limit) {
+            return false;
+        }
+        await cache.put(key, new Response(String(count + 1), {
+            headers: { 'Cache-Control': 'public, max-age=120' },
+        }));
+        return true;
+    } catch (e) {
+        return true;
+    }
 }
 
 function withHeader(response, name, value) {
