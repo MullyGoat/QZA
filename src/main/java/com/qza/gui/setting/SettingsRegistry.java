@@ -231,8 +231,8 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
-        settings.add(new ToggleSetting(chat, "Open Chat", "Open With T",
-                Component.literal("Override chat keybind to open QZA Chat")
+        settings.add(new ToggleSetting(chat, "Open Chat", "Open With T and /",
+                Component.literal("Override both chat keybinds to open QZA Chat")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.openChatWithT,
                 v -> {
