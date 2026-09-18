@@ -49,6 +49,8 @@ public class QZAChatScreen extends Screen {
     private static final int IN_BORDER = 0x40FFFFFF;
     private static final int OUT_BG = 0x8C4A2A52;
     private static final int OUT_BORDER = 0x80FF55FF;
+    private static final int SYS_BG = 0x8C1E2A22;
+    private static final int SYS_BORDER = 0xB055FF55;
 
     private static final int HEADER_H = 62;
     private static final int RAIL_W = 190;
@@ -413,6 +415,7 @@ public class QZAChatScreen extends Screen {
                     lines, rawLines,
                     widest + faceRoom + (BUBBLE_PAD * 2),
                     (lines.size() * LINE_H) + (BUBBLE_PAD * 2) - 1);
+            bubble.system = message.system;
             bubble.y = y;
             bubbles.add(bubble);
             y += bubble.h + BUBBLE_GAP;
@@ -592,6 +595,14 @@ public class QZAChatScreen extends Screen {
         graphics.fill(x, y, x + 2, y + 2, colour);
         graphics.fill(x, y + 3, x + 2, y + 5, colour);
         graphics.fill(x, y + 6, x + 2, y + 8, colour);
+    }
+
+    /** Centred for QZA's own lines, otherwise sent right and received left. */
+    private int bubbleX(Bubble bubble) {
+        if (bubble.system) {
+            return threadX + ((threadW - bubble.w) / 2);
+        }
+        return bubble.outgoing ? threadX + threadW - bubble.w : threadX;
     }
 
     private void drawMenu(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
@@ -812,12 +823,12 @@ public class QZAChatScreen extends Screen {
             if (y + bubble.h < threadY - 4 || y > threadY + threadH + 4) {
                 continue;
             }
-            int x = bubble.outgoing ? threadX + threadW - bubble.w : threadX;
+            int x = bubbleX(bubble);
 
             graphics.fill(x, y, x + bubble.w, y + bubble.h,
-                    bubble.outgoing ? OUT_BG : IN_BG);
+                    bubble.system ? SYS_BG : bubble.outgoing ? OUT_BG : IN_BG);
             outline(graphics, x, y, bubble.w, bubble.h,
-                    bubble.outgoing ? OUT_BORDER : IN_BORDER);
+                    bubble.system ? SYS_BORDER : bubble.outgoing ? OUT_BORDER : IN_BORDER);
 
             if (bubble.speaker != null && bubble.faceRoom > 0) {
                 PlayerFaceExtractor.extractRenderState(graphics,
@@ -1155,7 +1166,7 @@ public class QZAChatScreen extends Screen {
         int top = threadY - (int) Math.round(threadScroll);
         for (Bubble bubble : bubbles) {
             int by = top + bubble.y;
-            int bx = bubble.outgoing ? threadX + threadW - bubble.w : threadX;
+            int bx = bubbleX(bubble);
             if (x >= bx && x <= bx + bubble.w && y >= by && y <= by + bubble.h) {
                 return bubble;
             }
@@ -1187,7 +1198,7 @@ public class QZAChatScreen extends Screen {
         }
         int top = threadY - (int) Math.round(threadScroll);
         int by = top + bubble.y;
-        int bx = bubble.outgoing ? threadX + threadW - bubble.w : threadX;
+        int bx = bubbleX(bubble);
 
         int index = (int) Math.floor((mouseY - (by + BUBBLE_PAD)) / (double) LINE_H);
         if (index < 0 || index >= bubble.rawLines.size()) {
@@ -1245,9 +1256,8 @@ public class QZAChatScreen extends Screen {
         }
 
         int top = threadY - (int) Math.round(threadScroll);
-        int bubbleX = hoverBubble.outgoing
-                ? threadX + threadW - hoverBubble.w : threadX;
-        int textX = bubbleX + BUBBLE_PAD + hoverBubble.faceRoom;
+        int hoverX = bubbleX(hoverBubble);
+        int textX = hoverX + BUBBLE_PAD + hoverBubble.faceRoom;
 
         int w = widest + 8;
         int h = (lines.size() * LINE_H) + 6;
@@ -1335,7 +1345,7 @@ public class QZAChatScreen extends Screen {
 
     private void copy(Bubble bubble) {
         String line;
-        if (isDm()) {
+        if (isDm() && !bubble.system) {
             ChatConversation conversation = current();
             if (conversation == null) {
                 return;
@@ -1462,6 +1472,7 @@ public class QZAChatScreen extends Screen {
         final int w;
         final int h;
         int y;
+        boolean system;
 
         Bubble(boolean outgoing, String text, String speaker, int faceRoom,
                List<FormattedCharSequence> lines, List<FormattedText> rawLines, int w, int h) {

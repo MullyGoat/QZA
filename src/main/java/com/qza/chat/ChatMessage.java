@@ -8,6 +8,13 @@ public class ChatMessage {
     public long time;
     public String speaker;
 
+    /**
+     * A line QZA produced itself, such as a stats check. Drawn centred so it
+     * reads as neither sent nor received. Absent in older saved history, which
+     * reads back as false.
+     */
+    public boolean system;
+
     public transient Component rich;
 
     public ChatMessage() {

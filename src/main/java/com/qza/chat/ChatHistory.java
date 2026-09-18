@@ -260,8 +260,8 @@ public final class ChatHistory {
 
     /**
      * A locally generated line in a conversation, such as a stats check result.
-     * Sits on the sent side so it never raises an unread badge for something
-     * the player did themselves.
+     * Marked as a system line so it draws centred rather than looking like
+     * something either side actually whispered.
      */
     public static void note(String ign, String text) {
         if (ign == null || ign.isBlank() || text == null || text.isBlank()) {
@@ -269,7 +269,9 @@ public final class ChatHistory {
         }
 
         ChatConversation conversation = resolve(ign);
-        conversation.messages.add(new ChatMessage(true, text, System.currentTimeMillis()));
+        ChatMessage note = new ChatMessage(false, text, System.currentTimeMillis());
+        note.system = true;
+        conversation.messages.add(note);
         while (conversation.messages.size() > MAX_MESSAGES) {
             conversation.messages.remove(0);
         }
