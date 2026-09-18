@@ -9,12 +9,14 @@ Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other vers
 - Minecraft 26.1.2
 - Fabric Loader 0.19.0 or newer
 - Fabric API
+- [Hypixel Mod API](https://modrinth.com/mod/hypixel-mod-api) - auto invite reads
+  your party from it, and Fabric will not load QZA without it
 - Java 25
 
 ## Install
 
 Grab the jar from the [latest release](https://github.com/MullyGoat/QZA/releases/latest)
-and drop it into your `mods` folder alongside Fabric API.
+and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API.
 
 ## Commands
 
@@ -31,6 +33,8 @@ and drop it into your `mods` folder alongside Fabric API.
 | `/qza music stop` | Stop the music |
 | `/qza music folder` | Open the music folder |
 | `/qza music reload` | Re-scan the music folder |
+| `/qza stats` | Check the stats source against your own profile |
+| `/qza stats <ign>` | Show someone's cata, floor PB, class, secret average and MP |
 | `/qza reload` | Reload config and list from disk |
 | `/qza help` | Print this list in game |
 
