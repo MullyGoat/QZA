@@ -153,12 +153,24 @@ async function lookup(name, uuid, apiKey) {
     const achievements = player && player.player ? (player.player.achievements || {}) : {};
     const secrets = numberOr(achievements.skyblock_treasure_hunter, numberOr(dungeons.secrets, 0));
 
+    // Null rather than zero when it cannot be read, so the mod can say "API
+    // Off" instead of reporting a real-looking 0.
+    const accessories = member.accessory_bag_storage;
+    const rawPower = accessories ? Number(accessories.highest_magical_power) : NaN;
+    const magicalPower = Number.isFinite(rawPower) && rawPower >= 0
+        ? Math.round(rawPower) : null;
+
     return {
         ok: true,
         name: resolved,
         uuid: id,
+        // Whatever they last picked, which is the best guess at what they will
+        // play. Empty when they have never chosen one.
+        class: typeof dungeons.selected_dungeon_class === 'string'
+            ? dungeons.selected_dungeon_class : '',
         cataExp: numberOr(cata.experience, 0),
         secrets: secrets,
+        magicalPower: magicalPower,
         runs: {
             cata: intMap(cata.tier_completions),
             master: intMap(master.tier_completions),
