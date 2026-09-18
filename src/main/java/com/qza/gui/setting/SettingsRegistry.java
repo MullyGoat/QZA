@@ -14,9 +14,7 @@ import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationGate;
 import com.qza.party.PartyNotification;
-import com.qza.shitter.ShitterList;
 import com.qza.shitter.ShitterListPage;
-import com.qza.stats.AutoInvite;
 import com.qza.stats.DungeonFloor;
 import com.qza.util.ChatUtil;
 import net.minecraft.ChatFormatting;
@@ -69,7 +67,7 @@ public final class SettingsRegistry {
 
         settings.add(new ActionSetting(shitter, "The List", "Open Shitter List",
                 Component.literal("Displays list of shitters").withStyle(ChatFormatting.GRAY),
-                () -> ShitterList.size() + " listed",
+                "Open",
                 () -> {
                     Minecraft.getInstance().setScreen(null);
                     ShitterListPage.print(1);
@@ -363,12 +361,6 @@ public final class SettingsRegistry {
                 },
                 v -> cfg.autoInvitePbSeconds = (v[0] * 60) + v[1])
                 .visibleWhen(() -> cfg.autoInviteEnabled));
-
-        settings.add(new ActionSetting(invite, "Stats", "Stats Source",
-                Component.literal("Where dungeon stats are read from")
-                        .withStyle(ChatFormatting.GRAY),
-                "Check",
-                AutoInvite::reportSource));
 
         String notify = "Notifications";
 
