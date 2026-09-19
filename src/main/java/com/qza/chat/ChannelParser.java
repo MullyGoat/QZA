@@ -11,6 +11,9 @@ public final class ChannelParser {
 
     private static final int MAX_LENGTH = 512;
 
+    /** Joins and leaves while a party finder group fills up. */
+    private static final String PARTY_FINDER = "Party Finder > ";
+
     private ChannelParser() {
     }
 
@@ -25,6 +28,13 @@ public final class ChannelParser {
         String message = IgnUtil.stripCodes(raw).trim();
         if (message.isEmpty()) {
             return null;
+        }
+
+        // "Party Finder > Bob joined the dungeon group! (Mage Level 42)".
+        // Nobody says these, so there is no speaker to pull out, but they are
+        // about the party and belong beside it rather than only in Everything.
+        if (message.startsWith(PARTY_FINDER)) {
+            return new Line(PARTY, null);
         }
 
         Line line = tagged(message, "Party > ", PARTY);
