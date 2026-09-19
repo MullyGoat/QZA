@@ -2,28 +2,65 @@
  * Registers the two slash commands with Discord. Run once, and again only if
  * the commands below change.
  *
- * The bot token is read from the environment rather than a file, so it never
- * sits on disk where it could be committed by accident:
+ *   node register.mjs
  *
- *   DISCORD_APP_ID=... DISCORD_BOT_TOKEN=... node register.mjs
+ * It asks for what it needs. Answering the prompts keeps the bot token out of
+ * your shell history, and out of any file where it could be committed by
+ * accident.
  *
- * On Windows PowerShell:
+ * DISCORD_APP_ID, DISCORD_BOT_TOKEN and DISCORD_GUILD_ID are read from the
+ * environment when they are set, for running this from a script. They are
+ * trimmed, because the obvious way to set them on Windows
  *
- *   $env:DISCORD_APP_ID="..."; $env:DISCORD_BOT_TOKEN="..."; node register.mjs
+ *   set DISCORD_BOT_TOKEN=abc && node register.mjs
  *
- * Set DISCORD_GUILD_ID as well to register to one server, which takes effect
- * immediately. Without it the commands are global, which is what you want for
+ * puts the space before the && inside the value, and a token with a trailing
+ * space comes back from Discord as a bare 401 that looks like a wrong token.
+ *
+ * The server id registers the commands to one server, which takes effect
+ * immediately. Leave it blank for global commands, which is what you want for
  * a bot in more than one server, but Discord can take up to an hour to show
  * them.
  */
 
-const APP_ID = process.env.DISCORD_APP_ID;
-const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const GUILD_ID = process.env.DISCORD_GUILD_ID;
+import { createInterface } from 'node:readline/promises';
+
+async function ask(question) {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+        return (await rl.question(question)).trim();
+    } finally {
+        rl.close();
+    }
+}
+
+/** Null when the variable is not set at all, so an empty one still counts. */
+function fromEnv(name) {
+    const raw = process.env[name];
+    return raw === undefined ? null : raw.trim();
+}
+
+const APP_ID = fromEnv('DISCORD_APP_ID')
+    || await ask('Application ID (General Information page): ');
+const BOT_TOKEN = fromEnv('DISCORD_BOT_TOKEN')
+    || await ask('Bot token (Bot tab, Reset Token): ');
+// ?? rather than ||, because an empty server id is an answer - register
+// globally - and should not send it back round to the prompt.
+const GUILD_ID = fromEnv('DISCORD_GUILD_ID')
+    ?? await ask('Server ID, or blank to register globally: ');
 
 if (!APP_ID || !BOT_TOKEN) {
-    console.error('Set DISCORD_APP_ID and DISCORD_BOT_TOKEN in the environment first.');
-    console.error('See the comment at the top of this file.');
+    console.error('An application id and a bot token are both needed.');
+    process.exit(1);
+}
+if (!/^\d+$/.test(APP_ID)) {
+    console.error(`"${APP_ID}" is not an application id. That is the number on the`);
+    console.error('General Information page, not the public key and not the token.');
+    process.exit(1);
+}
+if (GUILD_ID && !/^\d+$/.test(GUILD_ID)) {
+    console.error(`"${GUILD_ID}" is not a server id. Right click the server and`);
+    console.error('"Copy Server ID" with Developer Mode switched on.');
     process.exit(1);
 }
 
@@ -66,6 +103,15 @@ const body = await response.text();
 if (!response.ok) {
     console.error(`Discord returned ${response.status}`);
     console.error(body);
+    if (response.status === 401) {
+        console.error('\nThat means the bot token was not accepted. It is the one from the');
+        console.error('Bot tab, not the public key and not the application id, and resetting');
+        console.error('it on that page invalidates whatever was there before.');
+    }
+    if (response.status === 403) {
+        console.error('\nThat usually means the bot is in the server without the');
+        console.error('applications.commands scope. Re-invite it with that scope added.');
+    }
     process.exit(1);
 }
 

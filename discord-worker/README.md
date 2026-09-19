@@ -158,12 +158,17 @@ public key is wrong — that is the whole purpose of the check.
 ### 7. Register the slash commands
 
 ```
-$env:DISCORD_APP_ID="..."; $env:DISCORD_BOT_TOKEN="..."; node register.mjs
+node register.mjs
 ```
 
-The token is read from the environment so it never lands on disk. Add
-`$env:DISCORD_GUILD_ID="..."` to register to one server, which is instant;
-without it the commands are global and Discord can take up to an hour.
+It asks for the application id, the bot token and optionally a server id.
+Answering the prompts keeps the token out of your shell history and out of any
+file. Giving a server id registers to that one server and takes effect
+immediately; leaving it blank registers globally, which Discord can take up to
+an hour to show.
+
+`DISCORD_APP_ID`, `DISCORD_BOT_TOKEN` and `DISCORD_GUILD_ID` are used instead
+when they are set, for scripting.
 
 ### 8. Point the mod at it
 
