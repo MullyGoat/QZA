@@ -40,10 +40,6 @@ public class ChatKeyMixin {
             return;
         }
 
-        // The slash rides on the same toggle as T, so turning that off gives
-        // both keys back to vanilla. Cancelling here stops KeyMapping
-        // registering the click, so vanilla never opens its own chat. Reads the
-        // bound key rather than assuming slash, in case it has been rebound.
         if (ConfigManager.get().qzaChatEnabled
                 && ConfigManager.get().openChatWithT
                 && client.options != null

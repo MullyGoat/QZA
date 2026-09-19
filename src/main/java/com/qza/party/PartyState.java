@@ -11,15 +11,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Party membership, straight from Hypixel's own mod API rather than guessed at
- * by reading chat.
- *
- * The packet carries uuids and a leader/mod/member role. It says nothing about
- * dungeon classes, so those are looked up per member separately.
- */
 public final class PartyState {
-    /** Hypixel dungeon parties cap at five. */
+
     public static final int MAX_SIZE = 5;
 
     private static final long FRESH_MILLIS = 5_000L;
@@ -31,11 +24,6 @@ public final class PartyState {
     private PartyState() {
     }
 
-    /**
-     * @param inParty false when Hypixel says you are on your own
-     * @param leader  whoever is running the party, or null when alone
-     * @param members every member including yourself
-     */
     public record Snapshot(boolean inParty, UUID leader, Set<UUID> members, long at) {
         public int size() {
             return inParty ? Math.max(1, members.size()) : 1;
@@ -49,7 +37,6 @@ public final class PartyState {
             return System.currentTimeMillis() - at <= FRESH_MILLIS;
         }
 
-        /** True only when Hypixel named this player as the leader. */
         public boolean ledBy(UUID who) {
             return who != null && who.equals(leader);
         }
@@ -77,16 +64,10 @@ public final class PartyState {
         }
     }
 
-    /** The last snapshot, however old, or null when nothing has arrived yet. */
     public static Snapshot cached() {
         return latest;
     }
 
-    /**
-     * A snapshot to make a decision from. A recent one is reused; otherwise it
-     * asks Hypixel and waits briefly. Never fails: on a timeout it falls back
-     * to whatever was last known, so a quiet API cannot block an invite.
-     */
     public static CompletableFuture<Snapshot> request() {
         Snapshot known = latest;
         if (known != null && known.fresh()) {

@@ -1,16 +1,4 @@
-/**
- * Accessories that share an upgrade path, so magical power counts one of them.
- *
- * Buying the Speed Ring does not retire the Speed Talisman sitting in the bag,
- * and the game only pays out for the better of the two. Same for tiered badges
- * and for the handful of accessories that come in colours.
- *
- * Generated from NotEnoughUpdates' parents.json, narrowed to the ids Hypixel's
- * own item list calls an ACCESSORY. Anything Hypixel adds later is simply
- * missing, which at worst counts a superseded accessory twice.
- */
 
-/** A numbered chain, such as the 29 campfire badges. */
 function tiers(prefix, from, to) {
     const ids = [];
     for (let i = from; i <= to; i++) ids.push(prefix + i);
@@ -142,7 +130,6 @@ const GROUPS = [
     tiers('WEDDING_RING_', 0, 9),
 ];
 
-/** Item id to the id standing for its whole family. */
 export const FAMILY = new Map();
 for (const group of GROUPS) {
     for (const id of group) FAMILY.set(id, group[0]);

@@ -330,7 +330,7 @@ public final class SettingsRegistry {
                     cfg.autoInviteFloor = DungeonFloor.key(NumberSetting.parse(v), master);
                     ConfigManager.save();
                 },
-                // Labelled through the toggle, so the list reads F1-F7 or M1-M7.
+
                 n -> (DungeonFloor.master(cfg.autoInviteFloor) ? "M" : "F") + n,
                 null,
                 "M7",

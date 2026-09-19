@@ -6,18 +6,10 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * One or more small boxes you type whole numbers into.
- *
- * A box whose value is over its maximum turns red and nothing is written, so
- * the config never takes a value the feature cannot use. Two boxes with a
- * separator make a minutes and seconds pair.
- */
 public class NumberSetting extends Setting {
     public static final int BOX_W = 28;
     public static final int BOX_H = 16;
 
-    /** A single box: the unit shown beside it, and the largest value it accepts. */
     public record Field(String unit, int max, int digits) {
     }
 
@@ -50,7 +42,6 @@ public class NumberSetting extends Setting {
         return fields.get(index);
     }
 
-    /** Empty reads as zero, anything unparseable or over the max as invalid. */
     public static int parse(String text) {
         if (text == null || text.isBlank()) {
             return 0;
@@ -67,7 +58,6 @@ public class NumberSetting extends Setting {
         return value >= 0 && value <= field(index).max();
     }
 
-    /** Writes only when every box is inside its range. */
     public boolean commit(int index, String text) {
         if (!validFor(index, text)) {
             return false;

@@ -74,7 +74,6 @@ public class QZAChatScreen extends Screen {
             "DMs", "Everything", "All", "Party", "Guild", "Co-op"};
     private static final int TAB_H = 14;
 
-
     private static String selected;
     private static String selectedTab = TAB_DM;
 
@@ -92,17 +91,6 @@ public class QZAChatScreen extends Screen {
 
     private CommandSuggestions commandSuggestions;
 
-    /**
-     * How far back through the sent messages the arrows have walked, counting
-     * from the oldest, or NOT_WALKING before an arrow has been pressed.
-     *
-     * Not stored as "one past the newest", which is the obvious way to say the
-     * same thing, because that is a count of the messages and a count goes out
-     * of date. Anything added to the list afterwards leaves it pointing one
-     * short, and the first press of the arrow then skips the newest message.
-     * Where the newest one is gets worked out when an arrow is actually
-     * pressed.
-     */
     private static final int NOT_WALKING = -1;
 
     private int historyPos = NOT_WALKING;
@@ -153,11 +141,6 @@ public class QZAChatScreen extends Screen {
         }
     }
 
-    /**
-     * Opens on a set tab with the box already filled in, ignoring the Default
-     * Tab preference. The slash key uses this so it always lands on Everything
-     * ready to type a command, the way vanilla chat does.
-     */
     public QZAChatScreen(String tab, String text) {
         super(Component.literal("QZA Chat"));
 
@@ -214,15 +197,11 @@ public class QZAChatScreen extends Screen {
 
         setInitialFocus(input);
 
-        // Vanilla's own component, so the popup, the highlight, the grey ghost
-        // text and the argument usage hints all look and behave exactly as
-        // they do in normal chat. Same arguments vanilla's ChatScreen uses.
         commandSuggestions = new CommandSuggestions(this.minecraft, this, input, this.font,
                 false, false, 1, 10, true, 0xD0000000);
         input.setResponder(text -> refreshSuggestions());
         refreshSuggestions();
 
-        // Cleared once applied, so a resize does not wipe what has been typed.
         if (prefill != null) {
             input.setValue(prefill);
             input.moveCursorToEnd(false);
@@ -309,30 +288,18 @@ public class QZAChatScreen extends Screen {
         rebuildBubbles(true);
     }
 
-    /**
-     * True while the box holds nothing but a slash, where a list of every
-     * command on the server would only be noise.
-     */
     private static boolean isBareSlash(String text) {
         return text != null && text.startsWith("/") && text.substring(1).isBlank();
     }
 
-    /** Completion is for running commands, which the DMs tab does not do. */
     private boolean suggestionsAllowed() {
         return !isDm() && !adding && !inviting && menuFor == null;
     }
 
-    /**
-     * Vanilla anchors the popup and the usage hint to {@code screen.height - 12},
-     * which is where its own chat box sits at the bottom of the screen. QZA's box
-     * is partway up inside the panel, so everything it draws is shifted by the
-     * difference to land just above the box instead of on top of it.
-     */
     private int suggestionShiftY() {
         return inputY - (this.height - 12);
     }
 
-    /** Recomputes the popup and the grey ghost text after the line changes. */
     private void refreshSuggestions() {
         if (commandSuggestions == null || input == null) {
             return;
@@ -352,10 +319,6 @@ public class QZAChatScreen extends Screen {
         }
     }
 
-    /**
-     * Keeps the gate honest between keystrokes, since opening a menu or the
-     * IGN field does not change the text.
-     */
     private void updateSuggestionGate() {
         if (commandSuggestions == null || input == null) {
             return;
@@ -517,7 +480,6 @@ public class QZAChatScreen extends Screen {
         drawHoverText(graphics);
         drawMenu(graphics, mx, my);
 
-        // Last, so the list sits above the thread while it is open.
         if (commandSuggestions != null && suggestionsAllowed()) {
             int shift = suggestionShiftY();
             graphics.pose().pushMatrix();
@@ -616,7 +578,6 @@ public class QZAChatScreen extends Screen {
         graphics.fill(x, y + 6, x + 2, y + 8, colour);
     }
 
-    /** Centred for QZA's own lines, otherwise sent right and received left. */
     private int bubbleX(Bubble bubble) {
         if (bubble.system) {
             return threadX + ((threadW - bubble.w) / 2);
@@ -941,30 +902,19 @@ public class QZAChatScreen extends Screen {
         return (seconds / 86400) + "d";
     }
 
-    /**
-     * The messages the player has sent, newest last. Vanilla's own list, so
-     * this box and the normal chat box share one history.
-     */
     private List<String> sentHistory() {
         return this.minecraft.gui.getChat().getRecentChat();
     }
 
-    /** Back to the newest end, with no half-typed line held over. */
     private void forgetHistoryPosition() {
         historyPos = NOT_WALKING;
         historyDraft = "";
     }
 
-    /**
-     * Walks the sent messages, the way the arrows do in vanilla chat. Stepping
-     * back off the newest one restores whatever was half-typed at the time.
-     */
     private void moveInHistory(int by) {
         List<String> sent = sentHistory();
         int size = sent.size();
 
-        // Counted here rather than when the last message was sent, so the first
-        // press always starts from whatever the newest message is right now.
         int from = historyPos == NOT_WALKING ? size : historyPos;
         int target = Mth.clamp(from + by, 0, size);
         if (target == from) {
@@ -984,8 +934,6 @@ public class QZAChatScreen extends Screen {
         historyPos = target;
         input.setValue(sent.get(target));
 
-        // After the responder has run, so a recalled command does not open the
-        // popup and swallow the next press of the arrow.
         if (commandSuggestions != null) {
             commandSuggestions.setAllowSuggestions(false);
             input.setSuggestion(null);
@@ -1014,11 +962,6 @@ public class QZAChatScreen extends Screen {
         forgetHistoryPosition();
     }
 
-    /**
-     * Parties only. Guild and coop invites are rare enough that a button is no
-     * real saving, and a misclicked coop invite is not something the recipient
-     * can easily be taken back out of.
-     */
     private String inviteLabel() {
         return ChannelHistory.PARTY.equals(selectedTab) ? "Invite to Party" : null;
     }
@@ -1493,17 +1436,13 @@ public class QZAChatScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        // The popup takes the arrows, Tab and Escape while it is open. It never
-        // takes Enter, so sending still works. Suppressed on a bare slash so
-        // Tab cannot force the full command list open either.
+
         if (commandSuggestions != null && suggestionsAllowed()
                 && !isBareSlash(input.getValue())
                 && commandSuggestions.keyPressed(event)) {
             return true;
         }
-        // Only once the popup has passed, which is the order vanilla uses: the
-        // arrows pick a suggestion while one is showing and walk what has been
-        // sent otherwise. Skipped while the ign box has the screen.
+
         if (!adding && !inviting) {
             if (event.key() == GLFW.GLFW_KEY_UP) {
                 moveInHistory(-1);

@@ -217,7 +217,6 @@ public class QZAScreen extends Screen {
         return width;
     }
 
-    /** Left edge of each box, laid out right to left from the control column. */
     private int[] numberBoxRect(NumberSetting number, Row row, int y, int index) {
         int x = contentX + contentW - CONTROL_PAD - numberWidth(number);
         for (int i = 0; i < number.fields.size(); i++) {
@@ -252,7 +251,6 @@ public class QZAScreen extends Screen {
         numberText = String.valueOf(number.values()[index]);
     }
 
-    /** Pushes a valid in-progress value through, then drops focus. */
     private void commitNumber() {
         if (numberFocus != null) {
             numberFocus.commit(numberBox, numberText);
@@ -798,7 +796,6 @@ public class QZAScreen extends Screen {
             break;
         }
 
-        // A click anywhere else puts the typed value away.
         commitNumber();
         return false;
     }
@@ -869,7 +866,7 @@ public class QZAScreen extends Screen {
                 return true;
             }
             if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
-                // Leave the stored value alone rather than keeping a bad entry.
+
                 numberFocus = null;
                 numberBox = -1;
                 numberText = "";
@@ -892,7 +889,7 @@ public class QZAScreen extends Screen {
             int typed = event.codepoint();
             if (typed >= '0' && typed <= '9') {
                 if (numberText.length() < numberFocus.field(numberBox).digits()) {
-                    // Drop a leading zero so typing over "0" reads naturally.
+
                     String base = "0".equals(numberText) ? "" : numberText;
                     numberText = base + (char) typed;
                     numberFocus.commit(numberBox, numberText);

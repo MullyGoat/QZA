@@ -1,30 +1,14 @@
-/**
- * Everything that talks to Discord: verifying that an interaction really came
- * from them, and the handful of REST calls the relay makes.
- */
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
-/** Interaction types, from Discord's docs. */
 export const PING = 1;
 export const APPLICATION_COMMAND = 2;
 
-/** Response types. */
 export const PONG = 1;
 export const REPLY = 4;
 
-/** Only the person who ran the command sees the answer. */
 export const EPHEMERAL = 64;
 
-/**
- * Whether this request was really signed by Discord for this application.
- *
- * Discord signs the timestamp followed by the raw body with the application's
- * Ed25519 key, so the body has to be verified exactly as it arrived rather than
- * re-serialised from a parsed object. Getting this wrong is not a small bug: an
- * unverified endpoint lets anybody forge an interaction and link their Discord
- * account to somebody else's alerts.
- */
 export async function verifySignature(publicKeyHex, signatureHex, timestamp, rawBody) {
     if (!publicKeyHex || !signatureHex || !timestamp) {
         return false;
@@ -59,7 +43,6 @@ function fromHex(text) {
     return out;
 }
 
-/** An answer only the person who ran the command can see. */
 export function ephemeral(content) {
     return Response.json({
         type: REPLY,
@@ -67,10 +50,6 @@ export function ephemeral(content) {
     });
 }
 
-/**
- * Whoever ran the command. In a server this is under `member`, in a DM under
- * `user`, and the relay accepts both.
- */
 export function invoker(interaction) {
     const user = (interaction.member && interaction.member.user) || interaction.user;
     return user && user.id ? user.id : null;
@@ -82,7 +61,6 @@ export function optionValue(interaction, name) {
     return found ? found.value : null;
 }
 
-/** The bot's DM channel with one user, opened fresh each time it is needed. */
 export async function openDm(env, userId) {
     const opened = await call(env, 'POST', '/users/@me/channels', { recipient_id: userId });
     if (opened.error) {
@@ -98,7 +76,6 @@ export async function sendMessage(env, channelId, payload) {
     return call(env, 'POST', `/channels/${encodeURIComponent(channelId)}/messages`, payload);
 }
 
-/** One place for every Discord call, so every failure reads the same way. */
 export async function call(env, method, path, payload) {
     let response;
     try {
@@ -126,11 +103,6 @@ export async function call(env, method, path, payload) {
     return { error: await describe(response) };
 }
 
-/**
- * Discord's own words where they help, and a plainer explanation where the
- * status code is the more useful part. 50007 is the common one and never means
- * the setup is wrong.
- */
 async function describe(response) {
     let detail = '';
     let code = 0;
@@ -139,7 +111,7 @@ async function describe(response) {
         code = body.code || 0;
         detail = body.message || '';
     } catch (e) {
-        // Leaves the status code to speak for itself.
+
     }
 
     if (code === 50007) {

@@ -1,16 +1,3 @@
-/**
- * Current magical power, worked out from what is actually in the accessory bag.
- *
- * Hypixel stores only accessory_bag_storage.highest_magical_power, which is the
- * best somebody has ever had. Sell a mythic accessory and that number stays put,
- * so it is no use for judging who is in front of you. The bag itself is the only
- * honest source, which means unpacking it and adding the accessories up the way
- * the game does.
- *
- * Null when the bag cannot be read at all, which is what an inventory API left
- * switched off looks like. The mod says "API Off" for that rather than printing
- * a total that is really just a guess.
- */
 
 import { FAMILY } from './accessories.js';
 import { decodeNbt } from './nbt.js';
@@ -26,26 +13,18 @@ const MAGICAL_POWER = {
     'VERY SPECIAL': 5,
 };
 
-/**
- * The rarity named on an accessory's tooltip. "VERY SPECIAL" has to come first
- * or it reads as "SPECIAL". Deliberately not anchored: see rarityOf.
- */
 const RARITY = /\b(VERY SPECIAL|SPECIAL|MYTHIC|LEGENDARY|EPIC|RARE|UNCOMMON|COMMON)\b/;
 
 const FORMATTING = /§./g;
 
-/** Counts twice over, which is the whole point of it. */
 const HEGEMONY = 'HEGEMONY_ARTIFACT';
 
-/** Not an accessory and not in the bag, so it is added on separately. */
 const RIFT_PRISM = 11;
 
 export async function magicalPower(member) {
     const packed = bagData(member);
     if (!packed) {
-        // Hypixel leaves the whole inventory out when that API is switched
-        // off. An inventory with no accessory bag in it is a real answer: the
-        // bag is empty.
+
         return member && member.inventory ? 0 : null;
     }
 
@@ -63,8 +42,6 @@ export async function magicalPower(member) {
 
     const contacts = contactCount(member);
 
-    // Keyed by family so a Speed Talisman kept next to the Speed Artifact does
-    // not pay twice, and nor does a second copy of the same accessory.
     const best = new Map();
 
     for (const item of items) {
@@ -95,11 +72,6 @@ export async function magicalPower(member) {
     return total;
 }
 
-/**
- * The bag as Hypixel stores it. Newer profiles keep it under inventory, older
- * ones at the top level, and a profile with the inventory API switched off has
- * neither.
- */
 function bagData(member) {
     const inventory = member && member.inventory ? member.inventory : {};
     const bags = inventory.bag_contents || {};
@@ -114,28 +86,12 @@ function itemPower(id, item, contacts) {
         return null;
     }
 
-    // The phone pays its rarity and then one more for every two contacts, on
-    // top rather than instead.
     if (id.startsWith('ABICASE')) {
         return power + Math.floor(contacts / 2);
     }
     return id === HEGEMONY ? power * 2 : power;
 }
 
-/**
- * Read off the tooltip rather than looked up, because the tooltip is what a
- * recombobulator changes.
- *
- * Found by the word ACCESSORY rather than by where it sits, and matched
- * anywhere on that line rather than at the start of it. Both matter: soulbound
- * accessories print a line underneath the rarity, and Hypixel wraps a shiny
- * one in obfuscated text, which leaves a stray letter at each end once the
- * formatting codes come off - "a MYTHIC ACCESSORY a". Anchoring to the start
- * quietly skipped every shiny accessory in the bag.
- *
- * A rarity on a line that does not say ACCESSORY is kept only as a fallback,
- * in case Hypixel ever words one differently.
- */
 function rarityOf(item) {
     const display = item && item.tag ? item.tag.display : null;
     const lore = display ? display.Lore : null;
@@ -155,7 +111,7 @@ function rarityOf(item) {
         if (!match) {
             continue;
         }
-        // Covers ACCESSORY, HATCESSORY and "DUNGEON ACCESSORY".
+
         if (text.includes('CESSORY')) {
             return match[1];
         }

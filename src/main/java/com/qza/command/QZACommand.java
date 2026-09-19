@@ -136,7 +136,6 @@ public final class QZACommand {
         client.execute(() -> client.setScreen(new QZAChatScreen()));
     }
 
-    /** What the alert would do right now, and what is stopping it if anything. */
     private static void discordStatus() {
         QZAConfig cfg = ConfigManager.get();
 

@@ -20,19 +20,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
-/**
- * Reads dungeon stats from the QZA stats proxy.
- *
- * The proxy holds the Hypixel API key, so nothing secret lives in the mod. See
- * worker/README.md for deploying one. Results are cached briefly here as well
- * as at the proxy, so a player spamming "lf inv" costs one request.
- */
 public final class StatsApi {
-    /**
-     * The deployed stats proxy, so players need no setup. Not a secret: it only
-     * holds the Hypixel key server side. Overridden by statsProxyUrl in the
-     * config when that is set.
-     */
+
     private static final String DEFAULT_PROXY = "https://qza-stats.qza.workers.dev";
 
     private static final Pattern VALID_IGN = Pattern.compile("^[A-Za-z0-9_]{1,16}$");
@@ -118,7 +107,6 @@ public final class StatsApi {
                 ign.toLowerCase(java.util.Locale.ROOT), ign);
     }
 
-    /** Party members arrive as uuids, which the proxy accepts directly. */
     public static CompletableFuture<Result> fetchByUuid(UUID uuid) {
         if (uuid == null) {
             return CompletableFuture.completedFuture(Result.failed("No uuid"));
@@ -219,10 +207,6 @@ public final class StatsApi {
         return fallback;
     }
 
-    /**
-     * Null stays null rather than becoming zero, so a value the proxy could not
-     * read is never shown as a real number.
-     */
     private static Integer nullableInt(JsonObject source, String key) {
         if (!source.has(key) || source.get(key).isJsonNull()
                 || !source.get(key).isJsonPrimitive()) {
@@ -242,7 +226,7 @@ public final class StatsApi {
                 return Math.max(0L, value);
             }
         } catch (NumberFormatException ignored) {
-            // Treated as absent.
+
         }
         return 0L;
     }
@@ -260,7 +244,7 @@ public final class StatsApi {
                     out.put(floor, value);
                 }
             } catch (Exception ignored) {
-                // Skip anything that is not a number.
+
             }
         }
         return Map.copyOf(out);
@@ -279,7 +263,7 @@ public final class StatsApi {
                     out.put(floor, value);
                 }
             } catch (Exception ignored) {
-                // Skip anything that is not a number.
+
             }
         }
         return Map.copyOf(out);

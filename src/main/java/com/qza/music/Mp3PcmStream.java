@@ -13,10 +13,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/**
- * mp3 playback through JLayer. Frames are decoded on demand rather than up
- * front so a long track does not sit fully decoded in memory.
- */
 final class Mp3PcmStream implements PcmStream {
     private final InputStream source;
     private final Bitstream bitstream;

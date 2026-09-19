@@ -8,10 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Ogg Opus playback. Concentus decodes Opus packets but knows nothing about the
- * Ogg container, so this class demuxes the pages itself (RFC 3533 / RFC 7845).
- */
 final class OpusPcmStream implements PcmStream {
     private static final int RATE = 48000;
     private static final int MAX_FRAME = 5760;
@@ -55,7 +51,6 @@ final class OpusPcmStream implements PcmStream {
         long granule = container.lastGranule() - preSkip;
         this.lengthSeconds = granule > 0 ? granule / (double) RATE : 0.0;
 
-        // Skip the identification header and the comment header that follows it.
         this.packetIndex = packets.size() > 1 && startsWith(packets.get(1), "OpusTags") ? 2 : 1;
 
         try {

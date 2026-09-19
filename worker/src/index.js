@@ -1,43 +1,12 @@
-/**
- * QZA stats proxy.
- *
- * Holds the Hypixel API key server side so the mod never ships it. The mod
- * asks this Worker for a player's dungeon numbers; the Worker asks Mojang and
- * Hypixel, trims the response down to what the mod needs, and caches it.
- *
- * Deploy with:
- *   wrangler secret put HYPIXEL_API_KEY
- *   wrangler deploy
- *
- * The key is a Worker secret. It is never in this file, the repo, or the jar.
- *
- *   GET /stats?name=<ign>     or     GET /stats?uuid=<uuid>
- *
- * Responds with
- *   { ok: true, name, uuid, class, cataExp, secrets, magicalPower,
- *     runs:   { cata: {"0":n,...}, master: {"1":n,...} },
- *     pb:     { cata: {"1":ms,...}, master: {"7":ms,...} } }
- * or
- *   { ok: false, error: "<message>" }
- *
- * Raw numbers only. Cata level, secret average and formatting are worked out
- * in the mod, so changing how any of that reads never needs a redeploy.
- */
 
 import { magicalPower } from './magicalpower.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_]{1,16}$/;
 const UUID_PATTERN = /^[0-9a-fA-F]{32}$/;
 
-// Dungeon records barely move, so an hour of caching costs nothing in
-// freshness and cuts upstream calls roughly sixfold.
 const CACHE_SECONDS = 3600;
 const NOT_FOUND_CACHE_SECONDS = 600;
 
-// What any single caller may ask for, and the hard ceiling on calls this
-// Worker will forward to Hypixel. The second one is what actually protects the
-// key: past the budget the Worker refuses rather than spending it, so abuse
-// degrades the abuser instead of taking the key down for everybody.
 const IP_LIMIT_PER_MINUTE = 30;
 const UPSTREAM_LIMIT_PER_MINUTE = 30;
 
@@ -55,8 +24,6 @@ export default {
             return fail('Proxy is missing its Hypixel API key', 500);
         }
 
-        // Checked before the cache, so hammering a cached player still costs
-        // the caller their own allowance rather than this Worker's quota.
         const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
         if (!await allow(`ip:${ip}`, IP_LIMIT_PER_MINUTE)) {
             return retryLater('Too many stats lookups from your connection');
@@ -75,8 +42,6 @@ export default {
             return fail('That is not a valid uuid', 400);
         }
 
-        // Cache on the normalised identity so ten people asking about the same
-        // player in the same minute cost one Hypixel call, not ten.
         const key = rawUuid
             ? `uuid:${rawUuid.toLowerCase()}`
             : `name:${rawName.toLowerCase()}`;
@@ -88,7 +53,6 @@ export default {
             return withHeader(hit, 'X-QZA-Cache', 'hit');
         }
 
-        // A miss means real upstream calls, so it has to fit the budget.
         if (!await allow('upstream', UPSTREAM_LIMIT_PER_MINUTE)) {
             return retryLater('Stats are busy right now, try again in a minute');
         }
@@ -105,7 +69,6 @@ export default {
         const seconds = payload.ok ? CACHE_SECONDS : NOT_FOUND_CACHE_SECONDS;
         const response = json(payload, status, seconds);
 
-        // Only cache answers, never transport failures.
         if (status === 200 || status === 404) {
             ctx.waitUntil(cache.put(cacheKey, response.clone()));
         }
@@ -155,17 +118,13 @@ async function lookup(name, uuid, apiKey) {
     const achievements = player && player.player ? (player.player.achievements || {}) : {};
     const secrets = numberOr(achievements.skyblock_treasure_hunter, numberOr(dungeons.secrets, 0));
 
-    // Added up from the accessory bag, since Hypixel only records the highest
-    // somebody has ever had. Null rather than zero when the bag cannot be read,
-    // so the mod can say "API Off" instead of reporting a real-looking 0.
     const power = await magicalPower(member);
 
     return {
         ok: true,
         name: resolved,
         uuid: id,
-        // Whatever they last picked, which is the best guess at what they will
-        // play. Empty when they have never chosen one.
+
         class: typeof dungeons.selected_dungeon_class === 'string'
             ? dungeons.selected_dungeon_class : '',
         cataExp: numberOr(cata.experience, 0),
@@ -182,14 +141,6 @@ async function lookup(name, uuid, apiKey) {
     };
 }
 
-/**
- * Name to uuid. Mojang answers 403 to requests from datacenter ranges, which is
- * where this Worker runs, so several resolvers are tried in turn. They all
- * return the same { id, name } shape.
- *
- * A 404 or 204 is a real answer - that name does not exist - so it stops there
- * rather than asking the next one. Only a block or an outage moves on.
- */
 async function resolveName(name) {
     const encoded = encodeURIComponent(name);
     const resolvers = [
@@ -260,7 +211,6 @@ async function hypixel(url, apiKey) {
     return body;
 }
 
-/** Keeps only whole non-negative numbers, so odd upstream values cannot leak through. */
 function intMap(source) {
     const out = {};
     if (!source || typeof source !== 'object') {
@@ -306,15 +256,6 @@ function retryLater(message) {
     return response;
 }
 
-/**
- * A per-minute counter kept in the edge cache. Buckets are keyed by the minute
- * so they expire on their own.
- *
- * Approximate on purpose: the cache is per location and concurrent requests can
- * read the same value, so a burst may slip a few past. That is fine for holding
- * back sustained abuse, which is what this is for. If the counter itself fails
- * the request is allowed, since a broken limiter must not take the service down.
- */
 async function allow(bucket, limit) {
     const minute = Math.floor(Date.now() / 60000);
     const key = new Request(`https://qza.invalid/rl/${encodeURIComponent(bucket)}/${minute}`);

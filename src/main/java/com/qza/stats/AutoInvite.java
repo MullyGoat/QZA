@@ -24,21 +24,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Answers "lf inv" whispers by looking the sender up and, if asked to, either
- * inviting them or turning them down.
- *
- * Both the lookup and the reply are off by default, and the reply is gated
- * behind its own toggle, so nothing is sent on anyone's behalf until it has
- * been switched on deliberately.
- */
 public final class AutoInvite {
     private static final long COOLDOWN_MILLIS = 30_000L;
 
-    /**
-     * Spelled with or without the space, which is how people actually type it.
-     * Anchored to a word boundary so something like "golf inv" does not count.
-     */
     private static final Pattern REQUEST = Pattern.compile("\\blf\\s*inv");
 
     private static final Map<String, Long> lastHandled = new HashMap<>();
@@ -50,11 +38,6 @@ public final class AutoInvite {
         return text != null && REQUEST.matcher(text.toLowerCase(Locale.ROOT)).find();
     }
 
-    /**
-     * The class they are offering to play, as in "lf inv healer". Only what
-     * follows the request is read, so a floor like "m7" is not mistaken for a
-     * class. Null when they did not name one.
-     */
     public static String requestedRole(String text) {
         if (text == null) {
             return null;
@@ -83,21 +66,11 @@ public final class AutoInvite {
         run(ign, true, true, requestedRole(text));
     }
 
-    /**
-     * The right-click and kebab menu entry: reports, never replies. The result
-     * also lands in that player's DM thread, since that is where the check was
-     * started from.
-     */
     public static void check(String ign) {
         ChatUtil.info("Checking " + ign + "...");
         run(ign, false, true, null);
     }
 
-    /**
-     * Looks the player up against their own name, which both proves the proxy
-     * works and shows what a report reads like before anything is aimed at
-     * someone else.
-     */
     public static void reportSource() {
         if (!StatsApi.configured()) {
             ChatUtil.error("No stats proxy set up yet.");
@@ -143,8 +116,6 @@ public final class AutoInvite {
             String floor = DungeonFloor.normalise(cfg.autoInviteFloor);
             String failure = firstFailure(stats, cfg, floor);
 
-            // What they offered to play is what they will be, so a tank asking
-            // "lf inv healer" is reported as the healer.
             String shown = requested != null ? requested : stats.dungeonClass();
 
             ChatUtil.raw(report(stats, cfg, floor, shown));
@@ -165,11 +136,6 @@ public final class AutoInvite {
         });
     }
 
-    /**
-     * A full party and a duplicate class both block an invite whatever the
-     * stats say. Requirements are judged before the class so someone who is
-     * simply not good enough is not told to switch class instead.
-     */
     private static void decide(PlayerStats stats, String requested, String failure) {
         PartyState.request().thenAccept(snapshot -> {
             if (snapshot != null && snapshot.full()) {
@@ -182,8 +148,6 @@ public final class AutoInvite {
                 return;
             }
 
-            // What they say they will play wins over what they have selected,
-            // so "lf inv healer" from a tank fills the empty healer slot.
             String role = requested != null ? requested : stats.role();
             if (role == null || snapshot == null || !snapshot.inParty()) {
                 PartyInvite.send(stats.name());
@@ -204,7 +168,6 @@ public final class AutoInvite {
         });
     }
 
-    /** Which classes the party already covers, this client included. */
     private static CompletableFuture<Set<String>> takenRoles(PartyState.Snapshot snapshot) {
         List<CompletableFuture<StatsApi.Result>> lookups = new ArrayList<>();
         for (UUID member : snapshot.members()) {
@@ -233,7 +196,6 @@ public final class AutoInvite {
         ChatUtil.sendCommand("w " + name + " " + reply);
     }
 
-    /** The first unmet requirement, or null when they pass everything. */
     public static String firstFailure(PlayerStats stats, QZAConfig cfg, String floor) {
         int requiredCata = (int) Math.round(cfg.autoInviteCataReq);
         if (requiredCata > 0 && stats.cataLevel() < requiredCata) {
@@ -254,7 +216,6 @@ public final class AutoInvite {
         return null;
     }
 
-    /** The same numbers as the chat report, without the colours. */
     static String plainReport(PlayerStats stats, String floor, String shownClass) {
         long pb = stats.pbMillis(floor);
         return "Cata " + stats.cataLevel()
@@ -265,11 +226,6 @@ public final class AutoInvite {
                 + " | MP " + stats.magicalPowerLabel();
     }
 
-    /**
-     * The unmet requirement, sent under the stats rather than tacked onto the
-     * end of them. The stats line is already long enough to wrap, and wrapping
-     * is what hid the numbers behind it.
-     */
     private static MutableComponent failLine(String failure) {
         return ChatUtil.prefix()
                 .append(Component.literal("Fails: ").withStyle(ChatFormatting.RED))

@@ -1,12 +1,3 @@
-/**
- * Just enough NBT to read an accessory bag.
- *
- * Hypixel hands out inventories as gzipped NBT wrapped in base64, so there is
- * no way to count somebody's accessories without unpacking one. Every tag type
- * is handled because a bag contains whatever Hypixel put there, but the result
- * is plain objects and arrays rather than a tag tree: the caller wants a couple
- * of strings out of each item, not a model of the format.
- */
 
 const END = 0;
 const BYTE = 1;
@@ -24,12 +15,9 @@ const LONG_ARRAY = 12;
 
 const DECODER = new TextDecoder();
 
-// A bag is a few hundred kilobytes at the very most. Both caps are here so a
-// malformed or hostile payload cannot spend the Worker's whole CPU slice.
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_TAGS = 400_000;
 
-/** The root compound of gzipped, base64 NBT. Throws if it is not readable. */
 export async function decodeNbt(base64) {
     const packed = unbase64(base64);
     const bytes = await gunzip(packed);
@@ -118,8 +106,7 @@ function readList(reader) {
     const length = readLength(reader);
     const out = new Array(length);
     for (let i = 0; i < length; i++) {
-        // An empty list is written with an end tag for its type, so there is
-        // nothing to read even though the length may claim otherwise.
+
         out[i] = type === END ? null : readPayload(reader, type);
     }
     return out;
@@ -150,7 +137,6 @@ function byteAt(reader) {
     return reader.view.getUint8(take(reader, 1));
 }
 
-/** A length that cannot be negative or run past what is left. */
 function readLength(reader) {
     const length = reader.view.getInt32(take(reader, 4));
     if (length < 0 || length > reader.bytes.length - reader.at) {
@@ -159,7 +145,6 @@ function readLength(reader) {
     return length;
 }
 
-/** Claims the next {@code count} bytes and returns where they start. */
 function take(reader, count) {
     const start = reader.at;
     if (count < 0 || start + count > reader.bytes.length) {

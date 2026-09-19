@@ -46,10 +46,6 @@ public interface PcmStream extends AutoCloseable {
         throw new IOException("Song is an unsupported audio format");
     }
 
-    /**
-     * An .ogg file is a container, so the codec inside it decides the decoder.
-     * Vorbis goes through stb, Opus through Concentus.
-     */
     private static PcmStream openOgg(Path path) throws IOException {
         byte[] bytes = Files.readAllBytes(path);
         String head = headText(bytes);

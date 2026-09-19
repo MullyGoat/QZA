@@ -10,40 +10,10 @@ import net.minecraft.client.Minecraft;
 import java.util.Locale;
 import java.util.UUID;
 
-/**
- * Pings Discord the moment a party the player is running fills up behind their
- * back.
- *
- * Hypixel's mod API answers questions about the party but never volunteers that
- * it changed, so something has to prompt the asking. Chat is that prompt: every
- * join and leave is announced, and a line saying so is the cue to go and get a
- * fresh count. Polling on a timer would ask constantly and still be late.
- *
- * The party reaching five is the event. It is edge triggered, so a party sitting
- * at full does not re-announce itself on every join and leave around it.
- *
- * Two further things decide whether that event is worth interrupting for, and
- * either one on its own is enough:
- *
- * <ul>
- *   <li>the player leads the party, so a group they are recruiting for is worth
- *       telling them about whether or not they are watching it;</li>
- *   <li>the game window is not focused, so a party filling while they are
- *       looking at something else reaches them whoever leads it.</li>
- * </ul>
- *
- * Which leaves exactly one case quiet: somebody else's party filling up while
- * the player is sat watching it happen, where the alert would tell them nothing
- * the screen has not already.
- */
 public final class PartyFullAlert {
-    /**
-     * Long enough for a burst of joins to settle into one count, short enough
-     * that the ping still beats the player back to the window.
-     */
+
     private static final long SETTLE_TICKS = 20;
 
-    /** A floor on how often this can fire, whatever the party does. */
     private static final long COOLDOWN_MILLIS = 60_000L;
 
     private static final String[] MEMBERSHIP_CHANGED = {
@@ -62,7 +32,6 @@ public final class PartyFullAlert {
     private PartyFullAlert() {
     }
 
-    /** Nothing carries across a reconnect, least of all who was in the party. */
     public static void reset() {
         wasFull = false;
         checkPending = false;
@@ -86,7 +55,6 @@ public final class PartyFullAlert {
             return;
         }
 
-        // One count per burst. Five people joining at once is still one party.
         checkPending = true;
         Scheduler.schedule(SETTLE_TICKS, PartyFullAlert::check);
     }
@@ -103,14 +71,8 @@ public final class PartyFullAlert {
         });
     }
 
-    /**
-     * Runs on the client thread, so the window state it reads is the one the
-     * player is actually looking at.
-     */
     private static void evaluate(Minecraft client, PartyState.Snapshot snapshot) {
-        // A stale snapshot means Hypixel did not answer in time. Counting off an
-        // old one could announce a party that emptied a minute ago, so this
-        // waits for the next join instead.
+
         if (snapshot == null || !snapshot.fresh()) {
             return;
         }
@@ -123,9 +85,6 @@ public final class PartyFullAlert {
             return;
         }
 
-        // Either reason is reason enough. Requiring both meant a leader sitting
-        // on the party finder screen, who is the most likely person to want
-        // this, was the one person who never got it.
         UUID self = client.player.getUUID();
         boolean leads = snapshot.ledBy(self);
         boolean away = !client.isWindowActive();
@@ -142,10 +101,6 @@ public final class PartyFullAlert {
         DiscordAlert.partyFull(snapshot.size());
     }
 
-    /**
-     * Why the last party to fill up went unannounced, for {@code /qza discord}.
-     * Null when nothing is standing in the way.
-     */
     public static String blockedReason() {
         QZAConfig cfg = ConfigManager.get();
         if (!cfg.discordAlertEnabled) {

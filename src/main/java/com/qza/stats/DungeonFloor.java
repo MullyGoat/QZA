@@ -4,10 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * The floors a personal best can be set on. Stored in the config as a short
- * key such as "m7" so the setting survives reordering.
- */
 public final class DungeonFloor {
     public static final String DEFAULT = "m7";
 
@@ -27,7 +23,6 @@ public final class DungeonFloor {
         return List.copyOf(keys);
     }
 
-    /** Just the floor numbers, for a dropdown that pairs with a Master Mode toggle. */
     public static final List<String> NUMBERS = List.of("1", "2", "3", "4", "5", "6", "7");
 
     public static String key(int floor, boolean master) {
@@ -43,7 +38,6 @@ public final class DungeonFloor {
         return KEYS.contains(lower) ? lower : DEFAULT;
     }
 
-    /** "m7" reads as "M7", which is what players call it. */
     public static String label(String key) {
         String safe = normalise(key);
         return safe.toUpperCase(Locale.ROOT);
@@ -58,7 +52,6 @@ public final class DungeonFloor {
         return safe.charAt(1) - '0';
     }
 
-    /** Milliseconds to "4:59", or "5:01.4" when a fraction matters. */
     public static String time(long millis) {
         if (millis <= 0) {
             return "none";
@@ -69,7 +62,6 @@ public final class DungeonFloor {
         return minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
     }
 
-    /** Seconds to the same shape, for requirement labels. */
     public static String timeFromSeconds(long seconds) {
         if (seconds <= 0) {
             return "any";

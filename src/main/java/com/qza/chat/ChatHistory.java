@@ -258,11 +258,6 @@ public final class ChatHistory {
         save();
     }
 
-    /**
-     * A locally generated line in a conversation, such as a stats check result.
-     * Marked as a system line so it draws centred rather than looking like
-     * something either side actually whispered.
-     */
     public static void note(String ign, String text) {
         if (ign == null || ign.isBlank() || text == null || text.isBlank()) {
             return;
@@ -301,9 +296,7 @@ public final class ChatHistory {
         if (ign == null || ign.isBlank() || trimmed.isEmpty()) {
             return;
         }
-        // Typed by the player, so it takes the same route as anything typed in
-        // vanilla chat: into their history, and past any mod that rewrites
-        // what gets sent.
+
         ChatUtil.sendTyped("/w " + ign + " " + trimmed);
     }
 

@@ -72,7 +72,6 @@ public final class ChannelHistory {
         }
     }
 
-    /** A locally generated line, with no speaker and not treated as sent. */
     public static void note(String channel, Component rich, String text) {
         record(channel, rich, text, null, false);
     }

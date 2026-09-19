@@ -13,17 +13,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-/**
- * Paints anyone on the shitter list brown in party finder tooltips, so a party
- * worth skipping is obvious while scrolling through the listings.
- *
- * Rather than parsing the party finder's layout, this looks for names anywhere
- * in the tooltip. Hypixel can change how those items read without breaking it.
- */
 public final class ShitterHighlight {
     private static final TextColor BROWN = TextColor.fromRgb(0xA9714B);
 
-    /** Sits on the end of the party name, so a party to skip stands out. */
     private static final String MARK = "(X)";
     private static final Style MARK_STYLE = Style.EMPTY
             .withColor(TextColor.fromRgb(0xFF5555))
@@ -32,14 +24,6 @@ public final class ShitterHighlight {
     private ShitterHighlight() {
     }
 
-    /**
-     * The lines as they will actually be drawn, or the same list when there is
-     * nothing to mark.
-     *
-     * This runs from the render call itself rather than from the tooltip event,
-     * because other party finder mods rebuild the member lines on their way to
-     * the renderer. Anything done earlier is simply replaced.
-     */
     public static List<Component> highlight(List<Component> lines) {
         if (lines == null || lines.isEmpty()
                 || ShitterList.size() == 0 || !inPartyFinder()) {
@@ -70,8 +54,6 @@ public final class ShitterHighlight {
             return lines;
         }
 
-        // One marker, on the end of the party name, wherever in the party the
-        // listed player turned up. The names themselves are left to the colour.
         if (out.get(0) != null) {
             out.set(0, Component.empty().append(out.get(0))
                     .append(Component.literal(" " + MARK).withStyle(MARK_STYLE)));
@@ -89,7 +71,6 @@ public final class ShitterHighlight {
         return names;
     }
 
-    /** Only while the party finder is open, so ordinary tooltips are untouched. */
     private static boolean inPartyFinder() {
         Screen screen = Minecraft.getInstance().screen;
         if (screen == null) {
@@ -99,15 +80,6 @@ public final class ShitterHighlight {
         return title.toLowerCase(Locale.ROOT).contains("party finder");
     }
 
-    /**
-     * Marks every listed name on the line and keeps everything else exactly as
-     * it came in, so ranks and stats still read the way Hypixel and other mods
-     * wrote them. Null when there was nothing to change.
-     *
-     * Matching runs against the whole line rather than each run of styling,
-     * because a name is often split across several runs. Searching run by run
-     * finds a name only when it happens to land in one piece.
-     */
     static Component paint(Component line, List<String> names) {
         List<Part> parts = new ArrayList<>();
         line.visit((style, text) -> {
@@ -168,16 +140,6 @@ public final class ShitterHighlight {
         return out;
     }
 
-    /**
-     * Turns legacy section codes inside the text into real styles and drops the
-     * codes themselves.
-     *
-     * Party finder mods write these member lines with codes baked into the
-     * string. Those codes matter twice over: the font renderer applies them and
-     * would override any colour set here, and the letter in a code such as
-     * "§b" sits right against the name, which makes a word boundary check treat
-     * the name as part of something longer. Expanding them first solves both.
-     */
     private static void expand(String text, Style base, List<Part> into) {
         Style current = base;
         StringBuilder run = new StringBuilder();
@@ -200,7 +162,6 @@ public final class ShitterHighlight {
                 run.setLength(0);
             }
 
-            // A colour clears the other formatting, the way vanilla behaves.
             if (code == ChatFormatting.RESET) {
                 current = base;
             } else if (code.isColor()) {
@@ -216,11 +177,6 @@ public final class ShitterHighlight {
         }
     }
 
-    /**
-     * The next listed name in the text at or after {@code from}, as start and
-     * end offsets. Bounded by non-name characters so a listed name cannot match
-     * inside a longer one.
-     */
     static int[] findName(String text, int from, List<String> names) {
         int best = -1;
         int bestEnd = -1;

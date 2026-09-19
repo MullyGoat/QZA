@@ -3,10 +3,6 @@ package com.qza.stats;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * The five dungeon classes, and the shorthand players actually type when they
- * ask for a role, as in "lf inv healer" or "lf inv zerk".
- */
 public final class DungeonClass {
     public static final String HEALER = "healer";
     public static final String MAGE = "mage";
@@ -19,7 +15,6 @@ public final class DungeonClass {
     private DungeonClass() {
     }
 
-    /** Hypixel sends lower case; players read "Berserk". */
     public static String label(String raw) {
         if (raw == null || raw.isBlank()) {
             return "no class";
@@ -28,13 +23,6 @@ public final class DungeonClass {
         return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 
-    /**
-     * The canonical name for whatever a profile or a player typed, or null.
-     *
-     * No single-letter forms on purpose. "lf inv m7" splits into words that
-     * include "m", and reading that as mage would have QZA decide someone was
-     * offering to play a class they never mentioned.
-     */
     public static String of(String raw) {
         if (raw == null) {
             return null;

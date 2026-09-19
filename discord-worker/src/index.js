@@ -1,32 +1,3 @@
-/**
- * QZA Discord relay.
- *
- * Pings a player on Discord when their dungeon party fills up. Anyone in the
- * server can use it: they link their game to their Discord account once, with a
- * code, and the relay messages whoever that code belonged to.
- *
- * Kept apart from the stats proxy on purpose. That one is public and answers
- * anonymous requests all day; this one holds a bot token that can message
- * people. Separate Workers mean separate secret stores, so a mistake in one
- * cannot reach the other.
- *
- * Deploy with:
- *   wrangler kv namespace create LINKS      (once, then paste the id below)
- *   wrangler secret put DISCORD_BOT_TOKEN
- *   wrangler secret put DISCORD_PUBLIC_KEY
- *   wrangler secret put DISCORD_CHANNEL_ID  (optional, for the channel ping)
- *   wrangler secret put DISCORD_OWNER_ID    (optional, see CHANNEL_SCOPE)
- *   wrangler deploy
- *
- * Nothing identifying is in wrangler.toml, so the repo stays clean of ids.
- *
- *   POST /link/start          { ign, replaces }      -> { ok, code, token }
- *   POST /alert               Bearer <token>         -> { ok }
- *   POST /unlink              Bearer <token>         -> { ok }
- *   POST /interactions        signed by Discord      -> /link and /unlink
- *
- * See links.js for the complete list of what is stored, which is short.
- */
 
 import {
     CODE_TTL_SECONDS, bind, bindingFor, forget, hashToken, newCode, newToken,
@@ -37,12 +8,9 @@ import {
     sendMessage, verifySignature,
 } from './discord.js';
 
-/** Blurple for a real alert, grey for a test, so the two never look alike. */
 const COLOUR_ALERT = 0x5865f2;
 const COLOUR_TEST = 0x99aab5;
 
-// Per token, so one noisy player cannot drown out anybody else, and overall so
-// the relay cannot be used to hammer Discord.
 const ALERT_LIMIT_PER_MINUTE = 6;
 const ALERT_LIMIT_TOTAL_PER_MINUTE = 120;
 const LINK_LIMIT_PER_MINUTE = 10;
@@ -78,13 +46,6 @@ export default {
     },
 };
 
-// ---- the game asking for a code --------------------------------------------
-
-/**
- * Hands out a code and the token it will belong to. Deliberately open: the
- * token is worthless until somebody proves ownership of a Discord account by
- * running /link with the code, and the code dies in ten minutes.
- */
 async function linkStart(request, env) {
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
     if (!await allow(`link:${ip}`, LINK_LIMIT_PER_MINUTE)) {
@@ -103,11 +64,9 @@ async function linkStart(request, env) {
 
     await putCode(env.LINKS, code, {
         tokenHash: await hashToken(token),
-        // Shown once when confirming the link so the person can see which
-        // account they are attaching, then thrown away with the code.
+
         ign: typeof body.ign === 'string' ? body.ign.slice(0, 16) : '',
-        // Whatever this copy of the mod was using before, so relinking does not
-        // leave the previous token working.
+
         replaces: typeof body.replaces === 'string' && body.replaces
             ? await hashToken(body.replaces) : null,
     });
@@ -115,16 +74,12 @@ async function linkStart(request, env) {
     return json({ ok: true, code: code, token: token, expiresIn: CODE_TTL_SECONDS }, 200);
 }
 
-// ---- Discord running a slash command ---------------------------------------
-
 async function interactions(request, env) {
     if (!env.DISCORD_PUBLIC_KEY) {
         return fail('Relay is missing DISCORD_PUBLIC_KEY '
             + '(wrangler secret put DISCORD_PUBLIC_KEY)', 500);
     }
 
-    // Read once, as text. The signature covers these exact bytes, so parsing
-    // first and re-serialising would not verify.
     const raw = await request.text();
     const ok = await verifySignature(
         env.DISCORD_PUBLIC_KEY,
@@ -133,8 +88,7 @@ async function interactions(request, env) {
         raw);
 
     if (!ok) {
-        // Discord requires exactly this for an unverified request, and checks
-        // for it when you save the endpoint URL.
+
         return new Response('invalid request signature', { status: 401 });
     }
 
@@ -197,12 +151,9 @@ async function runUnlink(env, who) {
         + 'in game to set it up again.');
 }
 
-/** Stops an in game name from bolding or linking the confirmation message. */
 function escapeMarkdown(text) {
     return text.replace(/[\\`*_~|>[\]()#-]/g, '\\$&');
 }
-
-// ---- the game sending an alert ---------------------------------------------
 
 async function alert(request, env) {
     const token = bearer(request);
@@ -241,8 +192,6 @@ async function alert(request, env) {
     const message = compose(body, binding.discordId);
     const problems = [];
 
-    // One after another rather than together, so hitting a Discord rate limit
-    // on the first does not also burn the second.
     if (wantsDm) {
         const to = await openDm(env, binding.discordId);
         if (to.error) {
@@ -268,14 +217,6 @@ async function alert(request, env) {
     return json({ ok: true }, 200);
 }
 
-/**
- * Whether this person's alerts may also go to the shared channel.
- *
- * "everyone" is the default: the channel becomes a feed everybody can see, and
- * because each message mentions only the one person whose party filled, nobody
- * else is notified by it. "owner" narrows it to the relay's own account, "off"
- * turns it off entirely.
- */
 function channelAllowed(env, discordId) {
     if (!env.DISCORD_CHANNEL_ID) {
         return false;
@@ -304,11 +245,6 @@ function bearer(request) {
     return header.startsWith('Bearer ') ? header.slice(7).trim() : '';
 }
 
-/**
- * The two wordings. The channel one carries the mention, because that is what
- * makes it a ping; the DM does not need one, since the message itself is
- * already the notification.
- */
 function compose(body, userId) {
     const test = body.event === 'test';
     const size = Number.isFinite(Number(body.size)) ? Math.round(Number(body.size)) : 5;
@@ -323,8 +259,6 @@ function compose(body, userId) {
         timestamp: new Date().toISOString(),
     };
 
-    // parse: [] switches off @everyone, @here and role pings outright, so the
-    // only thing this bot can ever mention is the one account it is sending to.
     return {
         dm: { embeds: [embed], allowed_mentions: { parse: [] } },
         channel: {
@@ -339,12 +273,6 @@ function clampSize(size) {
     return Math.max(0, Math.min(99, size));
 }
 
-/**
- * A per-minute counter kept in the edge cache, keyed by the minute so buckets
- * expire on their own. Approximate, since the cache is per location and racing
- * requests can read the same value, which is fine for holding back abuse. A
- * broken limiter allows the request rather than taking the relay down.
- */
 async function allow(bucket, limit) {
     const minute = Math.floor(Date.now() / 60000);
     const key = new Request(`https://qza.invalid/rl/${encodeURIComponent(bucket)}/${minute}`);

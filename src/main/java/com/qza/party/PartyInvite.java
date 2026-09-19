@@ -6,13 +6,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
-/**
- * Sends a party invite and leaves a note in the Party tab, so invites made by
- * QZA are visible in the same place the party conversation is.
- *
- * Everything that invites goes through here, whether it was the button in QZA
- * Chat or auto invite answering an "lf inv".
- */
 public final class PartyInvite {
     private PartyInvite() {
     }
@@ -25,7 +18,6 @@ public final class PartyInvite {
         announce(ign);
     }
 
-    /** Local only: a record of what QZA did, not something the party sees. */
     public static void announce(String ign) {
         MutableComponent rich = ChatUtil.prefix()
                 .append(Component.literal(ign).withStyle(ChatFormatting.YELLOW))

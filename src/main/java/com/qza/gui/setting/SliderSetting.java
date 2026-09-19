@@ -22,10 +22,6 @@ public class SliderSetting extends Setting {
                 getter, setter, null);
     }
 
-    /**
-     * The format overload is for values that do not read as plain numbers, such
-     * as a run time that belongs on screen as 5:00 rather than 300.
-     */
     public SliderSetting(String category, String section, String title, Component description,
                          double min, double max, double step, String suffix,
                          DoubleSupplier getter, Consumer<Double> setter,
