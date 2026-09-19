@@ -147,9 +147,16 @@ public final class AutoInvite {
             // "lf inv healer" is reported as the healer.
             String shown = requested != null ? requested : stats.dungeonClass();
 
-            ChatUtil.raw(report(stats, cfg, floor, failure, shown));
+            ChatUtil.raw(report(stats, cfg, floor, shown));
+            if (failure != null) {
+                ChatUtil.raw(failLine(failure));
+            }
+
             if (intoDm) {
-                ChatHistory.note(ign, "[QZA] " + plainReport(stats, cfg, floor, failure, shown));
+                ChatHistory.note(ign, "[QZA] " + plainReport(stats, floor, shown));
+                if (failure != null) {
+                    ChatHistory.note(ign, "[QZA] Fails: " + failure);
+                }
             }
 
             if (mayReply && cfg.autoInviteRespond) {
@@ -248,20 +255,29 @@ public final class AutoInvite {
     }
 
     /** The same numbers as the chat report, without the colours. */
-    static String plainReport(PlayerStats stats, QZAConfig cfg, String floor,
-                              String failure, String shownClass) {
+    static String plainReport(PlayerStats stats, String floor, String shownClass) {
         long pb = stats.pbMillis(floor);
-        String line = "Cata " + stats.cataLevel()
+        return "Cata " + stats.cataLevel()
                 + " | " + DungeonFloor.label(floor) + " "
                 + (pb > 0 ? DungeonFloor.time(pb) : "no S+")
                 + " | " + DungeonClass.label(shownClass)
                 + " | Secrets " + String.format(Locale.ROOT, "%.2f", stats.secretAverage()) + "/run"
                 + " | MP " + stats.magicalPowerLabel();
-        return failure == null ? line : line + " | FAILS: " + failure;
+    }
+
+    /**
+     * The unmet requirement, sent under the stats rather than tacked onto the
+     * end of them. The stats line is already long enough to wrap, and wrapping
+     * is what hid the numbers behind it.
+     */
+    private static MutableComponent failLine(String failure) {
+        return ChatUtil.prefix()
+                .append(Component.literal("Fails: ").withStyle(ChatFormatting.RED))
+                .append(Component.literal(failure).withStyle(ChatFormatting.GRAY));
     }
 
     private static MutableComponent report(PlayerStats stats, QZAConfig cfg,
-                                           String floor, String failure, String shownClass) {
+                                           String floor, String shownClass) {
         int requiredCata = (int) Math.round(cfg.autoInviteCataReq);
         long requiredSeconds = Math.round(cfg.autoInvitePbSeconds);
         long pb = stats.pbMillis(floor);
@@ -270,7 +286,7 @@ public final class AutoInvite {
         boolean pbOk = requiredSeconds <= 0
                 || (pb > 0 && pb <= requiredSeconds * 1000L);
 
-        MutableComponent line = ChatUtil.prefix()
+        return ChatUtil.prefix()
                 .append(Component.literal(stats.name())
                         .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD))
                 .append(Component.literal(" Cata ").withStyle(ChatFormatting.GRAY))
@@ -294,11 +310,5 @@ public final class AutoInvite {
                 .append(Component.literal(stats.magicalPowerLabel())
                         .withStyle(stats.magicalPower() == null
                                 ? ChatFormatting.RED : ChatFormatting.AQUA));
-
-        if (failure != null) {
-            line.append(Component.literal("  FAILS: ").withStyle(ChatFormatting.RED))
-                    .append(Component.literal(failure).withStyle(ChatFormatting.GRAY));
-        }
-        return line;
     }
 }
