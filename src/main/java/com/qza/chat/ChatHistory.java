@@ -301,7 +301,10 @@ public final class ChatHistory {
         if (ign == null || ign.isBlank() || trimmed.isEmpty()) {
             return;
         }
-        ChatUtil.sendCommand("w " + ign + " " + trimmed);
+        // Typed by the player, so it takes the same route as anything typed in
+        // vanilla chat: into their history, and past any mod that rewrites
+        // what gets sent.
+        ChatUtil.sendTyped("/w " + ign + " " + trimmed);
     }
 
     public static List<ChatConversation> conversations() {

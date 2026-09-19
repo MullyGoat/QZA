@@ -27,6 +27,7 @@ import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import org.lwjgl.glfw.GLFW;
 
@@ -90,6 +91,14 @@ public class QZAChatScreen extends Screen {
     private boolean inviting;
 
     private CommandSuggestions commandSuggestions;
+
+    /**
+     * How far back through the sent messages the arrows have walked. Equal to
+     * the number of them when not walking, which is one past the newest, and
+     * is where the half-typed line is kept while the arrows are in use.
+     */
+    private int historyPos;
+    private String historyDraft = "";
 
     private String menuFor;
     private int menuX;
@@ -211,6 +220,8 @@ public class QZAChatScreen extends Screen {
             input.moveCursorToEnd(false);
             prefill = null;
         }
+
+        forgetHistoryPosition();
 
         builtFor = null;
         rebuildBubbles(true);
@@ -922,6 +933,52 @@ public class QZAChatScreen extends Screen {
         return (seconds / 86400) + "d";
     }
 
+    /**
+     * The messages the player has sent, newest last. Vanilla's own list, so
+     * this box and the normal chat box share one history.
+     */
+    private List<String> sentHistory() {
+        return this.minecraft.gui.getChat().getRecentChat();
+    }
+
+    /** Back to the newest end, with no half-typed line held over. */
+    private void forgetHistoryPosition() {
+        historyPos = sentHistory().size();
+        historyDraft = "";
+    }
+
+    /**
+     * Walks the sent messages, the way the arrows do in vanilla chat. Stepping
+     * back off the newest one restores whatever was half-typed at the time.
+     */
+    private void moveInHistory(int by) {
+        List<String> sent = sentHistory();
+        int size = sent.size();
+        int target = Mth.clamp(historyPos + by, 0, size);
+        if (target == historyPos) {
+            return;
+        }
+
+        if (target == size) {
+            historyPos = size;
+            input.setValue(historyDraft);
+            return;
+        }
+
+        if (historyPos == size) {
+            historyDraft = input.getValue();
+        }
+        historyPos = target;
+        input.setValue(sent.get(target));
+
+        // After the responder has run, so a recalled command does not open the
+        // popup and swallow the next press of the arrow.
+        if (commandSuggestions != null) {
+            commandSuggestions.setAllowSuggestions(false);
+            input.setSuggestion(null);
+        }
+    }
+
     private void sendCurrent() {
         String text = input.getValue().trim();
         if (text.isEmpty()) {
@@ -929,7 +986,7 @@ public class QZAChatScreen extends Screen {
         }
 
         if (text.startsWith("/") || ChannelHistory.EVERYTHING.equals(selectedTab)) {
-            ChatUtil.sendChat(text);
+            ChatUtil.sendTyped(text);
         } else if (isDm()) {
             ChatConversation conversation = current();
             if (conversation == null) {
@@ -937,10 +994,11 @@ public class QZAChatScreen extends Screen {
             }
             ChatHistory.send(conversation.name, text);
         } else {
-            ChatUtil.sendCommand(ChannelHistory.command(selectedTab) + " " + text);
+            ChatUtil.sendTyped("/" + ChannelHistory.command(selectedTab) + " " + text);
         }
         ChatFocus.sent(selectedTab);
         input.setValue("");
+        forgetHistoryPosition();
     }
 
     /**
@@ -1429,6 +1487,19 @@ public class QZAChatScreen extends Screen {
                 && !isBareSlash(input.getValue())
                 && commandSuggestions.keyPressed(event)) {
             return true;
+        }
+        // Only once the popup has passed, which is the order vanilla uses: the
+        // arrows pick a suggestion while one is showing and walk what has been
+        // sent otherwise. Skipped while the ign box has the screen.
+        if (!adding && !inviting) {
+            if (event.key() == GLFW.GLFW_KEY_UP) {
+                moveInHistory(-1);
+                return true;
+            }
+            if (event.key() == GLFW.GLFW_KEY_DOWN) {
+                moveInHistory(1);
+                return true;
+            }
         }
         if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
             if (adding) {
