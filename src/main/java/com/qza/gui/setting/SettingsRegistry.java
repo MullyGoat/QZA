@@ -6,6 +6,7 @@ import com.qza.chat.ChatKeybind;
 import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.discord.DiscordAlert;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.gui.QZAChatScreen;
@@ -444,6 +445,63 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.chatNotifyEnabled));
+
+        settings.add(new ToggleSetting(notify, "Discord", "Party Full Alert",
+                Component.literal("Pings you on Discord when your party hits 5/5, as long as you "
+                                + "are leading it or tabbed out of the game. Link your Discord "
+                                + "below first.").withStyle(ChatFormatting.GRAY),
+                () -> cfg.discordAlertEnabled,
+                v -> {
+                    cfg.discordAlertEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ActionSetting(notify, "Discord", "Link Discord",
+                Component.literal("Gives you a code to run as ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("/link <code>").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" in the QZA Discord. Unlinking deletes "
+                                + "everything stored about you.").withStyle(ChatFormatting.GRAY)),
+                () -> DiscordAlert.linked() ? "Unlink" : "Link",
+                () -> {
+                    Minecraft.getInstance().setScreen(null);
+                    if (DiscordAlert.linked()) {
+                        DiscordAlert.unlink(ChatUtil::success, ChatUtil::error);
+                    } else {
+                        ChatUtil.info("Asking for a code...");
+                        DiscordAlert.link(DiscordAlert::announceCode, ChatUtil::error);
+                    }
+                })
+                .visibleWhen(() -> cfg.discordAlertEnabled));
+
+        settings.add(new ToggleSetting(notify, "Discord", "Direct Message",
+                Component.literal("The bot messages you directly").withStyle(ChatFormatting.GRAY),
+                () -> cfg.discordAlertDm,
+                v -> {
+                    cfg.discordAlertDm = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.discordAlertEnabled));
+
+        settings.add(new ToggleSetting(notify, "Discord", "Channel Ping",
+                Component.literal("The bot @ mentions you in the channel you picked")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.discordAlertChannel,
+                v -> {
+                    cfg.discordAlertChannel = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.discordAlertEnabled));
+
+        settings.add(new ActionSetting(notify, "Discord", "Send Test",
+                Component.literal("Sends a test alert now, the same way a full party would")
+                        .withStyle(ChatFormatting.GRAY),
+                "Send",
+                () -> {
+                    Minecraft.getInstance().setScreen(null);
+                    ChatUtil.info("Sending a test alert...");
+                    DiscordAlert.test(ChatUtil::success, ChatUtil::error);
+                })
+                .visibleWhen(() -> cfg.discordAlertEnabled));
 
         String misc = "Miscellaneous";
 

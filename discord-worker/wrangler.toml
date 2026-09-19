@@ -1,0 +1,25 @@
+name = "qza-discord"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Nothing identifying lives in this file. Discord ids belong to real people, so
+# even though they are not secret they are kept out of the repo and set with
+# `wrangler secret put` instead. See README.md for the full list.
+
+# Who may also get a ping in the shared channel, on top of their DM.
+#   everyone - anyone who has linked. Each alert mentions the one person whose
+#              party filled, so everybody sees it and only they are notified.
+#   owner    - only the relay's own account (DISCORD_OWNER_ID)
+#   off      - nobody, DMs only
+[vars]
+CHANNEL_SCOPE = "everyone"
+
+# The links between a game and a Discord account. Create it once with
+#   wrangler kv namespace create LINKS
+# and paste the id it prints in below. The id is not a secret.
+[[kv_namespaces]]
+binding = "LINKS"
+id = "868750b4618349eb94042cb9c5adc18a"
+
+[observability]
+enabled = true

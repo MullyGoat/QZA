@@ -1,0 +1,11 @@
+{
+  "name": "qza-discord",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Discord relay for the QZA mod - holds the bot token server side",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  }
+}

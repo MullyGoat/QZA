@@ -34,6 +34,8 @@ and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API
 | `/qza music reload` | Re-scan the music folder |
 | `/qza stats` | Check the stats source against your own profile |
 | `/qza stats <ign>` | Show someone's cata, floor PB, class, secret average and MP |
+| `/qza discord` | Show whether party full alerts are set up |
+| `/qza discord test` | Send a test alert to Discord |
 | `/qza reload` | Reload config and list from disk |
 | `/qza help` | Print this list in game |
 
@@ -49,6 +51,19 @@ and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API
 | `/shitter help` | Show the shitter list commands |
 
 `/shitterlist` works as an alias for every `/shitter` command.
+
+## Discord alerts
+
+QZA can ping you on Discord when your party fills up, either because you are the
+one recruiting or because you are tabbed out of the game, so you do not have to
+sit watching it fill.
+
+It needs a small Cloudflare Worker of your own, because the Discord bot token has
+to live somewhere that is not the jar. [discord-worker/README.md](discord-worker/README.md)
+walks through the whole thing, Discord account included.
+
+Once it is running, turn it on under **Notifications → Discord** in `/qza`, and
+check it with `/qza discord test`.
 
 ## Files
 

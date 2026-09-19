@@ -3,6 +3,9 @@ package com.qza.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.qza.config.ConfigManager;
+import com.qza.config.QZAConfig;
+import com.qza.discord.DiscordAlert;
+import com.qza.discord.PartyFullAlert;
 import com.qza.stats.AutoInvite;
 import com.qza.gui.GuiEditScreen;
 import com.qza.gui.QZAChatScreen;
@@ -53,6 +56,25 @@ public final class QZACommand {
                         })
                         .then(argument("ign", StringArgumentType.word()).executes(ctx -> {
                             AutoInvite.check(StringArgumentType.getString(ctx, "ign"));
+                            return 1;
+                        })))
+                .then(literal("discord")
+                        .executes(ctx -> {
+                            discordStatus();
+                            return 1;
+                        })
+                        .then(literal("test").executes(ctx -> {
+                            ChatUtil.info("Sending a test alert...");
+                            DiscordAlert.test(ChatUtil::success, ChatUtil::error);
+                            return 1;
+                        }))
+                        .then(literal("link").executes(ctx -> {
+                            ChatUtil.info("Asking for a code...");
+                            DiscordAlert.link(DiscordAlert::announceCode, ChatUtil::error);
+                            return 1;
+                        }))
+                        .then(literal("unlink").executes(ctx -> {
+                            DiscordAlert.unlink(ChatUtil::success, ChatUtil::error);
                             return 1;
                         })))
                 .then(literal("gui")
@@ -114,6 +136,31 @@ public final class QZACommand {
         client.execute(() -> client.setScreen(new QZAChatScreen()));
     }
 
+    /** What the alert would do right now, and what is stopping it if anything. */
+    private static void discordStatus() {
+        QZAConfig cfg = ConfigManager.get();
+
+        String blocked = PartyFullAlert.blockedReason();
+        if (blocked != null) {
+            ChatUtil.send(Component.literal("Party full alerts are off. ")
+                    .withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal(blocked).withStyle(ChatFormatting.RED)));
+            return;
+        }
+
+        String where = cfg.discordAlertDm && cfg.discordAlertChannel
+                ? "a DM and a channel ping"
+                : cfg.discordAlertDm ? "a DM" : "a channel ping";
+
+        ChatUtil.send(Component.literal("Party full alerts are on, sending ")
+                .withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(where).withStyle(ChatFormatting.GREEN))
+                .append(Component.literal(". Fires when your party hits 5/5, as long as you "
+                        + "lead it or the game is not focused.").withStyle(ChatFormatting.GRAY)));
+        ChatUtil.send(Component.literal("Try it with ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal("/qza discord test").withStyle(ChatFormatting.LIGHT_PURPLE)));
+    }
+
     private static void musicStatus() {
         MusicManager manager = MusicManager.get();
         int tracks = MusicLibrary.count();
@@ -148,6 +195,10 @@ public final class QZACommand {
         entry("/qza music reload", "Re-scan the music folder");
         entry("/qza stats", "Check the stats source against your own profile");
         entry("/qza stats <ign>", "Show someone's cata, floor PB and secret average");
+        entry("/qza discord", "Show whether party full alerts are set up");
+        entry("/qza discord link", "Get a code to link this game to your Discord");
+        entry("/qza discord unlink", "Unlink and delete what the relay stored");
+        entry("/qza discord test", "Send a test alert to Discord");
         entry("/qza reload", "Reload config and list from disk");
         entry("/qza help", "Print this list in game");
         entry("/shitter", "Show the shitter list commands");

@@ -6,6 +6,7 @@ import com.qza.chat.ChatNotification;
 import com.qza.command.QZACommand;
 import com.qza.command.ShitterCommand;
 import com.qza.config.ConfigManager;
+import com.qza.discord.PartyFullAlert;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationHud;
@@ -62,6 +63,7 @@ public class QZA implements ClientModInitializer {
             MusicManager.get().onChatMessage(plain);
             NecronTimer.onChatMessage(plain);
             PartyNotification.onChatMessage(plain);
+            PartyFullAlert.onChatMessage(plain);
             ChatHistory.onChatMessage(message, plain);
             ChannelHistory.onChatMessage(message, plain);
         });
@@ -84,6 +86,7 @@ public class QZA implements ClientModInitializer {
             NecronTimer.reset();
             ServerTickClock.reset();
             PartyNotification.clear();
+            PartyFullAlert.reset();
             ChatNotification.clear();
             PlayerFaces.clearCache();
             DungeonState.reset();

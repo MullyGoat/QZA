@@ -33,9 +33,10 @@ public final class PartyState {
 
     /**
      * @param inParty false when Hypixel says you are on your own
+     * @param leader  whoever is running the party, or null when alone
      * @param members every member including yourself
      */
-    public record Snapshot(boolean inParty, Set<UUID> members, long at) {
+    public record Snapshot(boolean inParty, UUID leader, Set<UUID> members, long at) {
         public int size() {
             return inParty ? Math.max(1, members.size()) : 1;
         }
@@ -46,6 +47,11 @@ public final class PartyState {
 
         public boolean fresh() {
             return System.currentTimeMillis() - at <= FRESH_MILLIS;
+        }
+
+        /** True only when Hypixel named this player as the leader. */
+        public boolean ledBy(UUID who) {
+            return who != null && who.equals(leader);
         }
     }
 
@@ -60,6 +66,7 @@ public final class PartyState {
 
     private static void accept(ClientboundPartyInfoPacket packet) {
         Snapshot snapshot = new Snapshot(packet.isInParty(),
+                packet.getLeader().orElse(null),
                 Set.copyOf(packet.getMembers()), System.currentTimeMillis());
         latest = snapshot;
 

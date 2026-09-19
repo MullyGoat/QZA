@@ -86,5 +86,24 @@ public class QZAConfig {
 
     public String statsProxyUrl = "";
 
+    public boolean discordAlertEnabled = false;
+
+    public boolean discordAlertDm = true;
+
+    public boolean discordAlertChannel = true;
+
+    /**
+     * Overrides the built-in relay, for anyone running their own. Blank means
+     * the shared one, which is not a secret: it holds the Discord bot token
+     * server side and messages only accounts that have linked themselves.
+     */
+    public String discordAlertUrl = "";
+
+    /**
+     * Issued by the relay when this game is linked to a Discord account, and
+     * written here automatically. Not something to fill in by hand.
+     */
+    public String discordAlertToken = "";
+
     public double guiScale = 100.0;
 }
