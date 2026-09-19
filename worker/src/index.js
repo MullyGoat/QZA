@@ -14,7 +14,7 @@
  *   GET /stats?name=<ign>     or     GET /stats?uuid=<uuid>
  *
  * Responds with
- *   { ok: true, name, uuid, cataExp, secrets,
+ *   { ok: true, name, uuid, class, cataExp, secrets, magicalPower,
  *     runs:   { cata: {"0":n,...}, master: {"1":n,...} },
  *     pb:     { cata: {"1":ms,...}, master: {"7":ms,...} } }
  * or
@@ -23,6 +23,8 @@
  * Raw numbers only. Cata level, secret average and formatting are worked out
  * in the mod, so changing how any of that reads never needs a redeploy.
  */
+
+import { magicalPower } from './magicalpower.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_]{1,16}$/;
 const UUID_PATTERN = /^[0-9a-fA-F]{32}$/;
@@ -153,12 +155,10 @@ async function lookup(name, uuid, apiKey) {
     const achievements = player && player.player ? (player.player.achievements || {}) : {};
     const secrets = numberOr(achievements.skyblock_treasure_hunter, numberOr(dungeons.secrets, 0));
 
-    // Null rather than zero when it cannot be read, so the mod can say "API
-    // Off" instead of reporting a real-looking 0.
-    const accessories = member.accessory_bag_storage;
-    const rawPower = accessories ? Number(accessories.highest_magical_power) : NaN;
-    const magicalPower = Number.isFinite(rawPower) && rawPower >= 0
-        ? Math.round(rawPower) : null;
+    // Added up from the accessory bag, since Hypixel only records the highest
+    // somebody has ever had. Null rather than zero when the bag cannot be read,
+    // so the mod can say "API Off" instead of reporting a real-looking 0.
+    const power = await magicalPower(member);
 
     return {
         ok: true,
@@ -170,7 +170,7 @@ async function lookup(name, uuid, apiKey) {
             ? dungeons.selected_dungeon_class : '',
         cataExp: numberOr(cata.experience, 0),
         secrets: secrets,
-        magicalPower: magicalPower,
+        magicalPower: power,
         runs: {
             cata: intMap(cata.tier_completions),
             master: intMap(master.tier_completions),

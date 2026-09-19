@@ -61,8 +61,10 @@ Expect `{"ok":true,...}`. A repeat call within ten minutes returns
   "ok": true,
   "name": "Steve",
   "uuid": "…",
+  "class": "berserk",
   "cataExp": 569809640,
   "secrets": 123456,
+  "magicalPower": 1546,
   "runs": { "cata": { "0": 12, "7": 500 }, "master": { "7": 300 } },
   "pb":   { "cata": { "7": 512340 }, "master": { "7": 299000 } }
 }
@@ -73,6 +75,37 @@ Expect `{"ok":true,...}`. A repeat call within ten minutes returns
 
 Deliberately raw: cata level, secret average and all formatting are worked out
 in the mod, so changing how those read never needs a redeploy.
+
+## Magical power
+
+Hypixel records only `highest_magical_power`, the best a player has ever had.
+Sell a mythic accessory and that number stays where it was, so it says nothing
+about who is in front of you now. The Worker adds up the accessory bag instead:
+unzip the NBT, read each accessory's rarity off its tooltip — which is what a
+recombobulator changes — and pay out once per upgrade family, so a Speed
+Talisman left sitting beside the Speed Artifact does not count twice. The three
+accessories that pay more than their rarity are handled too: Hegemony counts
+double, an Abicase adds one for every two abiphone contacts on top of its
+rarity, and an imbued Rift Prism adds eleven.
+
+Reading the rarity off the tooltip means coping with how Hypixel writes it. A
+shiny accessory has its rarity line wrapped in obfuscated text, so once the
+formatting codes come off the line reads `a MYTHIC ACCESSORY a`, and soulbound
+ones print another line below it. The line is found by the word `ACCESSORY`
+rather than by where it sits, and the rarity is matched anywhere on it.
+
+The total is the one you see outside a dungeon. Dungeon accessories pay double
+while you are inside one, which is a property of where you are standing rather
+than of the profile, so it is not something the proxy can report.
+
+`magicalPower` is `null` when the bag cannot be read at all, which is what an
+inventory API left switched off looks like. The mod prints "API Off" for that
+rather than a total that would really be a guess.
+
+The upgrade families in `src/accessories.js` come from NotEnoughUpdates,
+narrowed to the ids Hypixel's own item list calls an `ACCESSORY`. Families
+Hypixel adds later are simply missing, which at worst counts a superseded
+accessory twice.
 
 ## Protecting the key
 
