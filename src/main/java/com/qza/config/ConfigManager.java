@@ -47,7 +47,17 @@ public final class ConfigManager {
             }
         } catch (Exception e) {
             QZA.LOGGER.error("Failed to read config.json, keeping defaults", e);
+            // Left exactly as it is. A file that would not parse is worth
+            // looking at, and writing defaults over it destroys the evidence
+            // along with every setting in it.
+            return;
         }
+
+        // Written straight back, so a setting added by an update shows up in the
+        // file on the first launch after updating. Otherwise it stays invisible
+        // until something happens to trigger a save, which is no use for the
+        // ones that have to be filled in by hand.
+        save();
     }
 
     private static void copyInto(QZAConfig from, QZAConfig to) {
