@@ -483,23 +483,12 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.discordAlertEnabled));
 
         settings.add(new ToggleSetting(notify, "Discord", "Channel Ping",
-                Component.literal("The bot @ mentions you in the channel you picked")
+                Component.literal("The bot @ mentions you in party-full-ping channel")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.discordAlertChannel,
                 v -> {
                     cfg.discordAlertChannel = v;
                     ConfigManager.save();
-                })
-                .visibleWhen(() -> cfg.discordAlertEnabled));
-
-        settings.add(new ActionSetting(notify, "Discord", "Send Test",
-                Component.literal("Sends a test alert now, the same way a full party would")
-                        .withStyle(ChatFormatting.GRAY),
-                "Send",
-                () -> {
-                    Minecraft.getInstance().setScreen(null);
-                    ChatUtil.info("Sending a test alert...");
-                    DiscordAlert.test(ChatUtil::success, ChatUtil::error);
                 })
                 .visibleWhen(() -> cfg.discordAlertEnabled));
 
