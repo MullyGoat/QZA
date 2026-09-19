@@ -58,12 +58,18 @@ QZA can ping you on Discord when your party fills up, either because you are the
 one recruiting or because you are tabbed out of the game, so you do not have to
 sit watching it fill.
 
-It needs a small Cloudflare Worker of your own, because the Discord bot token has
-to live somewhere that is not the jar. [discord-worker/README.md](discord-worker/README.md)
-walks through the whole thing, Discord account included.
+Three steps, with nothing to fill in by hand:
 
-Once it is running, turn it on under **Notifications → Discord** in `/qza`, and
-check it with `/qza discord test`.
+1. `/qza discord link` in game prints a six character code.
+2. `/link <code>` in the QZA Discord. Only you see the reply.
+3. Turn on **Party Full Alert** under **Notifications → Discord** in `/qza`, and
+   check it with `/qza discord test`.
+
+`/unlink` in Discord, or `/qza discord unlink` in game, stops the alerts and
+deletes everything stored about you.
+
+[discord-worker/README.md](discord-worker/README.md) covers what the relay is
+and the short list of what it keeps.
 
 ## Files
 
