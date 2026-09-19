@@ -93,11 +93,19 @@ public class QZAChatScreen extends Screen {
     private CommandSuggestions commandSuggestions;
 
     /**
-     * How far back through the sent messages the arrows have walked. Equal to
-     * the number of them when not walking, which is one past the newest, and
-     * is where the half-typed line is kept while the arrows are in use.
+     * How far back through the sent messages the arrows have walked, counting
+     * from the oldest, or NOT_WALKING before an arrow has been pressed.
+     *
+     * Not stored as "one past the newest", which is the obvious way to say the
+     * same thing, because that is a count of the messages and a count goes out
+     * of date. Anything added to the list afterwards leaves it pointing one
+     * short, and the first press of the arrow then skips the newest message.
+     * Where the newest one is gets worked out when an arrow is actually
+     * pressed.
      */
-    private int historyPos;
+    private static final int NOT_WALKING = -1;
+
+    private int historyPos = NOT_WALKING;
     private String historyDraft = "";
 
     private String menuFor;
@@ -943,7 +951,7 @@ public class QZAChatScreen extends Screen {
 
     /** Back to the newest end, with no half-typed line held over. */
     private void forgetHistoryPosition() {
-        historyPos = sentHistory().size();
+        historyPos = NOT_WALKING;
         historyDraft = "";
     }
 
@@ -954,18 +962,23 @@ public class QZAChatScreen extends Screen {
     private void moveInHistory(int by) {
         List<String> sent = sentHistory();
         int size = sent.size();
-        int target = Mth.clamp(historyPos + by, 0, size);
-        if (target == historyPos) {
+
+        // Counted here rather than when the last message was sent, so the first
+        // press always starts from whatever the newest message is right now.
+        int from = historyPos == NOT_WALKING ? size : historyPos;
+        int target = Mth.clamp(from + by, 0, size);
+        if (target == from) {
             return;
         }
 
         if (target == size) {
-            historyPos = size;
-            input.setValue(historyDraft);
+            String draft = historyDraft;
+            forgetHistoryPosition();
+            input.setValue(draft);
             return;
         }
 
-        if (historyPos == size) {
+        if (from == size) {
             historyDraft = input.getValue();
         }
         historyPos = target;
