@@ -4,3 +4,13 @@ run/
 .idea/
 *.iml
 out/
+
+# Wrangler's working cache. It holds the Cloudflare account id and the email
+# the account belongs to, neither of which belongs in a public repo.
+.wrangler/
+node_modules/
+
+# Belt and braces: nothing resembling a key or a token should ever be here.
+*.env
+.dev.vars
+secrets.json
