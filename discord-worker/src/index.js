@@ -228,6 +228,27 @@ async function runVerifyDiag(env, interaction) {
     } else {
         lines.push('This all looks right, so the button should work. If it still does '
             + 'not, press it again and tell me what it says now.');
+        return ephemeral(lines.join('\n'));
+    }
+
+    const assignable = all
+        .filter((r) => !r.managed && r.id !== guildId
+            && (top === null || r.position < top.position))
+        .sort((a, b) => b.position - a.position)
+        .slice(0, 12);
+
+    lines.push('');
+    if (assignable.length === 0) {
+        lines.push('There are no plain roles below mine to hand out. Make one in '
+            + 'Server Settings then Roles, keep it below **'
+            + (top ? top.name : 'my role') + '**, and run this again.');
+    } else {
+        lines.push('Roles I could hand out, newest first:');
+        for (const role of assignable) {
+            lines.push(`  **${role.name}** \`${role.id}\``);
+        }
+        lines.push('');
+        lines.push('Tell me which one and I will point the button at it.');
     }
 
     return ephemeral(lines.join('\n'));
