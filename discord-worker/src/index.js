@@ -155,9 +155,19 @@ async function runVerifyDiag(env, interaction) {
         return ephemeral('No DISCORD_VERIFY_ROLE_ID is set on the relay.');
     }
 
+    const me = await call(env, 'GET', '/users/@me');
+    if (me.error) {
+        return ephemeral(`Could not read my own account: ${me.error}`);
+    }
+    const botId = me.body && me.body.id;
+    if (!botId) {
+        return ephemeral('Discord did not tell me who I am.');
+    }
+
     const [roles, self] = await Promise.all([
         call(env, 'GET', `/guilds/${encodeURIComponent(guildId)}/roles`),
-        call(env, 'GET', `/users/@me/guilds/${encodeURIComponent(guildId)}/member`),
+        call(env, 'GET', `/guilds/${encodeURIComponent(guildId)}`
+            + `/members/${encodeURIComponent(botId)}`),
     ]);
 
     if (roles.error) {
