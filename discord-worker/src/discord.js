@@ -82,9 +82,18 @@ export async function sendMessage(env, channelId, payload) {
 }
 
 export async function addRole(env, guildId, userId, roleId) {
-    return call(env, 'PUT', `/guilds/${encodeURIComponent(guildId)}`
+    const result = await call(env, 'PUT', `/guilds/${encodeURIComponent(guildId)}`
         + `/members/${encodeURIComponent(userId)}`
         + `/roles/${encodeURIComponent(roleId)}`);
+
+    if (result.code === MISSING_PERMISSIONS) {
+        return {
+            code: result.code,
+            error: `${result.error}. For a role it needs Manage Roles, and its own role `
+                 + 'has to sit above the one it is handing out',
+        };
+    }
+    return result;
 }
 
 export async function call(env, method, path, payload) {
@@ -113,8 +122,11 @@ export async function call(env, method, path, payload) {
         }
     }
 
-    return { error: await describe(response) };
+    const problem = await describe(response);
+    return { error: problem.message, code: problem.code };
 }
+
+export const MISSING_PERMISSIONS = 50013;
 
 async function describe(response) {
     let detail = '';
@@ -127,6 +139,10 @@ async function describe(response) {
 
     }
 
+    return { code: code, message: explain(response, code, detail) };
+}
+
+function explain(response, code, detail) {
     if (code === 50007) {
         return 'they have DMs from server members switched off, or the bot does not '
              + 'share a server with them';
@@ -134,14 +150,11 @@ async function describe(response) {
     if (response.status === 401) {
         return 'the bot token was rejected (401)';
     }
-    if (code === 50013) {
-        return 'the bot is missing a permission. For a role it needs Manage Roles, and '
-             + 'its own role has to sit above the one it is handing out in '
-             + 'Server Settings then Roles';
+    if (code === MISSING_PERMISSIONS) {
+        return 'the bot is missing a permission';
     }
     if (response.status === 403) {
-        return 'the bot is not allowed to do that there (403) - check its permissions '
-             + 'on the channel';
+        return 'the bot is not allowed to do that (403)';
     }
     if (response.status === 404) {
         return 'that channel or user does not exist (404) - check the ids';

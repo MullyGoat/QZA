@@ -5,8 +5,8 @@ import {
 } from './links.js';
 import {
     ACTION_ROW, APPLICATION_COMMAND, BUTTON, BUTTON_SUCCESS, MESSAGE_COMPONENT,
-    PING, PONG, REPLY, addRole, ephemeral, invoker, openDm, optionValue,
-    sendMessage, verifySignature,
+    MISSING_PERMISSIONS, PING, PONG, REPLY, addRole, ephemeral, invoker, openDm,
+    optionValue, sendMessage, verifySignature,
 } from './discord.js';
 
 const COLOUR_ALERT = 0x5865f2;
@@ -275,7 +275,11 @@ async function alert(request, env) {
     if (wantsChannel) {
         const sent = await sendMessage(env, env.DISCORD_CHANNEL_ID, message.channel);
         if (sent.error) {
-            problems.push(`Channel: ${sent.error}`);
+            problems.push(`Channel: ${sent.error}${sent.code === MISSING_PERMISSIONS
+                ? '. In that channel it needs View Channel, Send Messages and Embed '
+                  + 'Links. A channel that is hidden behind a role will refuse the bot '
+                  + 'unless the bot is given access to it too'
+                : ''}`);
         }
     }
 
