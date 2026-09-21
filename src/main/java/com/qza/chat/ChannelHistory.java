@@ -20,6 +20,8 @@ public final class ChannelHistory {
 
     private static final Map<String, List<ChatMessage>> logs = new LinkedHashMap<>();
 
+    private static final Map<String, Integer> revisions = new LinkedHashMap<>();
+
     private ChannelHistory() {
     }
 
@@ -67,9 +69,15 @@ public final class ChannelHistory {
                               String speaker, boolean outgoing) {
         List<ChatMessage> log = logs.computeIfAbsent(channel, key -> new ArrayList<>());
         log.add(new ChatMessage(rich, text, System.currentTimeMillis(), speaker, outgoing));
+        revisions.merge(channel, 1, Integer::sum);
         while (log.size() > MAX_MESSAGES) {
             log.remove(0);
         }
+    }
+
+    public static int revision(String channel) {
+        Integer at = revisions.get(channel);
+        return at == null ? 0 : at;
     }
 
     public static void note(String channel, Component rich, String text) {

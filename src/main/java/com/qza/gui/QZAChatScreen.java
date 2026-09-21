@@ -108,7 +108,7 @@ public class QZAChatScreen extends Screen {
 
     private final List<Bubble> bubbles = new ArrayList<>();
     private String builtFor;
-    private int builtCount = -1;
+    private int builtRevision = -1;
     private int builtWidth = -1;
 
     private double railScroll;
@@ -359,18 +359,22 @@ public class QZAChatScreen extends Screen {
         return selectedTab + "/" + (isDm() ? String.valueOf(selected) : "");
     }
 
+    private int currentRevision() {
+        return isDm() ? ChatHistory.revision(selected) : ChannelHistory.revision(selectedTab);
+    }
+
     private void rebuildBubbles(boolean toBottom) {
         List<ChatMessage> messages = currentMessages();
-        int count = messages.size();
+        int revision = currentRevision();
         String key = builtKey();
 
-        if (key.equals(builtFor) && builtCount == count && builtWidth == threadW) {
+        if (key.equals(builtFor) && builtRevision == revision && builtWidth == threadW) {
             return;
         }
 
-        boolean grew = key.equals(builtFor) && count > builtCount;
+        boolean grew = key.equals(builtFor) && revision != builtRevision;
         builtFor = key;
-        builtCount = count;
+        builtRevision = revision;
         builtWidth = threadW;
         bubbles.clear();
 

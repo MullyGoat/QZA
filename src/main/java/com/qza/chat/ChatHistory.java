@@ -36,6 +36,8 @@ public final class ChatHistory {
 
     private static final Map<String, ChatConversation> conversations = new LinkedHashMap<>();
 
+    private static final Map<String, Integer> revisions = new LinkedHashMap<>();
+
     private ChatHistory() {
     }
 
@@ -246,6 +248,7 @@ public final class ChatHistory {
         ChatConversation conversation = resolve(ign);
 
         conversation.messages.add(new ChatMessage(outgoing, text, System.currentTimeMillis()));
+        revisions.merge(key(conversation.name), 1, Integer::sum);
         while (conversation.messages.size() > MAX_MESSAGES) {
             conversation.messages.remove(0);
         }
@@ -267,6 +270,7 @@ public final class ChatHistory {
         ChatMessage note = new ChatMessage(false, text, System.currentTimeMillis());
         note.system = true;
         conversation.messages.add(note);
+        revisions.merge(key(conversation.name), 1, Integer::sum);
         while (conversation.messages.size() > MAX_MESSAGES) {
             conversation.messages.remove(0);
         }
@@ -313,6 +317,14 @@ public final class ChatHistory {
 
     public static ChatConversation get(String ign) {
         return ign == null ? null : conversations.get(ign.toLowerCase(Locale.ROOT));
+    }
+
+    public static int revision(String ign) {
+        if (ign == null) {
+            return 0;
+        }
+        Integer at = revisions.get(key(ign));
+        return at == null ? 0 : at;
     }
 
     public static void markRead(String ign) {
