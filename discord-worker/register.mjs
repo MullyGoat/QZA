@@ -58,12 +58,6 @@ const COMMANDS = [
         description: 'Stop the alerts and delete everything stored about you',
     },
     {
-        name: 'verifydiag',
-        description: 'Check why verification is failing',
-        default_member_permissions: '32',
-        dm_permission: false,
-    },
-    {
         name: 'verifypanel',
         description: 'Post the verification button in this channel',
         default_member_permissions: '32',
