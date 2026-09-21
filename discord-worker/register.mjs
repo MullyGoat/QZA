@@ -57,6 +57,21 @@ const COMMANDS = [
         name: 'unlink',
         description: 'Stop the alerts and delete everything stored about you',
     },
+    {
+        name: 'verifypanel',
+        description: 'Post the verification button in this channel',
+        default_member_permissions: '32',
+        dm_permission: false,
+        options: [
+            {
+                name: 'message',
+                description: 'What the panel should say',
+                type: 3,
+                required: false,
+                max_length: 400,
+            },
+        ],
+    },
 ];
 
 const path = GUILD_ID

@@ -3,11 +3,16 @@ const DISCORD_API = 'https://discord.com/api/v10';
 
 export const PING = 1;
 export const APPLICATION_COMMAND = 2;
+export const MESSAGE_COMPONENT = 3;
 
 export const PONG = 1;
 export const REPLY = 4;
 
 export const EPHEMERAL = 64;
+
+export const ACTION_ROW = 1;
+export const BUTTON = 2;
+export const BUTTON_SUCCESS = 3;
 
 export async function verifySignature(publicKeyHex, signatureHex, timestamp, rawBody) {
     if (!publicKeyHex || !signatureHex || !timestamp) {
@@ -76,18 +81,26 @@ export async function sendMessage(env, channelId, payload) {
     return call(env, 'POST', `/channels/${encodeURIComponent(channelId)}/messages`, payload);
 }
 
+export async function addRole(env, guildId, userId, roleId) {
+    return call(env, 'PUT', `/guilds/${encodeURIComponent(guildId)}`
+        + `/members/${encodeURIComponent(userId)}`
+        + `/roles/${encodeURIComponent(roleId)}`);
+}
+
 export async function call(env, method, path, payload) {
+    const headers = {
+        'Authorization': `Bot ${env.DISCORD_BOT_TOKEN}`,
+        'User-Agent': 'QZA-relay (https://github.com/MullyGoat/QZA, 1.0)',
+    };
+    const options = { method: method, headers: headers };
+    if (payload !== undefined) {
+        headers['Content-Type'] = 'application/json';
+        options.body = JSON.stringify(payload);
+    }
+
     let response;
     try {
-        response = await fetch(`${DISCORD_API}${path}`, {
-            method: method,
-            headers: {
-                'Authorization': `Bot ${env.DISCORD_BOT_TOKEN}`,
-                'Content-Type': 'application/json',
-                'User-Agent': 'QZA-relay (https://github.com/MullyGoat/QZA, 1.0)',
-            },
-            body: JSON.stringify(payload),
-        });
+        response = await fetch(`${DISCORD_API}${path}`, options);
     } catch (e) {
         return { error: 'could not reach Discord' };
     }
@@ -121,8 +134,14 @@ async function describe(response) {
     if (response.status === 401) {
         return 'the bot token was rejected (401)';
     }
+    if (code === 50013) {
+        return 'the bot is missing a permission. For a role it needs Manage Roles, and '
+             + 'its own role has to sit above the one it is handing out in '
+             + 'Server Settings then Roles';
+    }
     if (response.status === 403) {
-        return 'the bot is not allowed to post there (403) - check it can see the channel';
+        return 'the bot is not allowed to do that there (403) - check its permissions '
+             + 'on the channel';
     }
     if (response.status === 404) {
         return 'that channel or user does not exist (404) - check the ids';

@@ -4,7 +4,11 @@ compatibility_date = "2026-01-01"
 
 # Nothing identifying lives in this file. Discord ids belong to real people, so
 # even though they are not secret they are kept out of the repo and set with
-# `wrangler secret put` instead. See README.md for the full list.
+# `wrangler secret put` instead.
+#
+# DISCORD_VERIFY_ROLE_ID is the role /verifypanel hands out, set the same way.
+# The bot needs Manage Roles for it, and its own role has to sit above that one
+# in Server Settings then Roles.
 
 # Who may also get a ping in the shared channel, on top of their DM.
 #   everyone - anyone who has linked. Each alert mentions the one person whose

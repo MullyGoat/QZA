@@ -4,12 +4,17 @@ import {
     putCode, takeCode, tidyCode, unbind,
 } from './links.js';
 import {
-    APPLICATION_COMMAND, PING, PONG, ephemeral, invoker, openDm, optionValue,
+    ACTION_ROW, APPLICATION_COMMAND, BUTTON, BUTTON_SUCCESS, MESSAGE_COMPONENT,
+    PING, PONG, REPLY, addRole, ephemeral, invoker, openDm, optionValue,
     sendMessage, verifySignature,
 } from './discord.js';
 
 const COLOUR_ALERT = 0x5865f2;
 const COLOUR_TEST = 0x99aab5;
+
+const VERIFY_BUTTON = 'qza-verify';
+const DEFAULT_VERIFY_TEXT = 'Press the button below to verify and get access '
+    + 'to the rest of the server.';
 
 const ALERT_LIMIT_PER_MINUTE = 6;
 const ALERT_LIMIT_TOTAL_PER_MINUTE = 120;
@@ -102,13 +107,22 @@ async function interactions(request, env) {
     if (interaction.type === PING) {
         return Response.json({ type: PONG });
     }
-    if (interaction.type !== APPLICATION_COMMAND) {
-        return ephemeral('That is not something this bot knows how to do.');
-    }
 
     const who = invoker(interaction);
     if (!who) {
         return ephemeral('Could not tell who ran that.');
+    }
+
+    if (interaction.type === MESSAGE_COMPONENT) {
+        const button = interaction.data && interaction.data.custom_id;
+        if (button === VERIFY_BUTTON) {
+            return runVerify(env, interaction, who);
+        }
+        return ephemeral('That button is not one this bot knows.');
+    }
+
+    if (interaction.type !== APPLICATION_COMMAND) {
+        return ephemeral('That is not something this bot knows how to do.');
     }
 
     const name = interaction.data && interaction.data.name;
@@ -118,7 +132,61 @@ async function interactions(request, env) {
     if (name === 'unlink') {
         return runUnlink(env, who);
     }
+    if (name === 'verifypanel') {
+        return runVerifyPanel(env, interaction);
+    }
     return ephemeral('Unknown command.');
+}
+
+function runVerifyPanel(env, interaction) {
+    if (!env.DISCORD_VERIFY_ROLE_ID) {
+        return ephemeral('Verification is not set up yet. Run '
+            + '`wrangler secret put DISCORD_VERIFY_ROLE_ID` on the relay first.');
+    }
+
+    const text = optionValue(interaction, 'message') || DEFAULT_VERIFY_TEXT;
+
+    return Response.json({
+        type: REPLY,
+        data: {
+            embeds: [{
+                title: 'Verification',
+                description: text,
+                color: COLOUR_ALERT,
+            }],
+            components: [{
+                type: ACTION_ROW,
+                components: [{
+                    type: BUTTON,
+                    style: BUTTON_SUCCESS,
+                    label: 'Verify',
+                    custom_id: VERIFY_BUTTON,
+                }],
+            }],
+            allowed_mentions: { parse: [] },
+        },
+    });
+}
+
+async function runVerify(env, interaction, who) {
+    const roleId = env.DISCORD_VERIFY_ROLE_ID;
+    if (!roleId) {
+        return ephemeral('Verification is not set up on the relay.');
+    }
+    if (!interaction.guild_id) {
+        return ephemeral('That only works inside the server.');
+    }
+
+    const held = (interaction.member && interaction.member.roles) || [];
+    if (held.includes(roleId)) {
+        return ephemeral('You are already verified.');
+    }
+
+    const granted = await addRole(env, interaction.guild_id, who, roleId);
+    if (granted.error) {
+        return ephemeral(`Could not give you the role: ${granted.error}`);
+    }
+    return ephemeral('Verified. Welcome in.');
 }
 
 async function runLink(env, interaction, who) {
