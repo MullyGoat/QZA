@@ -5,7 +5,7 @@ import {
 } from './links.js';
 import {
     ACTION_ROW, APPLICATION_COMMAND, BUTTON, BUTTON_SUCCESS, MESSAGE_COMPONENT,
-    PING, PONG, REPLY, addRole, ephemeral, invoker, openDm, optionValue,
+    PING, PONG, REPLY, addRole, call, ephemeral, invoker, openDm, optionValue,
     sendMessage, verifySignature,
 } from './discord.js';
 
@@ -135,7 +135,92 @@ async function interactions(request, env) {
     if (name === 'verifypanel') {
         return runVerifyPanel(env, interaction);
     }
+    if (name === 'verifydiag') {
+        return runVerifyDiag(env, interaction);
+    }
     return ephemeral('Unknown command.');
+}
+
+const PERMISSION_ADMINISTRATOR = 1n << 3n;
+const PERMISSION_MANAGE_ROLES = 1n << 28n;
+
+async function runVerifyDiag(env, interaction) {
+    const guildId = interaction.guild_id;
+    if (!guildId) {
+        return ephemeral('Run that inside the server.');
+    }
+
+    const roleId = env.DISCORD_VERIFY_ROLE_ID;
+    if (!roleId) {
+        return ephemeral('No DISCORD_VERIFY_ROLE_ID is set on the relay.');
+    }
+
+    const [roles, self] = await Promise.all([
+        call(env, 'GET', `/guilds/${encodeURIComponent(guildId)}/roles`),
+        call(env, 'GET', `/users/@me/guilds/${encodeURIComponent(guildId)}/member`),
+    ]);
+
+    if (roles.error) {
+        return ephemeral(`Could not read the roles: ${roles.error}`);
+    }
+    if (self.error) {
+        return ephemeral(`Could not read my own membership: ${self.error}`);
+    }
+
+    const all = Array.isArray(roles.body) ? roles.body : [];
+    const mine = (self.body && self.body.roles) || [];
+    const held = all.filter((r) => mine.includes(r.id));
+
+    let top = null;
+    for (const role of held) {
+        if (top === null || role.position > top.position) {
+            top = role;
+        }
+    }
+
+    const target = all.find((r) => r.id === roleId);
+
+    let granted = 0n;
+    try {
+        granted = BigInt(interaction.app_permissions || '0');
+    } catch (e) {
+        granted = 0n;
+    }
+    const canManage = (granted & PERMISSION_ADMINISTRATOR) !== 0n
+        || (granted & PERMISSION_MANAGE_ROLES) !== 0n;
+
+    const lines = [];
+    lines.push(`Target role id: \`${roleId}\``);
+    lines.push(target
+        ? `Target role: **${target.name}** at position ${target.position}`
+              + `${target.managed ? ' (managed by an integration)' : ''}`
+        : 'Target role: **not found in this server**');
+    lines.push(top
+        ? `My highest role: **${top.name}** at position ${top.position}`
+        : 'My highest role: none but @everyone');
+    lines.push(`Manage Roles here: ${canManage ? 'yes' : 'no'}`);
+    lines.push('');
+
+    if (!target) {
+        lines.push('That role id does not exist in this server. Copy it again with '
+            + 'Developer Mode on, right clicking the role in Server Settings then Roles.');
+    } else if (target.managed) {
+        lines.push(`**${target.name}** belongs to an integration, so nobody can hand it `
+            + 'out, including you. Make a plain role and use that instead.');
+    } else if (!canManage) {
+        lines.push('I do not have Manage Roles in this channel. A channel permission '
+            + 'override can take it away even when the server role grants it, so check '
+            + 'the channel settings as well as the role.');
+    } else if (top === null || top.position <= target.position) {
+        lines.push(`My highest role is not above **${target.name}**. Drag my role above `
+            + 'it in Server Settings then Roles. Equal positions do not count, it has to '
+            + 'be strictly higher.');
+    } else {
+        lines.push('This all looks right, so the button should work. If it still does '
+            + 'not, press it again and tell me what it says now.');
+    }
+
+    return ephemeral(lines.join('\n'));
 }
 
 function runVerifyPanel(env, interaction) {
