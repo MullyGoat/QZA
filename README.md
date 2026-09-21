@@ -56,7 +56,8 @@ and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API
 
 QZA can ping you on Discord when your party fills up, either because you are the
 one recruiting or because you are tabbed out of the game, so you do not have to
-sit watching it fill.
+sit watching it fill. **Always Alert** drops both conditions and pings you on
+every 5/5.
 
 Three steps, with nothing to fill in by hand:
 

@@ -456,6 +456,17 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        settings.add(new ToggleSetting(notify, "Discord", "Always Alert",
+                Component.literal("Alerts every time your party hits 5/5. Off, it only "
+                                + "alerts when you are leading the party or tabbed out "
+                                + "of the game.").withStyle(ChatFormatting.GRAY),
+                () -> cfg.discordAlertAlways,
+                v -> {
+                    cfg.discordAlertAlways = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.discordAlertEnabled));
+
         settings.add(new ActionSetting(notify, "Discord", "Link Discord",
                 Component.literal("Gives you a code to run as ").withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("/link <code>").withStyle(ChatFormatting.LIGHT_PURPLE))

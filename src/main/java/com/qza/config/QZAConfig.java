@@ -88,6 +88,8 @@ public class QZAConfig {
 
     public boolean discordAlertEnabled = false;
 
+    public boolean discordAlertAlways = false;
+
     public boolean discordAlertDm = true;
 
     public boolean discordAlertChannel = true;

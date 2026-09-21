@@ -31,6 +31,9 @@ party stays full — and **either** of these is true:
 That leaves exactly one case quiet: somebody else's party filling up while you
 are sat watching it happen.
 
+Turning on **Always Alert** drops both conditions, so every 5/5 reaches you
+whoever is leading and wherever you are looking.
+
 ## What is stored
 
 Two records per linked player, and nothing else:

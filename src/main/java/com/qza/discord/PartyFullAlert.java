@@ -85,11 +85,13 @@ public final class PartyFullAlert {
             return;
         }
 
-        UUID self = client.player.getUUID();
-        boolean leads = snapshot.ledBy(self);
-        boolean away = !client.isWindowActive();
-        if (!leads && !away) {
-            return;
+        if (!ConfigManager.get().discordAlertAlways) {
+            UUID self = client.player.getUUID();
+            boolean leads = snapshot.ledBy(self);
+            boolean away = !client.isWindowActive();
+            if (!leads && !away) {
+                return;
+            }
         }
 
         long now = System.currentTimeMillis();

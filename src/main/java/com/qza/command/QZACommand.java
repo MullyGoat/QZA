@@ -154,8 +154,10 @@ public final class QZACommand {
         ChatUtil.send(Component.literal("Party full alerts are on, sending ")
                 .withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(where).withStyle(ChatFormatting.GREEN))
-                .append(Component.literal(". Fires when your party hits 5/5, as long as you "
-                        + "lead it or the game is not focused.").withStyle(ChatFormatting.GRAY)));
+                .append(Component.literal(cfg.discordAlertAlways
+                        ? ". Fires every time your party hits 5/5."
+                        : ". Fires when your party hits 5/5, as long as you lead it or "
+                          + "the game is not focused.").withStyle(ChatFormatting.GRAY)));
         ChatUtil.send(Component.literal("Try it with ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal("/qza discord test").withStyle(ChatFormatting.LIGHT_PURPLE)));
     }
