@@ -18,6 +18,8 @@ public final class ChannelHistory {
 
     private static final int MAX_MESSAGES = 300;
 
+    public static final int MAX_MESSAGES_UNLIMITED = 20_000;
+
     private static final Map<String, List<ChatMessage>> logs = new LinkedHashMap<>();
 
     private static final Map<String, Integer> revisions = new LinkedHashMap<>();
@@ -70,9 +72,16 @@ public final class ChannelHistory {
         List<ChatMessage> log = logs.computeIfAbsent(channel, key -> new ArrayList<>());
         log.add(new ChatMessage(rich, text, System.currentTimeMillis(), speaker, outgoing));
         revisions.merge(channel, 1, Integer::sum);
-        while (log.size() > MAX_MESSAGES) {
-            log.remove(0);
+
+        int cap = cap();
+        if (log.size() > cap) {
+            log.subList(0, log.size() - cap).clear();
         }
+    }
+
+    private static int cap() {
+        return ConfigManager.get().chatUnlimitedHistory
+                ? MAX_MESSAGES_UNLIMITED : MAX_MESSAGES;
     }
 
     public static int revision(String channel) {

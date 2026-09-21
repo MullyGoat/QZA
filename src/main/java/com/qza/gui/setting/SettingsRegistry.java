@@ -254,6 +254,19 @@ public final class SettingsRegistry {
                 ChatKeybind::arm)
                 .visibleWhen(() -> cfg.qzaChatEnabled && !cfg.openChatWithT));
 
+        settings.add(new ToggleSetting(chat, "History", "Unlimited Tab History",
+                Component.literal("Keeps every message in the Everything, All, Party, Guild "
+                                + "and Co-op tabs for as long as the game is open, instead "
+                                + "of the last 300, so you can scroll back through a whole "
+                                + "session. Cleared on quit. Does not change DMs.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.chatUnlimitedHistory,
+                v -> {
+                    cfg.chatUnlimitedHistory = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.qzaChatEnabled));
+
         settings.add(new DropdownSetting(chat, "History", "DM History",
                 Component.literal("Wipes DM History after closing game or keeps it forever")
                         .withStyle(ChatFormatting.GRAY),

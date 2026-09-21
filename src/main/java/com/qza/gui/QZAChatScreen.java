@@ -109,6 +109,7 @@ public class QZAChatScreen extends Screen {
     private final List<Bubble> bubbles = new ArrayList<>();
     private String builtFor;
     private int builtRevision = -1;
+    private int builtSize = -1;
     private int builtWidth = -1;
 
     private double railScroll;
@@ -363,8 +364,38 @@ public class QZAChatScreen extends Screen {
         return isDm() ? ChatHistory.revision(selected) : ChannelHistory.revision(selectedTab);
     }
 
+    private int maxTextWidth() {
+        double share = isDm() ? 0.72 : 0.94;
+        return Math.max(40, (int) (threadW * share) - (BUBBLE_PAD * 2));
+    }
+
+    private Bubble buildBubble(ChatMessage message, int maxTextW) {
+        String speaker = isDm() ? null : message.speaker;
+        int faceRoom = speaker == null ? 0 : SMALL_FACE + 4;
+
+        Component body = content(message);
+        int wrapAt = Math.max(30, maxTextW - faceRoom);
+        List<FormattedCharSequence> lines = this.font.split(body, wrapAt);
+        if (lines.isEmpty()) {
+            return null;
+        }
+        List<FormattedText> rawLines =
+                this.font.getSplitter().splitLines(body, wrapAt, Style.EMPTY);
+        int widest = 0;
+        for (FormattedCharSequence line : lines) {
+            widest = Math.max(widest, this.font.width(line));
+        }
+        Bubble bubble = new Bubble(message.outgoing, message.text, speaker, faceRoom,
+                lines, rawLines,
+                widest + faceRoom + (BUBBLE_PAD * 2),
+                (lines.size() * LINE_H) + (BUBBLE_PAD * 2) - 1);
+        bubble.system = message.system;
+        return bubble;
+    }
+
     private void rebuildBubbles(boolean toBottom) {
         List<ChatMessage> messages = currentMessages();
+        int count = messages.size();
         int revision = currentRevision();
         String key = builtKey();
 
@@ -373,39 +404,44 @@ public class QZAChatScreen extends Screen {
         }
 
         boolean grew = key.equals(builtFor) && revision != builtRevision;
+
+        int firstOrdinal = revision - count;
+        int keepFrom = builtRevision - firstOrdinal;
+
+        boolean reuse = key.equals(builtFor) && builtWidth == threadW
+                && builtSize >= 0 && revision > builtRevision
+                && keepFrom >= 0 && keepFrom <= count;
+
+        int from;
+        if (reuse) {
+            final int cutoff = firstOrdinal;
+            bubbles.removeIf(bubble -> bubble.ordinal < cutoff);
+            from = keepFrom;
+        } else {
+            bubbles.clear();
+            from = 0;
+        }
+
+        int maxTextW = maxTextWidth();
+        for (int i = from; i < count; i++) {
+            Bubble bubble = buildBubble(messages.get(i), maxTextW);
+            if (bubble == null) {
+                continue;
+            }
+            bubble.ordinal = firstOrdinal + i;
+            bubbles.add(bubble);
+        }
+
+        int y = 0;
+        for (Bubble bubble : bubbles) {
+            bubble.y = y;
+            y += bubble.h + BUBBLE_GAP;
+        }
+
         builtFor = key;
         builtRevision = revision;
         builtWidth = threadW;
-        bubbles.clear();
-
-        double share = isDm() ? 0.72 : 0.94;
-        int maxTextW = Math.max(40, (int) (threadW * share) - (BUBBLE_PAD * 2));
-        int y = 0;
-        for (ChatMessage message : messages) {
-            String speaker = isDm() ? null : message.speaker;
-            int faceRoom = speaker == null ? 0 : SMALL_FACE + 4;
-
-            Component body = content(message);
-            int wrapAt = Math.max(30, maxTextW - faceRoom);
-            List<FormattedCharSequence> lines = this.font.split(body, wrapAt);
-            if (lines.isEmpty()) {
-                continue;
-            }
-            List<FormattedText> rawLines =
-                    this.font.getSplitter().splitLines(body, wrapAt, Style.EMPTY);
-            int widest = 0;
-            for (FormattedCharSequence line : lines) {
-                widest = Math.max(widest, this.font.width(line));
-            }
-            Bubble bubble = new Bubble(message.outgoing, message.text, speaker, faceRoom,
-                    lines, rawLines,
-                    widest + faceRoom + (BUBBLE_PAD * 2),
-                    (lines.size() * LINE_H) + (BUBBLE_PAD * 2) - 1);
-            bubble.system = message.system;
-            bubble.y = y;
-            bubbles.add(bubble);
-            y += bubble.h + BUBBLE_GAP;
-        }
+        builtSize = count;
 
         if (toBottom || grew) {
             threadScroll = maxThreadScroll();
@@ -1499,6 +1535,7 @@ public class QZAChatScreen extends Screen {
         final int w;
         final int h;
         int y;
+        int ordinal;
         boolean system;
 
         Bubble(boolean outgoing, String text, String speaker, int faceRoom,

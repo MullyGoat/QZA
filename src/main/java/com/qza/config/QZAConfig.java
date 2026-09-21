@@ -52,6 +52,8 @@ public class QZAConfig {
 
     public String chatDefaultTab = "everything";
 
+    public boolean chatUnlimitedHistory = false;
+
     public boolean hideVanillaChat = false;
 
     public boolean openChatWithT = false;
