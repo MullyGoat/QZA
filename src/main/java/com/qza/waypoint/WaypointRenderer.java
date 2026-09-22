@@ -6,6 +6,7 @@ import com.qza.config.ConfigManager;
 import com.qza.util.DungeonState;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -16,6 +17,7 @@ import net.minecraft.world.phys.shapes.Shapes;
 public final class WaypointRenderer {
     private static final float FILL_ALPHA = 0.25f;
     private static final double GROW = 0.002;
+    private static final int LIGHT = 0xF000F0;
 
     private WaypointRenderer() {
     }
@@ -64,6 +66,40 @@ public final class WaypointRenderer {
                 outline(lines, poseStack, box(waypoint), waypoint.argb());
             }
         }
+
+        if (ConfigManager.get().waypointShowNames) {
+            for (Waypoint waypoint : WaypointList.all()) {
+                if (waypoint.enabled) {
+                    label(poseStack, buffers, waypoint);
+                }
+            }
+        }
+
+        poseStack.popPose();
+    }
+
+    private static void label(PoseStack poseStack, MultiBufferSource buffers, Waypoint waypoint) {
+        String name = waypoint.name;
+        if (name == null || name.isBlank()) {
+            return;
+        }
+
+        Minecraft client = Minecraft.getInstance();
+        Font font = client.font;
+        if (font == null) {
+            return;
+        }
+
+        poseStack.pushPose();
+        poseStack.translate(
+                (waypoint.minX() + waypoint.maxX()) / 2.0,
+                waypoint.maxY() + 0.35,
+                (waypoint.minZ() + waypoint.maxZ()) / 2.0);
+        poseStack.mulPose(client.gameRenderer.getMainCamera().rotation());
+        poseStack.scale(-0.025f, -0.025f, 0.025f);
+
+        font.drawInBatch(name, -font.width(name) / 2.0f, 0, waypoint.argb(), false,
+                poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LIGHT);
 
         poseStack.popPose();
     }

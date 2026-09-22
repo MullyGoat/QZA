@@ -45,15 +45,15 @@ public class Waypoint {
     }
 
     public double minX() {
-        return x - (width - 1) / 2.0;
+        return x - ((width - 1) / 2);
     }
 
     public double minY() {
-        return y - (height - 1) / 2.0;
+        return y - ((height - 1) / 2);
     }
 
     public double minZ() {
-        return z - (depth - 1) / 2.0;
+        return z - ((depth - 1) / 2);
     }
 
     public double maxX() {

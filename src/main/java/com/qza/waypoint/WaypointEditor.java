@@ -102,7 +102,7 @@ public final class WaypointEditor {
             return;
         }
 
-        String colour = ConfigManager.get().waypointColour;
+        String colour = "blue";
         WaypointList.add(new Waypoint(pos.getX(), pos.getY(), pos.getZ(),
                 colour, 1, 1, 1, ""));
         ChatUtil.send(Component.literal("Marked ").withStyle(ChatFormatting.GRAY)

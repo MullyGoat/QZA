@@ -20,6 +20,7 @@ import com.qza.util.DungeonState;
 import com.qza.util.PlayerFaces;
 import com.qza.util.PlayerLookup;
 import com.qza.util.Scheduler;
+import com.qza.waypoint.WaypointEditHud;
 import com.qza.waypoint.WaypointEditor;
 import com.qza.waypoint.WaypointList;
 import com.qza.waypoint.WaypointRenderer;
@@ -54,6 +55,8 @@ public class QZA implements ClientModInitializer {
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
                 new NotificationHud());
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "waypointedit"),
+                new WaypointEditHud());
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> {
             QZACommand.register(dispatcher);

@@ -19,9 +19,7 @@ import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.util.ChatUtil;
-import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
-import com.qza.waypoint.WaypointList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -142,8 +140,7 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.necronTimerEnabled));
 
         settings.add(new ToggleSetting(f7, "Waypoints", "Waypoints",
-                Component.literal("Highlights blocks you have marked, so you know where to "
-                                + "stand or what to break. Shows through walls.")
+                Component.literal("Easily highlight blocks around Skyblock")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.waypointsEnabled,
                 v -> {
@@ -157,7 +154,7 @@ public final class SettingsRegistry {
         settings.add(new ActionSetting(f7, "Waypoints", "Edit Waypoints",
                 Component.literal("View and change the coords, colour, size and name of "
                                 + "every waypoint").withStyle(ChatFormatting.GRAY),
-                () -> "Open (" + WaypointList.size() + ")",
+                "Open",
                 () -> Minecraft.getInstance().setScreen(new WaypointScreen()))
                 .visibleWhen(() -> cfg.waypointsEnabled));
 
@@ -167,26 +164,21 @@ public final class SettingsRegistry {
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Esc").withStyle(ChatFormatting.LIGHT_PURPLE))
                         .append(Component.literal(" to finish.").withStyle(ChatFormatting.GRAY)),
-                () -> WaypointEditor.active() ? "Stop" : "Start",
+                () -> WaypointEditor.active() ? "Stop" : "Add",
                 () -> {
                     Minecraft.getInstance().setScreen(null);
                     WaypointEditor.toggle();
                 })
                 .visibleWhen(() -> cfg.waypointsEnabled));
 
-        settings.add(new DropdownSetting(f7, "Waypoints", "Marker Colour",
-                Component.literal("The colour a manually added waypoint gets")
+        settings.add(new ToggleSetting(f7, "Waypoints", "Display name of waypoint",
+                Component.literal("Displays name of waypoint above highlighted blocks")
                         .withStyle(ChatFormatting.GRAY),
-                WaypointColour::names,
-                () -> cfg.waypointColour,
+                () -> cfg.waypointShowNames,
                 v -> {
-                    cfg.waypointColour = v;
+                    cfg.waypointShowNames = v;
                     ConfigManager.save();
-                },
-                text -> text,
-                null,
-                "(none)",
-                170)
+                })
                 .visibleWhen(() -> cfg.waypointsEnabled));
 
         settings.add(new ToggleSetting(f7, "Waypoints", "Dungeons Only",

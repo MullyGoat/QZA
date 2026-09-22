@@ -40,7 +40,7 @@ public class QZAConfig {
 
     public boolean waypointsDungeonOnly = true;
 
-    public String waypointColour = "blue";
+    public boolean waypointShowNames = false;
 
     public boolean partyInviteNotifyEnabled = true;
 
