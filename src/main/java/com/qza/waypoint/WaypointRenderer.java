@@ -6,21 +6,26 @@ import com.qza.config.ConfigManager;
 import com.qza.util.DungeonState;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
+import org.joml.Matrix4f;
 
 public final class WaypointRenderer {
     private static final float FILL_ALPHA = 0.25f;
     private static final double GROW = 0.002;
     private static final int LIGHT = 0xF000F0;
     private static final int BACKDROP = 0x60000000;
+    private static final float TEXT_SCALE = 0.025f;
+
+    private static final PoseStack IDENTITY = new PoseStack();
 
     private static int framesDrawn;
     private static int labelsAttempted;
@@ -123,19 +128,41 @@ public final class WaypointRenderer {
             return;
         }
 
+        Font font = Minecraft.getInstance().font;
+        if (font == null || cameraState.orientation == null) {
+            return;
+        }
+
         double x = (waypoint.minX() + waypoint.maxX()) / 2.0;
         double y = waypoint.maxY() + 0.35;
         double z = (waypoint.minZ() + waypoint.maxZ()) / 2.0;
 
-        poseStack.pushPose();
-        poseStack.translate(x - camera.x, y - camera.y, z - camera.z);
+        Matrix4f matrix = new Matrix4f()
+                .translate((float) (x - camera.x), (float) (y - camera.y),
+                        (float) (z - camera.z))
+                .rotate(cameraState.orientation)
+                .scale(TEXT_SCALE, -TEXT_SCALE, TEXT_SCALE);
 
-        collector.submitNameTag(poseStack, Vec3.ZERO, BACKDROP,
-                Component.literal(name).withStyle(style -> style.withColor(
-                        waypoint.argb() & 0xFFFFFF)),
-                false, LIGHT, camera.distanceToSqr(x, y, z), cameraState);
+        Font.PreparedText prepared = font.prepareText(name,
+                -font.width(name) / 2.0f, 0.0f, waypoint.argb(), false, BACKDROP);
 
-        poseStack.popPose();
+        prepared.visit(new Font.GlyphVisitor() {
+            @Override
+            public void acceptGlyph(TextRenderable.Styled glyph) {
+                submit(glyph);
+            }
+
+            @Override
+            public void acceptEffect(TextRenderable effect) {
+                submit(effect);
+            }
+
+            private void submit(TextRenderable renderable) {
+                collector.submitCustomGeometry(IDENTITY,
+                        renderable.renderType(Font.DisplayMode.NORMAL),
+                        (pose, consumer) -> renderable.render(matrix, consumer, LIGHT, false));
+            }
+        });
     }
 
     private static AABB box(Waypoint waypoint) {
