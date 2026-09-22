@@ -47,7 +47,7 @@ public final class WaypointRenderer {
                 || DungeonState.inDungeon();
     }
 
-    private static void draw(PoseStack poseStack, MultiBufferSource buffers) {
+    private static void draw(PoseStack poseStack, MultiBufferSource.BufferSource buffers) {
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
 
         poseStack.pushPose();
@@ -76,10 +76,14 @@ public final class WaypointRenderer {
         }
 
         poseStack.popPose();
+
+        // Text is queued rather than drawn, and nothing else in this pass ends
+        // the batch, so without this the labels are built and thrown away.
+        buffers.endBatch();
     }
 
     private static void label(PoseStack poseStack, MultiBufferSource buffers, Waypoint waypoint) {
-        String name = waypoint.name;
+        String name = waypoint.label();
         if (name == null || name.isBlank()) {
             return;
         }
