@@ -362,11 +362,6 @@ public class WaypointScreen extends Screen {
         this.rebuildWidgets();
     }
 
-    /**
-     * Reads the three boxes back onto the waypoint. Anything that will not parse
-     * is left alone rather than zeroed, so a half typed coordinate cannot lose
-     * the waypoint.
-     */
     private void apply() {
         boolean changed = false;
 

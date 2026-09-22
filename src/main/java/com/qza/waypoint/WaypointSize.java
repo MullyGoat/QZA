@@ -14,11 +14,6 @@ public final class WaypointSize {
         }
     }
 
-    /**
-     * Two numbers are read as width by depth, which is the flat patch you stand
-     * on, and three as width by height by depth. One number on its own is the
-     * same flat patch, since that is what people mean by a 3x3.
-     */
     public static Size parse(String text) {
         if (text == null) {
             return null;

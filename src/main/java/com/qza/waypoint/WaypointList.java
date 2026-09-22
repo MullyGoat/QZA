@@ -103,7 +103,6 @@ public final class WaypointList {
         return null;
     }
 
-    /** Replaces whatever was on the same block, so adding twice is not a stack. */
     public static Waypoint add(Waypoint waypoint) {
         Waypoint existing = atBlock(waypoint.x, waypoint.y, waypoint.z);
         if (existing != null) {

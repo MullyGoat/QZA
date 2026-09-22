@@ -30,9 +30,6 @@ public final class WaypointEditor {
             return InteractionResult.FAIL;
         });
 
-        // Escape has no screen to close while editing, so it opens the pause
-        // menu instead. Catching that is what makes Escape leave edit mode
-        // without also pausing the game.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (active && client.screen instanceof PauseScreen) {
                 client.setScreen(null);
