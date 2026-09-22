@@ -9,7 +9,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -18,6 +20,7 @@ public final class WaypointRenderer {
     private static final float FILL_ALPHA = 0.25f;
     private static final double GROW = 0.002;
     private static final int LIGHT = 0xF000F0;
+    private static final int BACKDROP = 0x60000000;
 
     private static int framesDrawn;
     private static int labelsAttempted;
@@ -36,7 +39,7 @@ public final class WaypointRenderer {
             if (!showing()) {
                 return;
             }
-            draw(context.poseStack(), context.bufferSource());
+            draw(context.poseStack(), context.bufferSource(), context.submitNodeCollector());
         });
     }
 
@@ -63,7 +66,8 @@ public final class WaypointRenderer {
         return true;
     }
 
-    private static void draw(PoseStack poseStack, MultiBufferSource.BufferSource buffers) {
+    private static void draw(PoseStack poseStack, MultiBufferSource.BufferSource buffers,
+                             SubmitNodeCollector collector) {
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
 
         poseStack.pushPose();
@@ -88,19 +92,16 @@ public final class WaypointRenderer {
             for (Waypoint waypoint : WaypointList.all()) {
                 if (waypoint.enabled) {
                     labelsAttempted++;
-                    label(poseStack, buffers, waypoint);
+                    label(poseStack, collector, waypoint);
                 }
             }
         }
 
         poseStack.popPose();
-
-        // Text is queued rather than drawn, and nothing else in this pass ends
-        // the batch, so without this the labels are built and thrown away.
-        buffers.endBatch();
     }
 
-    private static void label(PoseStack poseStack, MultiBufferSource buffers, Waypoint waypoint) {
+    private static void label(PoseStack poseStack, SubmitNodeCollector collector,
+                              Waypoint waypoint) {
         String name = waypoint.label();
         if (name == null || name.isBlank()) {
             return;
@@ -120,8 +121,9 @@ public final class WaypointRenderer {
         poseStack.mulPose(client.gameRenderer.getMainCamera().rotation());
         poseStack.scale(-0.025f, -0.025f, 0.025f);
 
-        font.drawInBatch(name, -font.width(name) / 2.0f, 0, waypoint.argb(), false,
-                poseStack.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, LIGHT);
+        collector.submitText(poseStack, -font.width(name) / 2.0f, 0,
+                Component.literal(name).getVisualOrderText(), false,
+                Font.DisplayMode.NORMAL, LIGHT, waypoint.argb(), BACKDROP, 0);
 
         poseStack.popPose();
     }
