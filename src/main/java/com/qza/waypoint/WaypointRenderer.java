@@ -19,7 +19,16 @@ public final class WaypointRenderer {
     private static final double GROW = 0.002;
     private static final int LIGHT = 0xF000F0;
 
+    private static int framesDrawn;
+    private static int labelsAttempted;
+    private static String lastSkip = "never drawn";
+
     private WaypointRenderer() {
+    }
+
+    public static String diagnosis() {
+        return "drawn " + framesDrawn + " frames, labels attempted " + labelsAttempted
+                + ", last skip: " + lastSkip;
     }
 
     public static void init() {
@@ -33,18 +42,25 @@ public final class WaypointRenderer {
 
     private static boolean showing() {
         if (!ConfigManager.get().waypointsEnabled) {
+            lastSkip = "waypoints switched off";
             return false;
         }
         if (WaypointList.size() == 0) {
+            lastSkip = "no waypoints saved";
             return false;
         }
         Minecraft client = Minecraft.getInstance();
         if (client.level == null || client.player == null) {
+            lastSkip = "not in a world";
             return false;
         }
-        return WaypointEditor.active()
-                || !ConfigManager.get().waypointsDungeonOnly
-                || DungeonState.inDungeon();
+        if (!WaypointEditor.active() && ConfigManager.get().waypointsDungeonOnly
+                && !DungeonState.inDungeon()) {
+            lastSkip = "dungeons only, and not in one";
+            return false;
+        }
+        lastSkip = "none";
+        return true;
     }
 
     private static void draw(PoseStack poseStack, MultiBufferSource.BufferSource buffers) {
@@ -67,9 +83,11 @@ public final class WaypointRenderer {
             }
         }
 
+        framesDrawn++;
         if (ConfigManager.get().waypointShowNames) {
             for (Waypoint waypoint : WaypointList.all()) {
                 if (waypoint.enabled) {
+                    labelsAttempted++;
                     label(poseStack, buffers, waypoint);
                 }
             }
@@ -103,7 +121,7 @@ public final class WaypointRenderer {
         poseStack.scale(-0.025f, -0.025f, 0.025f);
 
         font.drawInBatch(name, -font.width(name) / 2.0f, 0, waypoint.argb(), false,
-                poseStack.last().pose(), buffers, Font.DisplayMode.SEE_THROUGH, 0, LIGHT);
+                poseStack.last().pose(), buffers, Font.DisplayMode.NORMAL, 0, LIGHT);
 
         poseStack.popPose();
     }
