@@ -24,13 +24,15 @@ public final class WaypointRenderer {
 
     private static int framesDrawn;
     private static int labelsAttempted;
+    private static int collectCalls;
     private static String lastSkip = "never drawn";
 
     private WaypointRenderer() {
     }
 
     public static String diagnosis() {
-        return "drawn " + framesDrawn + " frames, labels attempted " + labelsAttempted
+        return "boxes " + framesDrawn + " frames, collectSubmits " + collectCalls
+                + ", labels attempted " + labelsAttempted
                 + ", last skip: " + lastSkip;
     }
 
@@ -39,7 +41,15 @@ public final class WaypointRenderer {
             if (!showing()) {
                 return;
             }
-            draw(context.poseStack(), context.bufferSource(), context.submitNodeCollector());
+            drawBoxes(context.poseStack(), context.bufferSource());
+        });
+
+        LevelRenderEvents.COLLECT_SUBMITS.register(context -> {
+            collectCalls++;
+            if (!ConfigManager.get().waypointShowNames || !showing()) {
+                return;
+            }
+            drawLabels(context.poseStack(), context.submitNodeCollector());
         });
     }
 
@@ -66,8 +76,7 @@ public final class WaypointRenderer {
         return true;
     }
 
-    private static void draw(PoseStack poseStack, MultiBufferSource.BufferSource buffers,
-                             SubmitNodeCollector collector) {
+    private static void drawBoxes(PoseStack poseStack, MultiBufferSource.BufferSource buffers) {
         Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
 
         poseStack.pushPose();
@@ -88,12 +97,19 @@ public final class WaypointRenderer {
         }
 
         framesDrawn++;
-        if (ConfigManager.get().waypointShowNames) {
-            for (Waypoint waypoint : WaypointList.all()) {
-                if (waypoint.enabled) {
-                    labelsAttempted++;
-                    label(poseStack, collector, waypoint);
-                }
+        poseStack.popPose();
+    }
+
+    private static void drawLabels(PoseStack poseStack, SubmitNodeCollector collector) {
+        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
+
+        poseStack.pushPose();
+        poseStack.translate(-camera.x, -camera.y, -camera.z);
+
+        for (Waypoint waypoint : WaypointList.all()) {
+            if (waypoint.enabled) {
+                labelsAttempted++;
+                label(poseStack, collector, waypoint);
             }
         }
 
