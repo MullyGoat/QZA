@@ -27,18 +27,7 @@ public final class WaypointRenderer {
 
     private static final PoseStack IDENTITY = new PoseStack();
 
-    private static int framesDrawn;
-    private static int labelsAttempted;
-    private static int collectCalls;
-    private static String lastSkip = "never drawn";
-
     private WaypointRenderer() {
-    }
-
-    public static String diagnosis() {
-        return "boxes " + framesDrawn + " frames, collectSubmits " + collectCalls
-                + ", labels attempted " + labelsAttempted
-                + ", last skip: " + lastSkip;
     }
 
     public static void init() {
@@ -50,7 +39,6 @@ public final class WaypointRenderer {
         });
 
         LevelRenderEvents.COLLECT_SUBMITS.register(context -> {
-            collectCalls++;
             if (!ConfigManager.get().waypointShowNames || !showing()) {
                 return;
             }
@@ -61,24 +49,19 @@ public final class WaypointRenderer {
 
     private static boolean showing() {
         if (!ConfigManager.get().waypointsEnabled) {
-            lastSkip = "waypoints switched off";
             return false;
         }
         if (WaypointList.size() == 0) {
-            lastSkip = "no waypoints saved";
             return false;
         }
         Minecraft client = Minecraft.getInstance();
         if (client.level == null || client.player == null) {
-            lastSkip = "not in a world";
             return false;
         }
         if (!WaypointEditor.active() && ConfigManager.get().waypointsDungeonOnly
                 && !DungeonState.inDungeon()) {
-            lastSkip = "dungeons only, and not in one";
             return false;
         }
-        lastSkip = "none";
         return true;
     }
 
@@ -102,7 +85,6 @@ public final class WaypointRenderer {
             }
         }
 
-        framesDrawn++;
         poseStack.popPose();
     }
 
@@ -115,7 +97,6 @@ public final class WaypointRenderer {
 
         for (Waypoint waypoint : WaypointList.all()) {
             if (waypoint.enabled) {
-                labelsAttempted++;
                 label(poseStack, collector, cameraState, camera, waypoint);
             }
         }

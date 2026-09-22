@@ -20,7 +20,6 @@ import com.qza.waypoint.Waypoint;
 import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
 import com.qza.waypoint.WaypointList;
-import com.qza.waypoint.WaypointRenderer;
 import com.qza.waypoint.WaypointSize;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
@@ -92,22 +91,6 @@ public final class QZACommand {
                         })
                         .then(literal("list").executes(ctx -> {
                             waypointList();
-                            return 1;
-                        }))
-                        .then(literal("debug").executes(ctx -> {
-                            QZAConfig cfg = ConfigManager.get();
-                            ChatUtil.info("enabled=" + cfg.waypointsEnabled
-                                    + " names=" + cfg.waypointShowNames
-                                    + " dungeonOnly=" + cfg.waypointsDungeonOnly
-                                    + " saved=" + WaypointList.size());
-                            ChatUtil.info(WaypointRenderer.diagnosis());
-                            Waypoint first = WaypointList.at(0);
-                            if (first != null) {
-                                ChatUtil.info("first: \"" + first.label() + "\" at "
-                                        + first.x + " " + first.y + " " + first.z
-                                        + " box " + first.minX() + ".." + first.maxX()
-                                        + " / " + first.minY() + ".." + first.maxY());
-                            }
                             return 1;
                         }))
                         .then(literal("clear").executes(ctx -> {
