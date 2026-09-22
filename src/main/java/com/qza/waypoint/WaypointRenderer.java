@@ -6,11 +6,11 @@ import com.qza.config.ConfigManager;
 import com.qza.util.DungeonState;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -49,7 +49,8 @@ public final class WaypointRenderer {
             if (!ConfigManager.get().waypointShowNames || !showing()) {
                 return;
             }
-            drawLabels(context.poseStack(), context.submitNodeCollector());
+            drawLabels(context.poseStack(), context.submitNodeCollector(),
+                    context.levelState().cameraRenderState);
         });
     }
 
@@ -100,46 +101,39 @@ public final class WaypointRenderer {
         poseStack.popPose();
     }
 
-    private static void drawLabels(PoseStack poseStack, SubmitNodeCollector collector) {
-        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
-
-        poseStack.pushPose();
-        poseStack.translate(-camera.x, -camera.y, -camera.z);
+    private static void drawLabels(PoseStack poseStack, SubmitNodeCollector collector,
+                                   CameraRenderState cameraState) {
+        if (cameraState == null || cameraState.pos == null) {
+            return;
+        }
+        Vec3 camera = cameraState.pos;
 
         for (Waypoint waypoint : WaypointList.all()) {
             if (waypoint.enabled) {
                 labelsAttempted++;
-                label(poseStack, collector, waypoint);
+                label(poseStack, collector, cameraState, camera, waypoint);
             }
         }
-
-        poseStack.popPose();
     }
 
     private static void label(PoseStack poseStack, SubmitNodeCollector collector,
-                              Waypoint waypoint) {
+                              CameraRenderState cameraState, Vec3 camera, Waypoint waypoint) {
         String name = waypoint.label();
         if (name == null || name.isBlank()) {
             return;
         }
 
-        Minecraft client = Minecraft.getInstance();
-        Font font = client.font;
-        if (font == null) {
-            return;
-        }
+        double x = (waypoint.minX() + waypoint.maxX()) / 2.0;
+        double y = waypoint.maxY() + 0.35;
+        double z = (waypoint.minZ() + waypoint.maxZ()) / 2.0;
 
         poseStack.pushPose();
-        poseStack.translate(
-                (waypoint.minX() + waypoint.maxX()) / 2.0,
-                waypoint.maxY() + 0.35,
-                (waypoint.minZ() + waypoint.maxZ()) / 2.0);
-        poseStack.mulPose(client.gameRenderer.getMainCamera().rotation());
-        poseStack.scale(-0.025f, -0.025f, 0.025f);
+        poseStack.translate(x - camera.x, y - camera.y, z - camera.z);
 
-        collector.submitText(poseStack, -font.width(name) / 2.0f, 0,
-                Component.literal(name).getVisualOrderText(), false,
-                Font.DisplayMode.NORMAL, LIGHT, waypoint.argb(), BACKDROP, 0);
+        collector.submitNameTag(poseStack, Vec3.ZERO, BACKDROP,
+                Component.literal(name).withStyle(style -> style.withColor(
+                        waypoint.argb() & 0xFFFFFF)),
+                false, LIGHT, camera.distanceToSqr(x, y, z), cameraState);
 
         poseStack.popPose();
     }
