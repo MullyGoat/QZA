@@ -1409,7 +1409,7 @@ public class QZAChatScreen extends Screen {
         } else {
             line = bubble.text;
         }
-        this.minecraft.keyboardHandler.setClipboard(line);
+        this.minecraft.keyboardHandler.setClipboard(IgnUtil.stripCodes(line));
         copiedAt = System.currentTimeMillis();
     }
 
