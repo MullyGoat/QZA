@@ -10,6 +10,7 @@ import com.qza.discord.DiscordAlert;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.gui.QZAChatScreen;
+import com.qza.gui.WaypointScreen;
 import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
@@ -18,6 +19,9 @@ import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.util.ChatUtil;
+import com.qza.waypoint.WaypointColour;
+import com.qza.waypoint.WaypointEditor;
+import com.qza.waypoint.WaypointList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -136,6 +140,64 @@ public final class SettingsRegistry {
                 "(none)",
                 170)
                 .visibleWhen(() -> cfg.necronTimerEnabled));
+
+        settings.add(new ToggleSetting(f7, "Waypoints", "Waypoints",
+                Component.literal("Highlights blocks you have marked, so you know where to "
+                                + "stand or what to break. Shows through walls.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.waypointsEnabled,
+                v -> {
+                    cfg.waypointsEnabled = v;
+                    if (!v) {
+                        WaypointEditor.stop();
+                    }
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ActionSetting(f7, "Waypoints", "Edit Waypoints",
+                Component.literal("View and change the coords, colour, size and name of "
+                                + "every waypoint").withStyle(ChatFormatting.GRAY),
+                () -> "Open (" + WaypointList.size() + ")",
+                () -> Minecraft.getInstance().setScreen(new WaypointScreen()))
+                .visibleWhen(() -> cfg.waypointsEnabled));
+
+        settings.add(new ActionSetting(f7, "Waypoints", "Manual Waypoint Add",
+                Component.literal("Closes the menu and lets you right click blocks to mark "
+                                + "them. Right click a marked block to clear it. Press ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Esc").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" to finish.").withStyle(ChatFormatting.GRAY)),
+                () -> WaypointEditor.active() ? "Stop" : "Start",
+                () -> {
+                    Minecraft.getInstance().setScreen(null);
+                    WaypointEditor.toggle();
+                })
+                .visibleWhen(() -> cfg.waypointsEnabled));
+
+        settings.add(new DropdownSetting(f7, "Waypoints", "Marker Colour",
+                Component.literal("The colour a manually added waypoint gets")
+                        .withStyle(ChatFormatting.GRAY),
+                WaypointColour::names,
+                () -> cfg.waypointColour,
+                v -> {
+                    cfg.waypointColour = v;
+                    ConfigManager.save();
+                },
+                text -> text,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.waypointsEnabled));
+
+        settings.add(new ToggleSetting(f7, "Waypoints", "Dungeons Only",
+                Component.literal("Only shows waypoints inside a dungeon, so they do not "
+                                + "clutter the hub").withStyle(ChatFormatting.GRAY),
+                () -> cfg.waypointsDungeonOnly,
+                v -> {
+                    cfg.waypointsDungeonOnly = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.waypointsEnabled));
 
         String music = "Music";
 

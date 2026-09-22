@@ -36,6 +36,12 @@ public class QZAConfig {
 
     public String necronAnnounceMode = "party";
 
+    public boolean waypointsEnabled = false;
+
+    public boolean waypointsDungeonOnly = true;
+
+    public String waypointColour = "blue";
+
     public boolean partyInviteNotifyEnabled = true;
 
     public double partyNotifyDuration = 5.0;

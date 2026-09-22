@@ -20,6 +20,9 @@ import com.qza.util.DungeonState;
 import com.qza.util.PlayerFaces;
 import com.qza.util.PlayerLookup;
 import com.qza.util.Scheduler;
+import com.qza.waypoint.WaypointEditor;
+import com.qza.waypoint.WaypointList;
+import com.qza.waypoint.WaypointRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -45,6 +48,9 @@ public class QZA implements ClientModInitializer {
         MusicLibrary.ensureDir();
         MusicManager.get().applySettings();
         PartyState.init();
+        WaypointList.load();
+        WaypointRenderer.init();
+        WaypointEditor.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
                 new NotificationHud());
@@ -87,6 +93,7 @@ public class QZA implements ClientModInitializer {
             ServerTickClock.reset();
             PartyNotification.clear();
             PartyFullAlert.reset();
+            WaypointEditor.reset();
             ChatNotification.clear();
             PlayerFaces.clearCache();
             DungeonState.reset();

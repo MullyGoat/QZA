@@ -1,6 +1,7 @@
 package com.qza.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
@@ -10,10 +11,16 @@ import com.qza.stats.AutoInvite;
 import com.qza.gui.GuiEditScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.QZAScreen;
+import com.qza.gui.WaypointScreen;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.shitter.ShitterList;
 import com.qza.util.ChatUtil;
+import com.qza.waypoint.Waypoint;
+import com.qza.waypoint.WaypointColour;
+import com.qza.waypoint.WaypointEditor;
+import com.qza.waypoint.WaypointList;
+import com.qza.waypoint.WaypointSize;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -77,6 +84,60 @@ public final class QZACommand {
                             DiscordAlert.unlink(ChatUtil::success, ChatUtil::error);
                             return 1;
                         })))
+                .then(literal("waypoint")
+                        .executes(ctx -> {
+                            openWaypoints();
+                            return 1;
+                        })
+                        .then(literal("list").executes(ctx -> {
+                            waypointList();
+                            return 1;
+                        }))
+                        .then(literal("clear").executes(ctx -> {
+                            int had = WaypointList.clear();
+                            ChatUtil.success("Removed " + had + " waypoint"
+                                    + (had == 1 ? "" : "s") + ".");
+                            return 1;
+                        }))
+                        .then(literal("manual")
+                                .executes(ctx -> {
+                                    WaypointEditor.toggle();
+                                    return 1;
+                                })
+                                .then(literal("add").executes(ctx -> {
+                                    WaypointEditor.toggle();
+                                    return 1;
+                                })))
+                        .then(literal("remove")
+                                .then(argument("x", IntegerArgumentType.integer())
+                                        .then(argument("y", IntegerArgumentType.integer())
+                                                .then(argument("z", IntegerArgumentType.integer())
+                                                        .executes(ctx -> {
+                                                            removeWaypoint(
+                                                                    IntegerArgumentType.getInteger(ctx, "x"),
+                                                                    IntegerArgumentType.getInteger(ctx, "y"),
+                                                                    IntegerArgumentType.getInteger(ctx, "z"));
+                                                            return 1;
+                                                        })))))
+                        .then(literal("add")
+                                .then(argument("x", IntegerArgumentType.integer())
+                                        .then(argument("y", IntegerArgumentType.integer())
+                                                .then(argument("z", IntegerArgumentType.integer())
+                                                        .executes(ctx -> addWaypoint(ctx, "blue", "1", ""))
+                                                        .then(argument("colour", StringArgumentType.word())
+                                                                .executes(ctx -> addWaypoint(ctx,
+                                                                        StringArgumentType.getString(ctx, "colour"),
+                                                                        "1", ""))
+                                                                .then(argument("size", StringArgumentType.word())
+                                                                        .executes(ctx -> addWaypoint(ctx,
+                                                                                StringArgumentType.getString(ctx, "colour"),
+                                                                                StringArgumentType.getString(ctx, "size"),
+                                                                                ""))
+                                                                        .then(argument("name", StringArgumentType.greedyString())
+                                                                                .executes(ctx -> addWaypoint(ctx,
+                                                                                        StringArgumentType.getString(ctx, "colour"),
+                                                                                        StringArgumentType.getString(ctx, "size"),
+                                                                                        StringArgumentType.getString(ctx, "name")))))))))))
                 .then(literal("gui")
                         .executes(ctx -> {
                             openEditor();
@@ -134,6 +195,82 @@ public final class QZACommand {
         Minecraft client = Minecraft.getInstance();
 
         client.execute(() -> client.setScreen(new QZAChatScreen()));
+    }
+
+    private static void openWaypoints() {
+        Minecraft client = Minecraft.getInstance();
+
+        client.execute(() -> client.setScreen(new WaypointScreen()));
+    }
+
+    private static int addWaypoint(
+            com.mojang.brigadier.context.CommandContext<FabricClientCommandSource> ctx,
+            String colour, String size, String name) {
+        if (!WaypointColour.known(colour)) {
+            ChatUtil.error("\"" + colour + "\" is not a colour. Try one of "
+                    + String.join(", ", WaypointColour.names()) + ", or a hex like #40C0FF.");
+            return 0;
+        }
+
+        WaypointSize.Size parsed = WaypointSize.parse(size);
+        if (parsed == null) {
+            ChatUtil.error("\"" + size + "\" is not a size. Use 3x3 for a flat patch, "
+                    + "3x3x3 for a cube, up to " + WaypointSize.MAX + " a side.");
+            return 0;
+        }
+
+        int x = IntegerArgumentType.getInteger(ctx, "x");
+        int y = IntegerArgumentType.getInteger(ctx, "y");
+        int z = IntegerArgumentType.getInteger(ctx, "z");
+
+        Waypoint added = WaypointList.add(new Waypoint(x, y, z,
+                WaypointColour.tidy(colour), parsed.width(), parsed.height(), parsed.depth(),
+                name));
+        if (added == null) {
+            ChatUtil.error("That is " + WaypointList.MAX + " waypoints, which is the limit.");
+            return 0;
+        }
+
+        ChatUtil.send(Component.literal("Waypoint ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(added.label()).withStyle(ChatFormatting.GREEN))
+                .append(Component.literal(" at " + x + " " + y + " " + z + ", "
+                        + added.sizeText() + " in " + added.colour + ".")
+                        .withStyle(ChatFormatting.GRAY)));
+
+        if (!ConfigManager.get().waypointsEnabled) {
+            ChatUtil.info("Waypoints are switched off, so it will not show yet. "
+                    + "Turn them on under F7 / M7 in /qza.");
+        }
+        return 1;
+    }
+
+    private static void removeWaypoint(int x, int y, int z) {
+        if (WaypointList.removeAt(x, y, z)) {
+            ChatUtil.success("Removed the waypoint at " + x + " " + y + " " + z + ".");
+        } else {
+            ChatUtil.error("No waypoint at " + x + " " + y + " " + z + ".");
+        }
+    }
+
+    private static void waypointList() {
+        if (WaypointList.size() == 0) {
+            ChatUtil.info("No waypoints yet. Add one with /qza waypoint add X Y Z "
+                    + "<colour> <size> <name>");
+            return;
+        }
+
+        ChatUtil.raw(Component.literal("QZA")
+                .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD)
+                .append(Component.literal(" waypoints (" + WaypointList.size() + ")")
+                        .withStyle(ChatFormatting.WHITE)));
+
+        for (Waypoint waypoint : WaypointList.all()) {
+            ChatUtil.raw(Component.literal(" " + waypoint.label() + " ")
+                    .withStyle(style -> style.withColor(waypoint.argb() & 0xFFFFFF))
+                    .append(Component.literal(waypoint.x + " " + waypoint.y + " "
+                            + waypoint.z + "  " + waypoint.sizeText() + "  "
+                            + waypoint.colour).withStyle(ChatFormatting.GRAY)));
+        }
     }
 
     private static void discordStatus() {
@@ -200,6 +337,12 @@ public final class QZACommand {
         entry("/qza discord link", "Get a code to link this game to your Discord");
         entry("/qza discord unlink", "Unlink and delete what the relay stored");
         entry("/qza discord test", "Send a test alert to Discord");
+        entry("/qza waypoint", "Open the waypoint list");
+        entry("/qza waypoint add X Y Z <colour> <size> <name>", "Mark blocks");
+        entry("/qza waypoint manual add", "Right click blocks to mark them");
+        entry("/qza waypoint remove X Y Z", "Remove one waypoint");
+        entry("/qza waypoint list", "Print every waypoint");
+        entry("/qza waypoint clear", "Remove every waypoint");
         entry("/qza reload", "Reload config and list from disk");
         entry("/qza help", "Print this list in game");
         entry("/shitter", "Show the shitter list commands");
