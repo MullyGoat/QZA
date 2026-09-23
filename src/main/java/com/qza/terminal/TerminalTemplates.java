@@ -34,8 +34,9 @@ public final class TerminalTemplates {
     }
 
     public static List<String> keys() {
-        List<String> out = new ArrayList<>(BUILT_IN.keySet());
+        List<String> out = new ArrayList<>();
         out.add(CUSTOM);
+        out.addAll(BUILT_IN.keySet());
         return out;
     }
 

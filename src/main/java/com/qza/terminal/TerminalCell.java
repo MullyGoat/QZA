@@ -1,5 +1,7 @@
 package com.qza.terminal;
 
+import java.util.Locale;
+
 public record TerminalCell(int index, boolean filled, int colour, String name,
                            int count, boolean marked) {
 
@@ -7,14 +9,19 @@ public record TerminalCell(int index, boolean filled, int colour, String name,
         return new TerminalCell(index, false, 0, "", 0, false);
     }
 
-    public String label(String mode) {
+    public TerminalCell hidden() {
+        return empty(index);
+    }
+
+    public String label(String mode, boolean counts) {
         if (!filled) {
             return "";
         }
         return switch (mode) {
-            case TerminalTemplate.LABEL_COUNT -> count > 1 ? String.valueOf(count) : "";
+            case TerminalTemplate.LABEL_COUNT -> counts && count > 0
+                    ? String.valueOf(count) : "";
             case TerminalTemplate.LABEL_INITIAL -> name.isEmpty()
-                    ? "" : name.substring(0, 1).toUpperCase(java.util.Locale.ROOT);
+                    ? "" : name.substring(0, 1).toUpperCase(Locale.ROOT);
             case TerminalTemplate.LABEL_NAME -> name;
             default -> "";
         };

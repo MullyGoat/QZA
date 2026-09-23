@@ -49,6 +49,10 @@ public class QZAConfig {
     public com.qza.terminal.TerminalTemplate terminalCustom =
             new com.qza.terminal.TerminalTemplate();
 
+    public boolean terminalNumbersLimit = false;
+
+    public int terminalNumbersShown = 3;
+
     public boolean witherKeyEnabled = false;
 
     public double witherKeyX = 0.5;

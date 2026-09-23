@@ -35,7 +35,27 @@ public abstract class TerminalScreenMixin {
     private void qzaTerminalClick(MouseButtonEvent event, boolean doubleClick,
                                   CallbackInfoReturnable<Boolean> cir) {
         AbstractContainerScreen<?> self = (AbstractContainerScreen<?>) (Object) this;
-        if (TerminalOverlay.click(self, leftPos, topPos, event, doubleClick)) {
+        if (TerminalOverlay.click(self, leftPos, topPos, event)) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    @Inject(method = "mouseReleased(Lnet/minecraft/client/input/MouseButtonEvent;)Z",
+            at = @At("HEAD"), cancellable = true)
+    private void qzaTerminalRelease(MouseButtonEvent event,
+                                    CallbackInfoReturnable<Boolean> cir) {
+        AbstractContainerScreen<?> self = (AbstractContainerScreen<?>) (Object) this;
+        if (TerminalOverlay.release(self, event)) {
+            cir.setReturnValue(true);
+        }
+    }
+
+    @Inject(method = "mouseDragged(Lnet/minecraft/client/input/MouseButtonEvent;DD)Z",
+            at = @At("HEAD"), cancellable = true)
+    private void qzaTerminalDrag(MouseButtonEvent event, double deltaX, double deltaY,
+                                 CallbackInfoReturnable<Boolean> cir) {
+        AbstractContainerScreen<?> self = (AbstractContainerScreen<?>) (Object) this;
+        if (TerminalOverlay.drag(self)) {
             cir.setReturnValue(true);
         }
     }

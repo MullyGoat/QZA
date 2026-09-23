@@ -213,6 +213,32 @@ public final class SettingsRegistry {
                 () -> Minecraft.getInstance().setScreen(new TerminalGuiScreen()))
                 .visibleWhen(() -> cfg.terminalGuiEnabled));
 
+        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Only Show Next Numbers",
+                Component.literal("In ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Click in order")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(", hides every pane except the next few, "
+                                + "and drops each one as it is clicked")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.terminalNumbersLimit,
+                v -> {
+                    cfg.terminalNumbersLimit = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalGuiEnabled));
+
+        settings.add(new SliderSetting(f7, "Custom Terminal GUI", "Numbers Shown",
+                Component.literal("How many panes stay on screen at once")
+                        .withStyle(ChatFormatting.GRAY),
+                1, 9, 1, "",
+                () -> cfg.terminalNumbersShown,
+                v -> {
+                    cfg.terminalNumbersShown = (int) Math.round(v);
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalGuiEnabled && cfg.terminalNumbersLimit));
+
         settings.add(new ToggleSetting(f7, "Wither Key Pickup", "Wither Key Pickup",
                 Component.literal("Shows ")
                         .withStyle(ChatFormatting.GRAY)

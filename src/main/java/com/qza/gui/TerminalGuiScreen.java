@@ -3,6 +3,7 @@ package com.qza.gui;
 import com.qza.config.ConfigManager;
 import com.qza.terminal.TerminalGrid;
 import com.qza.terminal.TerminalLayout;
+import com.qza.terminal.TerminalOverlay;
 import com.qza.terminal.TerminalPainter;
 import com.qza.terminal.TerminalSamples;
 import com.qza.terminal.TerminalTemplate;
@@ -235,7 +236,7 @@ public class TerminalGuiScreen extends Screen {
         graphics.fill(viewX, viewY, viewX + viewW, viewY + viewH, 0x33000000);
         outline(graphics, viewX, viewY, viewW, viewH, 0x33FFFFFF);
 
-        TerminalGrid grid = TerminalSamples.of(selected);
+        TerminalGrid grid = TerminalOverlay.limit(TerminalSamples.of(selected), selected);
         TerminalTemplate template = TerminalTemplates.get(templateKey());
         TerminalLayout natural = TerminalLayout.at(grid, template, 0, 0, 0, 0);
 

@@ -10,6 +10,9 @@ import net.minecraft.world.inventory.Slot;
 
 public final class TerminalOverlay {
     private static boolean forwarding;
+    private static double lastX;
+    private static double lastY;
+    private static boolean pressed;
 
     private TerminalOverlay() {
     }
@@ -28,13 +31,28 @@ public final class TerminalOverlay {
         return TerminalType.of(title(screen));
     }
 
+    public static TerminalGrid shown(AbstractContainerScreen<?> screen, TerminalType type) {
+        TerminalGrid grid = TerminalGrid.read(screen, type);
+        if (grid == null) {
+            return null;
+        }
+        return limit(grid, type);
+    }
+
+    public static TerminalGrid limit(TerminalGrid grid, TerminalType type) {
+        if (type != TerminalType.NUMBERS || !ConfigManager.get().terminalNumbersLimit) {
+            return grid;
+        }
+        return grid.onlyNext(Math.max(1, ConfigManager.get().terminalNumbersShown));
+    }
+
     public static boolean render(AbstractContainerScreen<?> screen, GuiGraphicsExtractor graphics,
                                  int mouseX, int mouseY) {
         TerminalType type = type(screen);
         if (type == null) {
             return false;
         }
-        TerminalGrid grid = TerminalGrid.read(screen);
+        TerminalGrid grid = shown(screen, type);
         if (grid == null) {
             return false;
         }
@@ -53,34 +71,67 @@ public final class TerminalOverlay {
     }
 
     public static boolean click(AbstractContainerScreen<?> screen, int leftPos, int topPos,
-                                MouseButtonEvent event, boolean doubleClick) {
+                                MouseButtonEvent event) {
         TerminalType type = type(screen);
         if (type == null) {
             return false;
         }
-        TerminalGrid grid = TerminalGrid.read(screen);
+        TerminalGrid grid = shown(screen, type);
         if (grid == null) {
             return false;
         }
+
+        pressed = true;
 
         TerminalTemplate template = TerminalTemplates.forType(type);
         TerminalLayout layout = TerminalLayout.of(grid, template, screen.width, screen.height);
 
         int index = layout.indexAt(event.x(), event.y());
-        if (index < 0 || index >= grid.cells.size()) {
+        if (index < 0 || index >= grid.cells.size() || !grid.cells.get(index).filled()) {
             return true;
         }
 
         Slot slot = screen.getMenu().slots.get(index);
-        MouseButtonEvent forwarded = new MouseButtonEvent(
-                leftPos + slot.x + 8.0, topPos + slot.y + 8.0, event.buttonInfo());
+        lastX = leftPos + slot.x + 8.0;
+        lastY = topPos + slot.y + 8.0;
 
+        forward(screen, event, true);
+        return true;
+    }
+
+    public static boolean release(AbstractContainerScreen<?> screen, MouseButtonEvent event) {
+        if (type(screen) == null) {
+            return false;
+        }
+        if (!pressed) {
+            return true;
+        }
+        pressed = false;
+        forward(screen, event, false);
+        return true;
+    }
+
+    public static boolean drag(AbstractContainerScreen<?> screen) {
+        return type(screen) != null;
+    }
+
+    private static void forward(AbstractContainerScreen<?> screen, MouseButtonEvent event,
+                                boolean down) {
+        MouseButtonEvent at = new MouseButtonEvent(lastX, lastY, event.buttonInfo());
         forwarding = true;
         try {
-            screen.mouseClicked(forwarded, doubleClick);
+            if (down) {
+                screen.mouseClicked(at, false);
+            } else {
+                screen.mouseReleased(at);
+            }
         } finally {
             forwarding = false;
         }
-        return true;
+    }
+
+    public static void reset() {
+        forwarding = false;
+        pressed = false;
     }
 }
