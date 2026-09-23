@@ -261,6 +261,38 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.terminalGuiEnabled));
 
+        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Rubix Click Counts",
+                Component.literal("In ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Change all to same color")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(", works out the colour that takes the "
+                                + "fewest clicks and writes each pane's share on it. ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("+").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" is a left click, ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("-").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" is a right click.")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.terminalRubixHints,
+                v -> {
+                    cfg.terminalRubixHints = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalGuiEnabled));
+
+        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Aim At Melody Button",
+                Component.literal("Puts the cursor on the melody button as the terminal "
+                                + "opens. Moves your own cursor only, nothing is sent to "
+                                + "the server.").withStyle(ChatFormatting.GRAY),
+                () -> cfg.terminalMelodyAim,
+                v -> {
+                    cfg.terminalMelodyAim = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalGuiEnabled));
+
         settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Hold Melody Button",
                 Component.literal("In ")
                         .withStyle(ChatFormatting.GRAY)

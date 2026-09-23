@@ -57,6 +57,10 @@ public class QZAConfig {
 
     public boolean terminalMelodyHold = true;
 
+    public boolean terminalMelodyAim = false;
+
+    public boolean terminalRubixHints = true;
+
     public boolean witherKeyEnabled = false;
 
     public double witherKeyX = 0.5;

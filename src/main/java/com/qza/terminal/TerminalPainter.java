@@ -10,12 +10,19 @@ public final class TerminalPainter {
     public static void draw(GuiGraphicsExtractor graphics, Font font, TerminalGrid grid,
                             TerminalTemplate template, TerminalLayout layout,
                             String title, int hovered) {
-        draw(graphics, font, grid, template, layout, title, hovered, template.label);
+        draw(graphics, font, grid, template, layout, title, hovered, template.label, null);
     }
 
     public static void draw(GuiGraphicsExtractor graphics, Font font, TerminalGrid grid,
                             TerminalTemplate template, TerminalLayout layout,
                             String title, int hovered, String labelMode) {
+        draw(graphics, font, grid, template, layout, title, hovered, labelMode, null);
+    }
+
+    public static void draw(GuiGraphicsExtractor graphics, Font font, TerminalGrid grid,
+                            TerminalTemplate template, TerminalLayout layout,
+                            String title, int hovered, String labelMode,
+                            java.util.List<String> overrides) {
         panel(graphics, template, layout);
 
         if (template.showTitle && title != null && !title.isBlank()) {
@@ -37,9 +44,11 @@ public final class TerminalPainter {
             if (row >= layout.rows) {
                 continue;
             }
+            String override = overrides == null || position >= overrides.size()
+                    ? null : overrides.get(position);
             cell(graphics, font, template, layout, grid.cells.get(position),
                     layout.cellX(column), layout.cellY(row),
-                    position == hovered, anyMarked, grid.counts, labelMode);
+                    position == hovered, anyMarked, grid.counts, labelMode, override);
         }
     }
 
@@ -66,7 +75,7 @@ public final class TerminalPainter {
     private static void cell(GuiGraphicsExtractor graphics, Font font, TerminalTemplate template,
                              TerminalLayout layout, TerminalCell cell, int x, int y,
                              boolean hovered, boolean anyMarked, boolean counts,
-                             String labelMode) {
+                             String labelMode, String override) {
         int size = layout.cell;
         int base = baseColour(template, cell);
 
@@ -88,7 +97,8 @@ public final class TerminalPainter {
             shape(graphics, x, y, size, template.shape, template.radius, template.hoverColour);
         }
 
-        String label = cell.label(labelMode, counts);
+        String label = override != null && !override.isEmpty()
+                ? override : cell.label(labelMode, counts);
         if (label.isEmpty()) {
             return;
         }

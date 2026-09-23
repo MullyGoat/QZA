@@ -487,7 +487,8 @@ public class TerminalCustomScreen extends Screen {
         graphics.pose().scale(fit, fit);
         graphics.pose().translate(-natural.width / 2f, -natural.height / 2f);
         TerminalPainter.draw(graphics, this.font, grid, template, natural,
-                preview.sampleTitle, -1, preview.labelFor(template.label));
+                preview.sampleTitle, -1, preview.labelFor(template.label),
+                TerminalOverlay.hints(grid, preview));
         graphics.pose().popMatrix();
     }
 
