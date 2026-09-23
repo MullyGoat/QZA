@@ -198,13 +198,37 @@ public final class TerminalGrid {
         return new TerminalGrid(rows, columns, out);
     }
 
+    public TerminalGrid onlyPending() {
+        List<TerminalCell> out = new ArrayList<>(cells.size());
+        for (TerminalCell cell : cells) {
+            out.add(cell.filled() && !cell.marked() ? cell : cell.hidden());
+        }
+        return new TerminalGrid(rows, columns, out);
+    }
+
     public TerminalGrid onlyColour(int argb) {
         if (argb == 0) {
-            return this;
+            return onlyPending();
         }
         List<TerminalCell> out = new ArrayList<>(cells.size());
         for (TerminalCell cell : cells) {
-            boolean keep = cell.filled() && cell.colour() == argb;
+            boolean keep = cell.filled() && !cell.marked() && cell.colour() == argb;
+            out.add(keep ? cell : cell.hidden());
+        }
+        return new TerminalGrid(rows, columns, out);
+    }
+
+    public TerminalGrid onlyInitial(String letter) {
+        if (letter == null || letter.isBlank()) {
+            return onlyPending();
+        }
+        String wanted = letter.trim().substring(0, 1).toUpperCase(Locale.ROOT);
+
+        List<TerminalCell> out = new ArrayList<>(cells.size());
+        for (TerminalCell cell : cells) {
+            boolean keep = cell.filled() && !cell.marked()
+                    && !cell.name().isEmpty()
+                    && cell.name().substring(0, 1).toUpperCase(Locale.ROOT).equals(wanted);
             out.add(keep ? cell : cell.hidden());
         }
         return new TerminalGrid(rows, columns, out);
@@ -235,8 +259,20 @@ public final class TerminalGrid {
         return -1;
     }
 
+    private static final Map<String, String> ODD_ITEMS = Map.of(
+            "bone_meal", "white",
+            "ink_sac", "black",
+            "lapis_lazuli", "blue",
+            "cocoa_beans", "brown");
+
     public static int colour(String path) {
         String text = path == null ? "" : path.toLowerCase(Locale.ROOT);
+
+        String odd = ODD_ITEMS.get(text);
+        if (odd != null) {
+            return DYES.get(odd);
+        }
+
         int best = 0;
         Integer found = null;
         for (Map.Entry<String, Integer> entry : DYES.entrySet()) {
@@ -253,6 +289,11 @@ public final class TerminalGrid {
         if (word == null || word.isBlank()) {
             return 0;
         }
-        return colour(word.trim().toLowerCase(Locale.ROOT).replace(' ', '_') + "_x");
+        String text = word.trim().toLowerCase(Locale.ROOT).replace(' ', '_');
+        if (text.equals("silver")) {
+            text = "light_gray";
+        }
+        Integer direct = DYES.get(text);
+        return direct == null ? 0 : direct;
     }
 }

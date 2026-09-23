@@ -45,8 +45,11 @@ public final class TerminalOverlay {
         return switch (type) {
             case NUMBERS -> cfg.terminalNumbersLimit
                     ? grid.onlyNext(Math.max(1, cfg.terminalNumbersShown)) : grid;
-            case SELECT -> cfg.terminalSelectFilter
+            case PANES -> cfg.terminalHideDone ? grid.onlyPending() : grid;
+            case SELECT -> cfg.terminalHideDone
                     ? grid.onlyColour(TerminalGrid.named(argument)) : grid;
+            case STARTS_WITH -> cfg.terminalHideDone
+                    ? grid.onlyInitial(argument) : grid;
             case MELODY -> cfg.terminalMelodyHold ? grid.holdMelody() : grid;
             default -> grid;
         };
@@ -72,7 +75,8 @@ public final class TerminalOverlay {
         TerminalLayout layout = TerminalLayout.of(grid, template, screen.width, screen.height);
 
         TerminalPainter.draw(graphics, client.font, grid, template, layout,
-                title(screen), layout.indexAt(mouseX, mouseY));
+                title(screen), layout.indexAt(mouseX, mouseY),
+                type.labelFor(template.label));
         return true;
     }
 

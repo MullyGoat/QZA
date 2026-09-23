@@ -239,16 +239,24 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.terminalGuiEnabled && cfg.terminalNumbersLimit));
 
-        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Only Show Asked Colour",
-                Component.literal("In ")
+        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Only Show What Is Left",
+                Component.literal("Leaves only the slots still needing a click. Red panes in ")
                         .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Correct all the panes")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(", the asked colour in ")
+                                .withStyle(ChatFormatting.GRAY))
                         .append(Component.literal("Select all the items")
                                 .withStyle(ChatFormatting.LIGHT_PURPLE))
-                        .append(Component.literal(", hides every item that is not the "
-                                + "colour named in the title").withStyle(ChatFormatting.GRAY)),
-                () -> cfg.terminalSelectFilter,
+                        .append(Component.literal(", the asked letter in ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("What starts with")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(". Each one drops away as it is clicked.")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.terminalHideDone,
                 v -> {
-                    cfg.terminalSelectFilter = v;
+                    cfg.terminalHideDone = v;
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.terminalGuiEnabled));

@@ -10,6 +10,12 @@ public final class TerminalPainter {
     public static void draw(GuiGraphicsExtractor graphics, Font font, TerminalGrid grid,
                             TerminalTemplate template, TerminalLayout layout,
                             String title, int hovered) {
+        draw(graphics, font, grid, template, layout, title, hovered, template.label);
+    }
+
+    public static void draw(GuiGraphicsExtractor graphics, Font font, TerminalGrid grid,
+                            TerminalTemplate template, TerminalLayout layout,
+                            String title, int hovered, String labelMode) {
         panel(graphics, template, layout);
 
         if (template.showTitle && title != null && !title.isBlank()) {
@@ -33,7 +39,7 @@ public final class TerminalPainter {
             }
             cell(graphics, font, template, layout, grid.cells.get(position),
                     layout.cellX(column), layout.cellY(row),
-                    position == hovered, anyMarked, grid.counts);
+                    position == hovered, anyMarked, grid.counts, labelMode);
         }
     }
 
@@ -59,7 +65,8 @@ public final class TerminalPainter {
 
     private static void cell(GuiGraphicsExtractor graphics, Font font, TerminalTemplate template,
                              TerminalLayout layout, TerminalCell cell, int x, int y,
-                             boolean hovered, boolean anyMarked, boolean counts) {
+                             boolean hovered, boolean anyMarked, boolean counts,
+                             String labelMode) {
         int size = layout.cell;
         int base = baseColour(template, cell);
 
@@ -81,7 +88,7 @@ public final class TerminalPainter {
             shape(graphics, x, y, size, template.shape, template.radius, template.hoverColour);
         }
 
-        String label = cell.label(template.label, counts);
+        String label = cell.label(labelMode, counts);
         if (label.isEmpty()) {
             return;
         }

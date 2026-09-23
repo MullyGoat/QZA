@@ -10,7 +10,7 @@ public enum TerminalType {
     SELECT("select", "Select All", "^Select all the ([\\w ]+) items!$",
             "Select all the RED items!"),
     STARTS_WITH("startswith", "Starts With", "^What starts with: '(\\w)'\\?$",
-            "What starts with: 'S'?"),
+            "What starts with: 'G'?"),
     PANES("panes", "Panes", "^Correct all the panes!$", "Correct all the panes!");
 
     public final String key;
@@ -46,6 +46,15 @@ public enum TerminalType {
             }
         }
         return null;
+    }
+
+    public String labelFor(String templateLabel) {
+        if (this != STARTS_WITH) {
+            return templateLabel;
+        }
+        return TerminalTemplate.LABEL_NAME.equals(templateLabel)
+                || TerminalTemplate.LABEL_INITIAL.equals(templateLabel)
+                ? templateLabel : TerminalTemplate.LABEL_INITIAL;
     }
 
     public String argument(String title) {

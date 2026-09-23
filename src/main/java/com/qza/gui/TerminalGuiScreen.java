@@ -257,7 +257,7 @@ public class TerminalGuiScreen extends Screen {
         graphics.pose().translate(-natural.width / 2f, -natural.height / 2f);
 
         TerminalPainter.draw(graphics, this.font, grid, template, natural,
-                selected.sampleTitle, -1);
+                selected.sampleTitle, -1, selected.labelFor(template.label));
 
         graphics.pose().popMatrix();
     }

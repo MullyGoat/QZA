@@ -18,8 +18,8 @@ public final class TerminalSamples {
     private static final int BROWN = 0xFF835432;
 
     private static final String[] NAMES = {
-            "Sponge", "Slimeball", "Sugar", "Stick", "Bone", "Bucket",
-            "Shears", "Saddle", "Snowball", "Book", "Feather", "Emerald"};
+            "Golden Apple", "Grass", "Gunpowder", "Bone", "Bucket", "Book",
+            "Glowstone", "Saddle", "Snowball", "Gold Ingot", "Feather", "Emerald"};
 
     private TerminalSamples() {
     }
@@ -134,7 +134,7 @@ public final class TerminalSamples {
             for (int column = 1; column <= 7; column++) {
                 String name = NAMES[n % NAMES.length];
                 put(cells, row, column, 0, name, 1,
-                        name.startsWith("S") && n % 2 == 0, false);
+                        name.startsWith("G") && n % 4 == 0, false);
                 n++;
             }
         }

@@ -53,7 +53,7 @@ public class QZAConfig {
 
     public int terminalNumbersShown = 3;
 
-    public boolean terminalSelectFilter = false;
+    public boolean terminalHideDone = true;
 
     public boolean terminalMelodyHold = true;
 
