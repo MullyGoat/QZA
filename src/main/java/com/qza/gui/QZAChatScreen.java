@@ -76,6 +76,7 @@ public class QZAChatScreen extends Screen {
 
     private static String selected;
     private static String selectedTab = TAB_DM;
+    private static String rememberedTab = TAB_DM;
 
     private static final int MENU_W = 92;
     private static final int MENU_ROW_H = 12;
@@ -133,25 +134,26 @@ public class QZAChatScreen extends Screen {
     public QZAChatScreen() {
         super(Component.literal("QZA Chat"));
 
-        String wanted = ChatFocus.resolve(selectedTab);
-        for (String key : TAB_KEYS) {
-            if (key.equals(wanted)) {
-                selectedTab = wanted;
-                break;
-            }
-        }
+        String wanted = ChatFocus.resolve(rememberedTab);
+        selectedTab = known(wanted) ? wanted : rememberedTab;
     }
 
     public QZAChatScreen(String tab, String text) {
         super(Component.literal("QZA Chat"));
 
-        for (String key : TAB_KEYS) {
-            if (key.equals(tab)) {
-                selectedTab = tab;
-                break;
-            }
+        if (known(tab)) {
+            selectedTab = tab;
         }
         this.prefill = text;
+    }
+
+    private static boolean known(String tab) {
+        for (String key : TAB_KEYS) {
+            if (key.equals(tab)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static float scale() {
@@ -279,6 +281,7 @@ public class QZAChatScreen extends Screen {
             return;
         }
         selectedTab = tab;
+        rememberedTab = tab;
         menuFor = null;
         inviting = false;
         setAdding(false);
@@ -986,7 +989,9 @@ public class QZAChatScreen extends Screen {
             return;
         }
 
-        if (text.startsWith("/") || ChannelHistory.EVERYTHING.equals(selectedTab)) {
+        boolean command = text.startsWith("/");
+
+        if (command || ChannelHistory.EVERYTHING.equals(selectedTab)) {
             ChatUtil.sendTyped(text);
         } else if (isDm()) {
             ChatConversation conversation = current();
@@ -997,7 +1002,10 @@ public class QZAChatScreen extends Screen {
         } else {
             ChatUtil.sendTyped("/" + ChannelHistory.command(selectedTab) + " " + text);
         }
-        ChatFocus.sent(selectedTab);
+        if (!command) {
+            rememberedTab = selectedTab;
+            ChatFocus.sent(selectedTab);
+        }
         input.setValue("");
         forgetHistoryPosition();
     }
