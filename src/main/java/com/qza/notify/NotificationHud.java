@@ -1,6 +1,7 @@
 package com.qza.notify;
 
 import com.qza.chat.ChatNotification;
+import com.qza.dungeon.WitherKey;
 import com.qza.party.PartyNotification;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.DeltaTracker;
@@ -16,5 +17,6 @@ public final class NotificationHud implements HudElement {
         }
         PartyNotification.renderHud(graphics, client.font);
         ChatNotification.renderHud(graphics, client.font);
+        WitherKey.renderHud(graphics, client.font);
     }
 }

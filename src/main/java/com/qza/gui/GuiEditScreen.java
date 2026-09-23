@@ -3,6 +3,7 @@ package com.qza.gui;
 import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.dungeon.WitherKey;
 import com.qza.notify.NotificationBox;
 import com.qza.party.PartyNotification;
 import net.minecraft.client.Minecraft;
@@ -42,6 +43,7 @@ public class GuiEditScreen extends Screen {
     public static void resetAll() {
         PartyNotification.resetPlacement();
         ChatNotification.resetPlacement();
+        WitherKey.resetPlacement();
         ConfigManager.save();
     }
 
@@ -71,6 +73,18 @@ public class GuiEditScreen extends Screen {
                     cfg.chatNotifyY = y;
                 },
                 s -> cfg.chatNotifyScale = s));
+
+        targets.add(new Target(
+                true,
+                WitherKey.TEXT,
+                WitherKey.WAITING_COLOUR,
+                () -> cfg.witherKeyEnabled,
+                () -> cfg.witherKeyX, () -> cfg.witherKeyY, () -> cfg.witherKeyScale,
+                (x, y) -> {
+                    cfg.witherKeyX = x;
+                    cfg.witherKeyY = y;
+                },
+                s -> cfg.witherKeyScale = s));
     }
 
     @Override
@@ -88,8 +102,13 @@ public class GuiEditScreen extends Screen {
                 continue;
             }
             int[] box = rect(target);
-            NotificationBox.draw(graphics, this.font, text(target),
-                    box[0], box[1], scale(target), 1.0, 1f, target.colour);
+            if (target.plain) {
+                NotificationBox.drawPlain(graphics, this.font, text(target),
+                        box[0], box[1], scale(target), target.colour);
+            } else {
+                NotificationBox.draw(graphics, this.font, text(target),
+                        box[0], box[1], scale(target), 1.0, 1f, target.colour);
+            }
 
             if (target == dragging || (dragging == null && target == hovered)) {
                 handles(graphics, box);
@@ -120,7 +139,7 @@ public class GuiEditScreen extends Screen {
     }
 
     private String text(Target target) {
-        return NotificationBox.fit(this.font, target.preview);
+        return target.plain ? target.preview : NotificationBox.fit(this.font, target.preview);
     }
 
     private float scale(Target target) {
@@ -130,8 +149,10 @@ public class GuiEditScreen extends Screen {
     private int[] rect(Target target) {
         String text = text(target);
         float scale = scale(target);
-        int w = Math.round(NotificationBox.width(this.font, text) * scale);
-        int h = Math.round(NotificationBox.height(this.font) * scale);
+        int w = Math.round((target.plain ? this.font.width(text)
+                : NotificationBox.width(this.font, text)) * scale);
+        int h = Math.round((target.plain ? this.font.lineHeight
+                : NotificationBox.height(this.font)) * scale);
         int[] pos = NotificationBox.topLeft(target.getX.getAsDouble(), target.getY.getAsDouble(),
                 this.width, this.height, w, h);
         return new int[]{pos[0], pos[1], w, h};
@@ -233,6 +254,7 @@ public class GuiEditScreen extends Screen {
     }
 
     private static final class Target {
+        final boolean plain;
         final String preview;
         final int colour;
         final BooleanSupplier enabled;
@@ -245,6 +267,13 @@ public class GuiEditScreen extends Screen {
         Target(String preview, int colour, BooleanSupplier enabled,
                DoubleSupplier getX, DoubleSupplier getY, DoubleSupplier getScale,
                PositionWriter setPosition, ScaleWriter setScale) {
+            this(false, preview, colour, enabled, getX, getY, getScale, setPosition, setScale);
+        }
+
+        Target(boolean plain, String preview, int colour, BooleanSupplier enabled,
+               DoubleSupplier getX, DoubleSupplier getY, DoubleSupplier getScale,
+               PositionWriter setPosition, ScaleWriter setScale) {
+            this.plain = plain;
             this.preview = preview;
             this.colour = colour;
             this.enabled = enabled;

@@ -42,6 +42,14 @@ public class QZAConfig {
 
     public boolean waypointShowNames = false;
 
+    public boolean witherKeyEnabled = false;
+
+    public double witherKeyX = 0.5;
+
+    public double witherKeyY = 0.42;
+
+    public double witherKeyScale = 1.0;
+
     public boolean partyInviteNotifyEnabled = true;
 
     public double partyNotifyDuration = 5.0;

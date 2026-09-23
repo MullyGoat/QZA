@@ -7,6 +7,7 @@ import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.discord.DiscordAlert;
+import com.qza.dungeon.WitherKey;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.gui.QZAChatScreen;
@@ -190,6 +191,28 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.waypointsEnabled));
+
+        settings.add(new ToggleSetting(f7, "Wither Key Pickup", "Wither Key Pickup",
+                Component.literal("Shows ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("WITHER KEY").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(" on screen - grey until the key drops, ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("red").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" while it is on the floor, ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("green").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" once it is picked up. Drag it in ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Edit GUI")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.witherKeyEnabled,
+                v -> {
+                    cfg.witherKeyEnabled = v;
+                    WitherKey.reset();
+                    ConfigManager.save();
+                }));
 
         String music = "Music";
 

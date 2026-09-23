@@ -112,6 +112,15 @@ public final class NotificationBox {
         graphics.pose().popMatrix();
     }
 
+    public static void drawPlain(GuiGraphicsExtractor graphics, Font font, String text,
+                                 int x, int y, float scale, int colour) {
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x, y);
+        graphics.pose().scale(scale, scale);
+        graphics.text(font, text, 0, 0, colour);
+        graphics.pose().popMatrix();
+    }
+
     private static void border(GuiGraphicsExtractor graphics, int w, int h, float alpha) {
         int hard = fade(BORDER, alpha);
         graphics.fill(0, 0, w, 1, hard);
