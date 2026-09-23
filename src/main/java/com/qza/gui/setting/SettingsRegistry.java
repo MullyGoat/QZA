@@ -11,6 +11,7 @@ import com.qza.dungeon.WitherKey;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.gui.QZAChatScreen;
+import com.qza.gui.TerminalGuiScreen;
 import com.qza.gui.WaypointScreen;
 import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;
@@ -191,6 +192,26 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.waypointsEnabled));
+
+        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Custom Terminal GUI",
+                Component.literal("Redraws the phase 3 terminals with a template of your "
+                                + "choice instead of the chest. Works in ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Odin's Terminal Simulator")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" too.").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.terminalGuiEnabled,
+                v -> {
+                    cfg.terminalGuiEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ActionSetting(f7, "Custom Terminal GUI", "Edit Terminal GUI",
+                Component.literal("Preview every terminal and pick a template for each one")
+                        .withStyle(ChatFormatting.GRAY),
+                "Open",
+                () -> Minecraft.getInstance().setScreen(new TerminalGuiScreen()))
+                .visibleWhen(() -> cfg.terminalGuiEnabled));
 
         settings.add(new ToggleSetting(f7, "Wither Key Pickup", "Wither Key Pickup",
                 Component.literal("Shows ")

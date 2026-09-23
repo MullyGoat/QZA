@@ -42,6 +42,13 @@ public class QZAConfig {
 
     public boolean waypointShowNames = false;
 
+    public boolean terminalGuiEnabled = false;
+
+    public Map<String, String> terminalTemplates = new LinkedHashMap<>();
+
+    public com.qza.terminal.TerminalTemplate terminalCustom =
+            new com.qza.terminal.TerminalTemplate();
+
     public boolean witherKeyEnabled = false;
 
     public double witherKeyX = 0.5;
