@@ -183,14 +183,21 @@ public class TerminalGuiScreen extends Screen {
     private void drawButtons(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         int[] drop = dropRect();
         graphics.text(this.font, "Template", drop[0], drop[1] - 11, TEXT_DIM);
-        button(graphics, drop, TerminalTemplates.label(templateKey()) + "   v",
-                inside(mouseX, mouseY, drop));
+        boolean overDrop = inside(mouseX, mouseY, drop);
+        button(graphics, drop, TerminalTemplates.label(templateKey()), overDrop);
+        arrow(graphics, drop[0] + drop[2] - 13, drop[1] + 7, overDrop ? TEXT : TEXT_DIM);
 
         int[] custom = customRect();
         button(graphics, custom, "Edit Custom Template", inside(mouseX, mouseY, custom));
 
         int[] all = allRect();
         button(graphics, all, "Use For Every Terminal", inside(mouseX, mouseY, all));
+    }
+
+    private static void arrow(GuiGraphicsExtractor graphics, int x, int y, int colour) {
+        for (int i = 0; i < 3; i++) {
+            graphics.fill(x + i, y + i, x + 7 - i, y + i + 1, colour);
+        }
     }
 
     private void button(GuiGraphicsExtractor graphics, int[] r, String label, boolean hovered) {
@@ -236,7 +243,8 @@ public class TerminalGuiScreen extends Screen {
         graphics.fill(viewX, viewY, viewX + viewW, viewY + viewH, 0x33000000);
         outline(graphics, viewX, viewY, viewW, viewH, 0x33FFFFFF);
 
-        TerminalGrid grid = TerminalOverlay.limit(TerminalSamples.of(selected), selected);
+        TerminalGrid grid = TerminalOverlay.limit(TerminalSamples.of(selected), selected,
+                selected.argument(selected.sampleTitle));
         TerminalTemplate template = TerminalTemplates.get(templateKey());
         TerminalLayout natural = TerminalLayout.at(grid, template, 0, 0, 0, 0);
 

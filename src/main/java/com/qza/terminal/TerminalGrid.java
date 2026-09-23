@@ -14,17 +14,21 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class TerminalGrid {
-    public static final int COLUMNS = 9;
+    public static final int CHEST_COLUMNS = 9;
+
+    public static final int MAGENTA = 0xFFC74EBD;
+    public static final int LIME = 0xFF80C71F;
+    public static final int RED = 0xFFB02E26;
 
     private static final Map<String, Integer> DYES = new LinkedHashMap<>();
 
     static {
         DYES.put("white", 0xFFF9FFFE);
         DYES.put("orange", 0xFFF9801D);
-        DYES.put("magenta", 0xFFC74EBD);
+        DYES.put("magenta", MAGENTA);
         DYES.put("light_blue", 0xFF3AB3DA);
         DYES.put("yellow", 0xFFFED83D);
-        DYES.put("lime", 0xFF80C71F);
+        DYES.put("lime", LIME);
         DYES.put("pink", 0xFFF38BAA);
         DYES.put("gray", 0xFF474F52);
         DYES.put("light_gray", 0xFF9D9D97);
@@ -33,16 +37,18 @@ public final class TerminalGrid {
         DYES.put("blue", 0xFF3C44AA);
         DYES.put("brown", 0xFF835432);
         DYES.put("green", 0xFF5E7C16);
-        DYES.put("red", 0xFFB02E26);
+        DYES.put("red", RED);
         DYES.put("black", 0xFF1D1D21);
     }
 
     public final int rows;
+    public final int columns;
     public final List<TerminalCell> cells;
     public final boolean counts;
 
-    private TerminalGrid(int rows, List<TerminalCell> cells) {
+    private TerminalGrid(int rows, int columns, List<TerminalCell> cells) {
         this.rows = rows;
+        this.columns = columns;
         this.cells = cells;
 
         boolean varied = false;
@@ -56,7 +62,11 @@ public final class TerminalGrid {
     }
 
     public static TerminalGrid of(int rows, List<TerminalCell> cells) {
-        return new TerminalGrid(rows, cells);
+        return new TerminalGrid(rows, CHEST_COLUMNS, cells);
+    }
+
+    public static TerminalGrid of(int rows, int columns, List<TerminalCell> cells) {
+        return new TerminalGrid(rows, columns, cells);
     }
 
     public static TerminalGrid read(AbstractContainerScreen<?> screen, TerminalType type) {
@@ -66,16 +76,16 @@ public final class TerminalGrid {
         }
 
         int container = chestSlots(slots);
-        if (container < COLUMNS || container % COLUMNS != 0) {
+        if (container < CHEST_COLUMNS || container % CHEST_COLUMNS != 0) {
             return null;
         }
 
-        int rows = container / COLUMNS;
+        int rows = container / CHEST_COLUMNS;
         List<TerminalCell> cells = new ArrayList<>(container);
         for (int i = 0; i < container; i++) {
             cells.add(cell(i, slots.get(i).getItem(), type));
         }
-        return new TerminalGrid(rows, cells);
+        return new TerminalGrid(rows, CHEST_COLUMNS, cells);
     }
 
     private static int chestSlots(List<Slot> slots) {
@@ -98,7 +108,7 @@ public final class TerminalGrid {
         }
 
         return new TerminalCell(index, true, colour(path), stripped(stack),
-                stack.getCount(), done(path, stack, type));
+                stack.getCount(), done(path, stack, type), path.endsWith("_terracotta"));
     }
 
     private static boolean done(String path, ItemStack stack, TerminalType type) {
@@ -127,6 +137,43 @@ public final class TerminalGrid {
         return id == null ? "" : id.getPath();
     }
 
+    public TerminalGrid crop() {
+        int minRow = rows;
+        int maxRow = -1;
+        int minColumn = columns;
+        int maxColumn = -1;
+
+        for (int i = 0; i < cells.size(); i++) {
+            if (!cells.get(i).filled()) {
+                continue;
+            }
+            int row = i / columns;
+            int column = i % columns;
+            minRow = Math.min(minRow, row);
+            maxRow = Math.max(maxRow, row);
+            minColumn = Math.min(minColumn, column);
+            maxColumn = Math.max(maxColumn, column);
+        }
+
+        if (maxRow < 0) {
+            return this;
+        }
+
+        int width = (maxColumn - minColumn) + 1;
+        int height = (maxRow - minRow) + 1;
+        if (width == columns && height == rows) {
+            return this;
+        }
+
+        List<TerminalCell> out = new ArrayList<>(width * height);
+        for (int row = minRow; row <= maxRow; row++) {
+            for (int column = minColumn; column <= maxColumn; column++) {
+                out.add(cells.get((row * columns) + column));
+            }
+        }
+        return new TerminalGrid(height, width, out);
+    }
+
     public TerminalGrid onlyNext(int shown) {
         if (shown <= 0) {
             return this;
@@ -148,7 +195,44 @@ public final class TerminalGrid {
             boolean keep = cell.filled() && !cell.marked() && cell.count() <= cut;
             out.add(keep ? cell : cell.hidden());
         }
-        return new TerminalGrid(rows, out);
+        return new TerminalGrid(rows, columns, out);
+    }
+
+    public TerminalGrid onlyColour(int argb) {
+        if (argb == 0) {
+            return this;
+        }
+        List<TerminalCell> out = new ArrayList<>(cells.size());
+        for (TerminalCell cell : cells) {
+            boolean keep = cell.filled() && cell.colour() == argb;
+            out.add(keep ? cell : cell.hidden());
+        }
+        return new TerminalGrid(rows, columns, out);
+    }
+
+    public TerminalGrid holdMelody() {
+        int magenta = columnOf(MAGENTA, false);
+        int lime = columnOf(LIME, false);
+        if (magenta < 0 || lime < 0 || magenta == lime) {
+            return this;
+        }
+
+        List<TerminalCell> out = new ArrayList<>(cells.size());
+        for (TerminalCell cell : cells) {
+            out.add(cell.filled() && cell.button() && cell.colour() == LIME
+                    ? cell.recoloured(RED) : cell);
+        }
+        return new TerminalGrid(rows, columns, out);
+    }
+
+    private int columnOf(int argb, boolean button) {
+        for (int i = 0; i < cells.size(); i++) {
+            TerminalCell cell = cells.get(i);
+            if (cell.filled() && cell.colour() == argb && cell.button() == button) {
+                return i % columns;
+            }
+        }
+        return -1;
     }
 
     public static int colour(String path) {
@@ -163,5 +247,12 @@ public final class TerminalGrid {
             }
         }
         return found == null ? 0 : found;
+    }
+
+    public static int named(String word) {
+        if (word == null || word.isBlank()) {
+            return 0;
+        }
+        return colour(word.trim().toLowerCase(Locale.ROOT).replace(' ', '_') + "_x");
     }
 }

@@ -474,7 +474,8 @@ public class TerminalCustomScreen extends Screen {
         graphics.fill(viewX, top, viewX + viewW, top + height, 0x33000000);
         outline(graphics, viewX, top, viewW, height, 0x33FFFFFF);
 
-        TerminalGrid grid = TerminalOverlay.limit(TerminalSamples.of(preview), preview);
+        TerminalGrid grid = TerminalOverlay.limit(TerminalSamples.of(preview), preview,
+                preview.argument(preview.sampleTitle));
         TerminalTemplate template = model().copy().tidy();
         TerminalLayout natural = TerminalLayout.at(grid, template, 0, 0, 0, 0);
 

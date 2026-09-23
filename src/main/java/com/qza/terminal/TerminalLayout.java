@@ -8,18 +8,20 @@ public final class TerminalLayout {
     public final int width;
     public final int height;
     public final int rows;
+    public final int columns;
     public final int cell;
     public final int gap;
     public final int pad;
     public final int titleH;
 
-    private TerminalLayout(int x, int y, int width, int height, int rows,
+    private TerminalLayout(int x, int y, int width, int height, int rows, int columns,
                            int cell, int gap, int pad, int titleH) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.rows = rows;
+        this.columns = columns;
         this.cell = cell;
         this.gap = gap;
         this.pad = pad;
@@ -38,7 +40,7 @@ public final class TerminalLayout {
         int pad = template.pad;
         int titleH = template.showTitle ? TITLE_H : 0;
 
-        int gridW = (TerminalGrid.COLUMNS * cell) + ((TerminalGrid.COLUMNS - 1) * gap);
+        int gridW = (grid.columns * cell) + (Math.max(0, grid.columns - 1) * gap);
         int gridH = (grid.rows * cell) + (Math.max(0, grid.rows - 1) * gap);
 
         int width = gridW + (pad * 2);
@@ -47,7 +49,8 @@ public final class TerminalLayout {
         int x = left < 0 ? (screenW - width) / 2 : left;
         int y = top < 0 ? (screenH - height) / 2 : top;
 
-        return new TerminalLayout(x, y, width, height, grid.rows, cell, gap, pad, titleH);
+        return new TerminalLayout(x, y, width, height, grid.rows, grid.columns,
+                cell, gap, pad, titleH);
     }
 
     public int cellX(int column) {
@@ -64,10 +67,10 @@ public final class TerminalLayout {
             if (mouseY < top || mouseY >= top + cell) {
                 continue;
             }
-            for (int column = 0; column < TerminalGrid.COLUMNS; column++) {
+            for (int column = 0; column < columns; column++) {
                 int left = cellX(column);
                 if (mouseX >= left && mouseX < left + cell) {
-                    return (row * TerminalGrid.COLUMNS) + column;
+                    return (row * columns) + column;
                 }
             }
         }

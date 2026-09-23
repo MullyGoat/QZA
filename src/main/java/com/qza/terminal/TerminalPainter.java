@@ -25,15 +25,15 @@ public final class TerminalPainter {
             }
         }
 
-        for (TerminalCell cell : grid.cells) {
-            int row = cell.index() / TerminalGrid.COLUMNS;
-            int column = cell.index() % TerminalGrid.COLUMNS;
+        for (int position = 0; position < grid.cells.size(); position++) {
+            int row = position / grid.columns;
+            int column = position % grid.columns;
             if (row >= layout.rows) {
                 continue;
             }
-            cell(graphics, font, template, layout, cell,
+            cell(graphics, font, template, layout, grid.cells.get(position),
                     layout.cellX(column), layout.cellY(row),
-                    cell.index() == hovered, anyMarked, grid.counts);
+                    position == hovered, anyMarked, grid.counts);
         }
     }
 

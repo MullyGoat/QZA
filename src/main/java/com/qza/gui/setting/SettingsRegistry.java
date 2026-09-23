@@ -239,6 +239,38 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.terminalGuiEnabled && cfg.terminalNumbersLimit));
 
+        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Only Show Asked Colour",
+                Component.literal("In ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Select all the items")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(", hides every item that is not the "
+                                + "colour named in the title").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.terminalSelectFilter,
+                v -> {
+                    cfg.terminalSelectFilter = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalGuiEnabled));
+
+        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Hold Melody Button",
+                Component.literal("In ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Melody")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(", keeps the button ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("red").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" until the marker lines up with the "
+                                + "target, then lets it go ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("green").withStyle(ChatFormatting.GREEN)),
+                () -> cfg.terminalMelodyHold,
+                v -> {
+                    cfg.terminalMelodyHold = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalGuiEnabled));
+
         settings.add(new ToggleSetting(f7, "Wither Key Pickup", "Wither Key Pickup",
                 Component.literal("Shows ")
                         .withStyle(ChatFormatting.GRAY)

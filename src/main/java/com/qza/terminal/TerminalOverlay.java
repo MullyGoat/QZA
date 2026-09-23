@@ -1,6 +1,7 @@
 package com.qza.terminal;
 
 import com.qza.config.ConfigManager;
+import com.qza.config.QZAConfig;
 import com.qza.util.IgnUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -36,14 +37,19 @@ public final class TerminalOverlay {
         if (grid == null) {
             return null;
         }
-        return limit(grid, type);
+        return limit(grid.crop(), type, type.argument(title(screen)));
     }
 
-    public static TerminalGrid limit(TerminalGrid grid, TerminalType type) {
-        if (type != TerminalType.NUMBERS || !ConfigManager.get().terminalNumbersLimit) {
-            return grid;
-        }
-        return grid.onlyNext(Math.max(1, ConfigManager.get().terminalNumbersShown));
+    public static TerminalGrid limit(TerminalGrid grid, TerminalType type, String argument) {
+        QZAConfig cfg = ConfigManager.get();
+        return switch (type) {
+            case NUMBERS -> cfg.terminalNumbersLimit
+                    ? grid.onlyNext(Math.max(1, cfg.terminalNumbersShown)) : grid;
+            case SELECT -> cfg.terminalSelectFilter
+                    ? grid.onlyColour(TerminalGrid.named(argument)) : grid;
+            case MELODY -> cfg.terminalMelodyHold ? grid.holdMelody() : grid;
+            default -> grid;
+        };
     }
 
     public static boolean render(AbstractContainerScreen<?> screen, GuiGraphicsExtractor graphics,
@@ -86,12 +92,16 @@ public final class TerminalOverlay {
         TerminalTemplate template = TerminalTemplates.forType(type);
         TerminalLayout layout = TerminalLayout.of(grid, template, screen.width, screen.height);
 
-        int index = layout.indexAt(event.x(), event.y());
-        if (index < 0 || index >= grid.cells.size() || !grid.cells.get(index).filled()) {
+        int position = layout.indexAt(event.x(), event.y());
+        if (position < 0 || position >= grid.cells.size()) {
+            return true;
+        }
+        TerminalCell cell = grid.cells.get(position);
+        if (cell.index() < 0 || cell.index() >= screen.getMenu().slots.size()) {
             return true;
         }
 
-        Slot slot = screen.getMenu().slots.get(index);
+        Slot slot = screen.getMenu().slots.get(cell.index());
         lastX = leftPos + slot.x + 8.0;
         lastY = topPos + slot.y + 8.0;
 

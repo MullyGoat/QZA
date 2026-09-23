@@ -53,6 +53,10 @@ public class QZAConfig {
 
     public int terminalNumbersShown = 3;
 
+    public boolean terminalSelectFilter = false;
+
+    public boolean terminalMelodyHold = true;
+
     public boolean witherKeyEnabled = false;
 
     public double witherKeyX = 0.5;
