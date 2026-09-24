@@ -42,32 +42,7 @@ public class QZAConfig {
 
     public boolean waypointShowNames = false;
 
-    public boolean terminalGuiEnabled = false;
-
-    public Map<String, String> terminalTemplates = new LinkedHashMap<>();
-
-    public com.qza.terminal.TerminalTemplate terminalCustom =
-            new com.qza.terminal.TerminalTemplate();
-
-    public Map<String, String> terminalImageNames = new LinkedHashMap<>();
-
-    public boolean terminalNumbersLimit = false;
-
-    public int terminalNumbersShown = 3;
-
-    public boolean terminalHideDone = true;
-
-    public boolean terminalMelodyHold = true;
-
-    public boolean terminalMelodyLineUp = true;
-
-    public boolean terminalMelodyAim = false;
-
-    public boolean terminalRubixHints = true;
-
-    public boolean terminalFirstClickProt = false;
-
-    public int terminalFirstClickMs = 500;
+    public boolean melodyAimEnabled = false;
 
     public boolean witherKeyEnabled = false;
 

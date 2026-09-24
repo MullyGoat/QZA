@@ -11,7 +11,6 @@ import com.qza.dungeon.WitherKey;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.gui.QZAChatScreen;
-import com.qza.gui.TerminalGuiScreen;
 import com.qza.gui.WaypointScreen;
 import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;
@@ -193,25 +192,21 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.waypointsEnabled));
 
-        settings.add(new ToggleSetting(f7, "Custom Terminal GUI", "Custom Terminal GUI",
-                Component.literal("Redraws the phase 3 terminals with a template of your "
-                                + "choice instead of the chest. Works in ")
+        settings.add(new ToggleSetting(f7, "Melody", "Aim Mouse at Melody Button",
+                Component.literal("Puts the cursor on the melody button as the terminal "
+                                + "opens. Follows ")
                         .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("Odin's Terminal Simulator")
+                        .append(Component.literal("Odin's")
                                 .withStyle(ChatFormatting.LIGHT_PURPLE))
-                        .append(Component.literal(" too.").withStyle(ChatFormatting.GRAY)),
-                () -> cfg.terminalGuiEnabled,
+                        .append(Component.literal(" terminal GUI when it is on, and the "
+                                + "chest when it is not. Moves your own cursor only, "
+                                + "nothing is sent to the server.")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.melodyAimEnabled,
                 v -> {
-                    cfg.terminalGuiEnabled = v;
+                    cfg.melodyAimEnabled = v;
                     ConfigManager.save();
                 }));
-
-        settings.add(new ActionSetting(f7, "Custom Terminal GUI", "Edit Terminal GUI",
-                Component.literal("Preview every terminal and pick a template for each one")
-                        .withStyle(ChatFormatting.GRAY),
-                "Open",
-                () -> Minecraft.getInstance().setScreen(new TerminalGuiScreen()))
-                .visibleWhen(() -> cfg.terminalGuiEnabled));
 
         settings.add(new ToggleSetting(f7, "Wither Key Pickup", "Wither Key Pickup",
                 Component.literal("Shows ")
