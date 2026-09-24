@@ -62,9 +62,14 @@ public final class TerminalOverlay {
                     ? grid.onlyColour(TerminalGrid.named(argument)) : grid;
             case STARTS_WITH -> cfg.terminalHideDone
                     ? grid.onlyInitial(argument) : grid;
-            case MELODY -> cfg.terminalMelodyHold ? grid.holdMelody() : grid;
+            case MELODY -> melody(grid, cfg);
             default -> grid;
         };
+    }
+
+    private static TerminalGrid melody(TerminalGrid grid, QZAConfig cfg) {
+        TerminalGrid out = cfg.terminalMelodyLineUp ? grid.alignMarkers() : grid;
+        return cfg.terminalMelodyHold ? out.holdMelody() : out;
     }
 
     public static boolean render(AbstractContainerScreen<?> screen, GuiGraphicsExtractor graphics,

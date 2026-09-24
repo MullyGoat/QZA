@@ -57,6 +57,8 @@ public class QZAConfig {
 
     public boolean terminalMelodyHold = true;
 
+    public boolean terminalMelodyLineUp = true;
+
     public boolean terminalMelodyAim = false;
 
     public boolean terminalRubixHints = true;

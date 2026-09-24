@@ -52,6 +52,7 @@ public class TerminalGuiScreen extends Screen {
             "Rubix Click Counts",
             "Hold Melody Button",
             "Aim At Melody Button",
+            "Line Up Melody Markers",
             "First Click Protection",
             "Protection Time"};
 
@@ -69,6 +70,8 @@ public class TerminalGuiScreen extends Screen {
                     + "then lets it go green.",
             "Puts the cursor on the melody button as the terminal opens. Moves your "
                     + "own cursor only, nothing is sent to the server.",
+            "In Melody, draws the lower marker in the same column as the upper one, "
+                    + "so the active column reads as a single line.",
             "Ignores clicks for a moment after a terminal opens, so a click meant for "
                     + "the last one does not land on this one.",
             "How long the terminal ignores clicks after opening, in milliseconds."};
@@ -153,7 +156,7 @@ public class TerminalGuiScreen extends Screen {
         QZAConfig cfg = ConfigManager.get();
         return switch (index) {
             case 2 -> cfg.terminalNumbersLimit;
-            case 7 -> cfg.terminalFirstClickProt;
+            case 8 -> cfg.terminalFirstClickProt;
             default -> true;
         };
     }
@@ -199,7 +202,8 @@ public class TerminalGuiScreen extends Screen {
             case 3 -> cfg.terminalRubixHints ? "On" : "Off";
             case 4 -> cfg.terminalMelodyHold ? "On" : "Off";
             case 5 -> cfg.terminalMelodyAim ? "On" : "Off";
-            case 6 -> cfg.terminalFirstClickProt ? "On" : "Off";
+            case 6 -> cfg.terminalMelodyLineUp ? "On" : "Off";
+            case 7 -> cfg.terminalFirstClickProt ? "On" : "Off";
             default -> cfg.terminalFirstClickMs + "ms";
         };
     }
@@ -214,7 +218,8 @@ public class TerminalGuiScreen extends Screen {
             case 3 -> cfg.terminalRubixHints = !cfg.terminalRubixHints;
             case 4 -> cfg.terminalMelodyHold = !cfg.terminalMelodyHold;
             case 5 -> cfg.terminalMelodyAim = !cfg.terminalMelodyAim;
-            case 6 -> cfg.terminalFirstClickProt = !cfg.terminalFirstClickProt;
+            case 6 -> cfg.terminalMelodyLineUp = !cfg.terminalMelodyLineUp;
+            case 7 -> cfg.terminalFirstClickProt = !cfg.terminalFirstClickProt;
             default -> cfg.terminalFirstClickMs =
                     Math.max(0, Math.min(2000, cfg.terminalFirstClickMs + (step * 50)));
         }
@@ -349,7 +354,7 @@ public class TerminalGuiScreen extends Screen {
                             r[2] - SET_CTRL_W - 8), r[0] + 2, r[1] + 5, TEXT_DIM);
 
             int[] c = settingControl(i);
-            if (i == 2 || i == 7) {
+            if (i == 2 || i == 8) {
                 int[] down = new int[]{c[0], c[1], SET_STEP_W, c[3]};
                 int[] up = new int[]{c[0] + c[2] - SET_STEP_W, c[1], SET_STEP_W, c[3]};
                 stepper(graphics, down, "-", inside(mouseX, mouseY, down));
@@ -513,7 +518,7 @@ public class TerminalGuiScreen extends Screen {
                     if (!inside(mouseX, mouseY, c)) {
                         continue;
                     }
-                    if (i == 2 || i == 7) {
+                    if (i == 2 || i == 8) {
                         boolean down = mouseX < c[0] + SET_STEP_W;
                         boolean up = mouseX > c[0] + c[2] - SET_STEP_W;
                         if (down || up) {

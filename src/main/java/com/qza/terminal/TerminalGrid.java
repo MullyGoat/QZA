@@ -235,6 +235,44 @@ public final class TerminalGrid {
         return new TerminalGrid(rows, columns, out);
     }
 
+    public TerminalGrid alignMarkers() {
+        int target = TerminalMelody.markerColumn(this);
+        if (target < 0) {
+            return this;
+        }
+        int lead = TerminalMelody.markerRow(this);
+
+        List<TerminalCell> out = new ArrayList<>(cells);
+        for (int row = 0; row < rows; row++) {
+            if (row == lead) {
+                continue;
+            }
+            int from = -1;
+            for (int column = 0; column < columns; column++) {
+                TerminalCell cell = cells.get((row * columns) + column);
+                if (cell.filled() && cell.colour() == MAGENTA) {
+                    from = column;
+                    break;
+                }
+            }
+            if (from < 0 || from == target) {
+                continue;
+            }
+
+            int here = (row * columns) + from;
+            int there = (row * columns) + target;
+            if (cells.get(there).filled()) {
+                continue;
+            }
+
+            TerminalCell marker = cells.get(here);
+            out.set(there, new TerminalCell(cells.get(there).index(), true, MAGENTA,
+                    marker.name(), marker.count(), marker.marked(), marker.button()));
+            out.set(here, TerminalCell.empty(marker.index()));
+        }
+        return new TerminalGrid(rows, columns, out);
+    }
+
     public TerminalGrid holdMelody() {
         if (TerminalMelody.aligned(this)) {
             return this;

@@ -63,6 +63,16 @@ public final class TerminalMelody {
         return -1;
     }
 
+    public static int markerRow(TerminalGrid grid) {
+        for (int position = 0; position < grid.cells.size(); position++) {
+            TerminalCell cell = grid.cells.get(position);
+            if (cell.filled() && cell.colour() == TerminalGrid.MAGENTA) {
+                return position / grid.columns;
+            }
+        }
+        return -1;
+    }
+
     public static boolean aligned(TerminalGrid grid) {
         int target = targetColumn(grid);
         int marker = markerColumn(grid);
