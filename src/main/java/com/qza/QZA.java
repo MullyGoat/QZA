@@ -15,6 +15,7 @@ import com.qza.party.PartyNotification;
 import com.qza.party.PartyState;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
+import com.qza.terminal.TerminalImages;
 import com.qza.terminal.TerminalOverlay;
 import com.qza.timer.NecronTimer;
 import com.qza.timer.ServerTickClock;
@@ -49,6 +50,7 @@ public class QZA implements ClientModInitializer {
         ShitterList.load();
         ChatHistory.load();
         MusicLibrary.ensureDir();
+        TerminalImages.ensureDir();
         MusicManager.get().applySettings();
         PartyState.init();
         WaypointList.load();

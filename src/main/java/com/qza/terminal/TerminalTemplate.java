@@ -54,6 +54,8 @@ public class TerminalTemplate {
     public int markColour = 0xFFFFFFFF;
     public int hoverColour = 0x38FFFFFF;
 
+    public String background = "";
+
     public boolean showTitle = true;
     public int titleColour = 0xFFFF55FF;
 
@@ -122,6 +124,7 @@ public class TerminalTemplate {
         textShadow = source.textShadow;
         markColour = source.markColour;
         hoverColour = source.hoverColour;
+        background = source.background;
         showTitle = source.showTitle;
         titleColour = source.titleColour;
         alwaysOrderNumbers = source.alwaysOrderNumbers;
@@ -163,6 +166,7 @@ public class TerminalTemplate {
         out.textShadow = textShadow;
         out.markColour = markColour;
         out.hoverColour = hoverColour;
+        out.background = background;
         out.showTitle = showTitle;
         out.titleColour = titleColour;
         out.alwaysOrderNumbers = alwaysOrderNumbers;
@@ -192,6 +196,9 @@ public class TerminalTemplate {
         edgeWidth = clamp(edgeWidth, 0, MAX_BORDER);
         if (name == null || name.isBlank()) {
             name = "Custom";
+        }
+        if (background == null) {
+            background = "";
         }
         return this;
     }

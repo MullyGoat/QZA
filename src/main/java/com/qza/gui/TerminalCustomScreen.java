@@ -2,6 +2,7 @@ package com.qza.gui;
 
 import com.qza.config.ConfigManager;
 import com.qza.terminal.TerminalGrid;
+import com.qza.terminal.TerminalImages;
 import com.qza.terminal.TerminalLayout;
 import com.qza.terminal.TerminalOverlay;
 import com.qza.terminal.TerminalPainter;
@@ -52,6 +53,7 @@ public class TerminalCustomScreen extends Screen {
     private static final String TOGGLE = "toggle";
     private static final String TEXT_ROW = "text";
     private static final String BASE = "base";
+    private static final String IMAGE = "image";
 
     private static final int BASE_ROW_H = 13;
 
@@ -61,6 +63,7 @@ public class TerminalCustomScreen extends Screen {
     private double scroll;
 
     private boolean baseOpen;
+    private int baseOpenFor = -1;
     private double baseScroll;
     private int dragging = -1;
     private int paletteFor = -1;
@@ -151,6 +154,7 @@ public class TerminalCustomScreen extends Screen {
         rows.add(colour("Selected", () -> t.markColour, v -> t.markColour = v));
         rows.add(colour("Hover", () -> t.hoverColour, v -> t.hoverColour = v));
         rows.add(colour("Title", () -> t.titleColour, v -> t.titleColour = v));
+        rows.add(new Row("Background", IMAGE));
 
         rows.add(toggle("Colour By Role", () -> t.roleColours, v -> t.roleColours = v));
         rows.add(colour("Rubix +1", () -> t.rubixPlus1, v -> t.rubixPlus1 = v));
@@ -279,11 +283,15 @@ public class TerminalCustomScreen extends Screen {
     }
 
     private int[] resetRect() {
-        return new int[]{listX, listY + listH + 6, 86, BUTTON_H};
+        return new int[]{listX, listY + listH + 6, 74, BUTTON_H};
+    }
+
+    private int[] imagesRect() {
+        return new int[]{listX + 80, listY + listH + 6, 80, BUTTON_H};
     }
 
     private int[] backRect() {
-        return new int[]{listX + 92, listY + listH + 6, 86, BUTTON_H};
+        return new int[]{listX + 166, listY + listH + 6, 74, BUTTON_H};
     }
 
     private int paletteW() {
@@ -354,6 +362,8 @@ public class TerminalCustomScreen extends Screen {
 
         int[] reset = resetRect();
         button(graphics, reset, "Reset", inside(mx, my, reset));
+        int[] images = imagesRect();
+        button(graphics, images, "Images", inside(mx, my, images));
         int[] back = backRect();
         button(graphics, back, "Done", inside(mx, my, back));
 
@@ -438,12 +448,15 @@ public class TerminalCustomScreen extends Screen {
                 graphics.fill(boxX - 2, c[1], c[0] + c[2], c[1] + c[3], 0x55000000);
                 outline(graphics, boxX - 2, c[1], c[0] + c[2] - boxX + 2, c[3], 0x40FFFFFF);
             }
-            case BASE -> {
-                boolean over = inside(mouseX, mouseY, c) || baseOpen;
+            case BASE, IMAGE -> {
+                boolean over = inside(mouseX, mouseY, c) || baseOpenFor == index;
                 graphics.fill(c[0], c[1], c[0] + c[2], c[1] + c[3],
                         over ? 0xAA3C5A70 : 0x99223140);
                 outline(graphics, c[0], c[1], c[2], c[3], over ? 0xFFAFD4EC : 0xFF6A8CA8);
-                graphics.centeredText(this.font, "Copy A Template",
+                String shownText = BASE.equals(row.kind)
+                        ? "Copy A Template" : TerminalImages.display(model().background);
+                graphics.centeredText(this.font,
+                        TerminalPainter.fit(this.font, shownText, c[2] - 6),
                         c[0] + (c[2] / 2), c[1] + 3, over ? TEXT : TEXT_DIM);
             }
             default -> {
@@ -507,25 +520,28 @@ public class TerminalCustomScreen extends Screen {
                 box[1] + box[3] - 10, any ? TEXT : TEXT_FAINT);
     }
 
+    private static List<String> pickerOptions(String kind) {
+        return BASE.equals(kind) ? baseKeys() : TerminalImages.choices();
+    }
+
+    private static String pickerLabel(String kind, String key) {
+        return BASE.equals(kind) ? TerminalTemplates.label(key) : TerminalImages.display(key);
+    }
+
     private static List<String> baseKeys() {
         List<String> out = new ArrayList<>(TerminalTemplates.keys());
         out.remove(TerminalTemplates.CUSTOM);
         return out;
     }
 
-    private int baseRowIndex() {
-        for (int i = 0; i < rows.size(); i++) {
-            if (BASE.equals(rows.get(i).kind)) {
-                return i;
-            }
-        }
-        return -1;
+    private String pickerKind() {
+        return baseOpenFor < 0 || baseOpenFor >= rows.size()
+                ? BASE : rows.get(baseOpenFor).kind;
     }
 
     private int[] baseListRect() {
-        int index = baseRowIndex();
-        int[] c = controlRect(index < 0 ? 0 : index);
-        int shown = Math.min(7, baseKeys().size());
+        int[] c = controlRect(Math.max(0, baseOpenFor));
+        int shown = Math.max(1, Math.min(7, pickerOptions(pickerKind()).size()));
         return new int[]{c[0] - 40, c[1] + c[3] + 2, c[2] + 40,
                 (shown * BASE_ROW_H) + 2};
     }
@@ -535,7 +551,8 @@ public class TerminalCustomScreen extends Screen {
         graphics.fill(box[0], box[1], box[0] + box[2], box[1] + box[3], 0xF00E1218);
         outline(graphics, box[0], box[1], box[2], box[3], PINK);
 
-        List<String> keys = baseKeys();
+        String kind = pickerKind();
+        List<String> keys = pickerOptions(kind);
         int first = (int) Math.round(baseScroll);
         int shown = (box[3] - 2) / BASE_ROW_H;
 
@@ -547,7 +564,7 @@ public class TerminalCustomScreen extends Screen {
                 graphics.fill(box[0] + 1, rowY, box[0] + box[2] - 1, rowY + BASE_ROW_H,
                         0x663C5A70);
             }
-            graphics.text(this.font, TerminalTemplates.label(keys.get(first + i)),
+            graphics.text(this.font, pickerLabel(kind, keys.get(first + i)),
                     box[0] + 6, rowY + 3, over ? TEXT : TEXT_DIM);
         }
 
@@ -560,7 +577,8 @@ public class TerminalCustomScreen extends Screen {
 
     private void pickBase(double mouseX, double mouseY) {
         int[] box = baseListRect();
-        List<String> keys = baseKeys();
+        String kind = pickerKind();
+        List<String> keys = pickerOptions(kind);
         int first = (int) Math.round(baseScroll);
         int index = first + (int) ((mouseY - (box[1] + 1)) / BASE_ROW_H);
         if (index < 0 || index >= keys.size()) {
@@ -568,6 +586,13 @@ public class TerminalCustomScreen extends Screen {
         }
 
         String key = keys.get(index);
+        if (IMAGE.equals(kind)) {
+            model().background = key;
+            ConfigManager.save();
+            baseOpen = false;
+            return;
+        }
+
         TerminalTemplate base = TerminalTemplates.get(key);
         model().copyFrom(base);
         model().name = base.name + " Custom";
@@ -709,6 +734,12 @@ public class TerminalCustomScreen extends Screen {
             this.minecraft.setScreen(new TerminalCustomScreen());
             return true;
         }
+        if (inside(mouseX, mouseY, imagesRect())) {
+            model().tidy();
+            ConfigManager.save();
+            this.minecraft.setScreen(new TerminalImagesScreen());
+            return true;
+        }
         if (inside(mouseX, mouseY, backRect())) {
             onClose();
             return true;
@@ -740,8 +771,12 @@ public class TerminalCustomScreen extends Screen {
                     ConfigManager.save();
                     return true;
                 }
-                if (BASE.equals(row.kind)) {
+                if (BASE.equals(row.kind) || IMAGE.equals(row.kind)) {
+                    if (IMAGE.equals(row.kind)) {
+                        TerminalImages.reload();
+                    }
                     baseOpen = true;
+                    baseOpenFor = i;
                     baseScroll = 0;
                     paletteFor = -1;
                     return true;
@@ -792,7 +827,7 @@ public class TerminalCustomScreen extends Screen {
 
         if (baseOpen) {
             int shown = (baseListRect()[3] - 2) / BASE_ROW_H;
-            double max = Math.max(0, baseKeys().size() - shown);
+            double max = Math.max(0, pickerOptions(pickerKind()).size() - shown);
             baseScroll = Math.max(0, Math.min(max, baseScroll - verticalAmount));
             return true;
         }

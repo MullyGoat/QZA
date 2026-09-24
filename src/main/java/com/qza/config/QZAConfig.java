@@ -49,6 +49,8 @@ public class QZAConfig {
     public com.qza.terminal.TerminalTemplate terminalCustom =
             new com.qza.terminal.TerminalTemplate();
 
+    public Map<String, String> terminalImageNames = new LinkedHashMap<>();
+
     public boolean terminalNumbersLimit = false;
 
     public int terminalNumbersShown = 3;

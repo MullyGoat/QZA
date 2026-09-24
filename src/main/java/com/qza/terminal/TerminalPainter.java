@@ -60,6 +60,14 @@ public final class TerminalPainter {
             graphics.fill(layout.x, layout.y, layout.x + layout.width,
                     layout.y + layout.height, template.panel);
         }
+
+        net.minecraft.resources.Identifier image =
+                TerminalImages.texture(template.background);
+        if (image != null) {
+            graphics.blit(image, layout.x, layout.y, layout.width, layout.height,
+                    0f, 1f, 0f, 1f);
+        }
+
         int width = template.edgeWidth;
         if (width <= 0 || alpha(template.panelEdge) == 0) {
             return;
