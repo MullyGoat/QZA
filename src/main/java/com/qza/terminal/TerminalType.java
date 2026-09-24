@@ -48,6 +48,13 @@ public enum TerminalType {
         return null;
     }
 
+    public String labelFor(TerminalTemplate template) {
+        if (this == NUMBERS && template.alwaysOrderNumbers) {
+            return TerminalTemplate.LABEL_COUNT;
+        }
+        return labelFor(template.label);
+    }
+
     public String labelFor(String templateLabel) {
         if (this != STARTS_WITH) {
             return templateLabel;

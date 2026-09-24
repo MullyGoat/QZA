@@ -57,6 +57,8 @@ public class TerminalTemplate {
     public boolean showTitle = true;
     public int titleColour = 0xFFFF55FF;
 
+    public boolean alwaysOrderNumbers = true;
+
     public boolean roleColours = false;
 
     public int rubixPlus1 = 0xFF5B8CFF;
@@ -118,6 +120,7 @@ public class TerminalTemplate {
         out.hoverColour = hoverColour;
         out.showTitle = showTitle;
         out.titleColour = titleColour;
+        out.alwaysOrderNumbers = alwaysOrderNumbers;
         out.roleColours = roleColours;
         out.rubixPlus1 = rubixPlus1;
         out.rubixPlus2 = rubixPlus2;

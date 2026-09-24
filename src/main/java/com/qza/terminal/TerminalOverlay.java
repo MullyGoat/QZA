@@ -89,7 +89,7 @@ public final class TerminalOverlay {
 
         TerminalPainter.draw(graphics, client.font, grid, template, layout,
                 title(screen), layout.indexAt(mouseX, mouseY),
-                type.labelFor(template.label), hints(source, type),
+                type.labelFor(template), hints(source, type),
                 TerminalRoles.of(source, type, type.argument(title(screen)), template));
 
         aim(screen, type, source, layout);

@@ -37,7 +37,7 @@ public class TerminalCustomScreen extends Screen {
     private static final int LIST_W = 244;
     private static final int ROW_H = 18;
     private static final int CTRL_W = 92;
-    private static final int STEP_W = 13;
+    private static final int VALUE_W = 26;
     private static final int SWATCH_W = 16;
     private static final int BUTTON_H = 16;
     private static final int TAB_H = 14;
@@ -56,6 +56,7 @@ public class TerminalCustomScreen extends Screen {
     private final List<Row> rows = new ArrayList<>();
     private double scroll;
 
+    private int dragging = -1;
     private int paletteFor = -1;
     private int paletteX;
     private int paletteY;
@@ -118,6 +119,8 @@ public class TerminalCustomScreen extends Screen {
                 step -> t.shape = spin(TerminalTemplate.shapes(), t.shape, step)));
         rows.add(cycle("Slot Label", () -> TerminalTemplate.pretty(t.label),
                 step -> t.label = spin(TerminalTemplate.labels(), t.label, step)));
+        rows.add(toggle("Always Number In Order",
+                () -> t.alwaysOrderNumbers, v -> t.alwaysOrderNumbers = v));
         rows.add(cycle("Selected Style", () -> TerminalTemplate.pretty(t.mark),
                 step -> t.mark = spin(TerminalTemplate.marks(), t.mark, step)));
 
@@ -172,6 +175,10 @@ public class TerminalCustomScreen extends Screen {
 
     private Row number(String label, IntSupplier value, IntConsumer set, int min, int max) {
         Row row = new Row(label, NUMBER);
+        row.get = value;
+        row.set = set;
+        row.min = min;
+        row.max = max;
         row.value = () -> String.valueOf(value.getAsInt());
         row.step = step -> set.accept(Math.max(min, Math.min(max, value.getAsInt() + step)));
         return row;
@@ -390,12 +397,23 @@ public class TerminalCustomScreen extends Screen {
                         c[0] + (c[2] / 2), c[1] + 3, TEXT);
             }
             case NUMBER -> {
-                int[] down = new int[]{c[0], c[1], STEP_W, c[3]};
-                int[] up = new int[]{c[0] + c[2] - STEP_W, c[1], STEP_W, c[3]};
-                stepper(graphics, down, "-", inside(mouseX, mouseY, down));
-                stepper(graphics, up, "+", inside(mouseX, mouseY, up));
+                int[] track = sliderTrack(index);
+                boolean over = inside(mouseX, mouseY, track) || dragging == index;
+                int trackH = 4;
+                int trackY = track[1] + ((track[3] - trackH) / 2);
+
+                graphics.fill(track[0], trackY, track[0] + track[2], trackY + trackH,
+                        0x88000000);
+                int fill = Math.round(track[2] * fraction(row));
+                graphics.fill(track[0], trackY, track[0] + fill, trackY + trackH,
+                        over ? 0xFFAFD4EC : 0xFF6A8CA8);
+
+                int knob = track[0] + Math.max(0, Math.min(track[2] - 3, fill - 1));
+                graphics.fill(knob, track[1], knob + 3, track[1] + track[3],
+                        over ? 0xFFFFFFFF : 0xFFDDE8F0);
+
                 graphics.centeredText(this.font, row.value.get(),
-                        c[0] + (c[2] / 2), c[1] + 3, TEXT);
+                        c[0] + c[2] - (VALUE_W / 2), c[1] + 3, TEXT);
             }
             case COLOUR -> {
                 int[] sw = swatchRect(index);
@@ -471,10 +489,26 @@ public class TerminalCustomScreen extends Screen {
                 box[1] + box[3] - 10, any ? TEXT : TEXT_FAINT);
     }
 
-    private void stepper(GuiGraphicsExtractor graphics, int[] r, String label, boolean hovered) {
-        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hovered ? 0xAA3C5A70 : 0x66223140);
-        graphics.centeredText(this.font, label, r[0] + (r[2] / 2), r[1] + 3,
-                hovered ? TEXT : TEXT_FAINT);
+    private int[] sliderTrack(int index) {
+        int[] c = controlRect(index);
+        return new int[]{c[0], c[1], Math.max(10, c[2] - VALUE_W), c[3]};
+    }
+
+    private static float fraction(Row row) {
+        if (row.max <= row.min) {
+            return 0f;
+        }
+        float span = row.max - row.min;
+        return Math.max(0f, Math.min(1f, (row.get.getAsInt() - row.min) / span));
+    }
+
+    private void slideTo(int index, double mouseX) {
+        Row row = rows.get(index);
+        int[] track = sliderTrack(index);
+        double fraction = (mouseX - track[0]) / (double) track[2];
+        int value = row.min + (int) Math.round(fraction * (row.max - row.min));
+        row.set.accept(Math.max(row.min, Math.min(row.max, value)));
+        model().tidy();
     }
 
     private void button(GuiGraphicsExtractor graphics, int[] r, String label, boolean hovered) {
@@ -502,7 +536,7 @@ public class TerminalCustomScreen extends Screen {
         graphics.pose().scale(fit, fit);
         graphics.pose().translate(-natural.width / 2f, -natural.height / 2f);
         TerminalPainter.draw(graphics, this.font, grid, template, natural,
-                preview.sampleTitle, -1, preview.labelFor(template.label),
+                preview.sampleTitle, -1, preview.labelFor(template),
                 TerminalOverlay.hints(grid, preview),
                 TerminalRoles.of(grid, preview, preview.argument(preview.sampleTitle),
                         template));
@@ -613,14 +647,9 @@ public class TerminalCustomScreen extends Screen {
                     return true;
                 }
                 if (NUMBER.equals(row.kind)) {
-                    boolean down = mouseX < c[0] + STEP_W;
-                    boolean up = mouseX > c[0] + c[2] - STEP_W;
-                    if (down || up) {
-                        row.step.accept(down ? -1 : 1);
-                        model().tidy();
-                        ConfigManager.save();
-                        return true;
-                    }
+                    dragging = i;
+                    slideTo(i, mouseX);
+                    return true;
                 }
             }
         }
@@ -633,6 +662,25 @@ public class TerminalCustomScreen extends Screen {
         paletteFor = index;
         paletteX = Math.min(sw[0], panelX + panelW - paletteW() - 6);
         paletteY = Math.min(sw[1] + sw[3] + 2, panelY + panelH - paletteH() - 6);
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (dragging >= 0) {
+            slideTo(dragging, toLogical(event).x());
+            return true;
+        }
+        return super.mouseDragged(toLogical(event), deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (dragging >= 0) {
+            dragging = -1;
+            ConfigManager.save();
+            return true;
+        }
+        return super.mouseReleased(toLogical(event));
     }
 
     @Override
@@ -672,6 +720,10 @@ public class TerminalCustomScreen extends Screen {
         IntConsumer step;
         IntSupplier swatch;
         IntConsumer apply;
+        IntSupplier get;
+        IntConsumer set;
+        int min;
+        int max;
         EditBox box;
 
         Row(String label, String kind) {
