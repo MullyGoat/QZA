@@ -61,6 +61,10 @@ public class QZAConfig {
 
     public boolean terminalRubixHints = true;
 
+    public boolean terminalFirstClickProt = false;
+
+    public int terminalFirstClickMs = 500;
+
     public boolean witherKeyEnabled = false;
 
     public double witherKeyX = 0.5;

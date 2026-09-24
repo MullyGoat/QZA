@@ -57,6 +57,23 @@ public class TerminalTemplate {
     public boolean showTitle = true;
     public int titleColour = 0xFFFF55FF;
 
+    public boolean roleColours = false;
+
+    public int rubixPlus1 = 0xFF5B8CFF;
+    public int rubixPlus2 = 0xFF1E3F8C;
+    public int rubixMinus1 = 0xFFE09020;
+    public int rubixMinus2 = 0xFF8A5A10;
+
+    public int order1 = 0xFFFF3FA0;
+    public int order2 = 0xFF2A2ACC;
+    public int order3 = 0xFF4A4AE8;
+
+    public int selectColour = 0xFF29C4F0;
+    public int startsWithColour = 0xFF22E8E8;
+
+    public int melodyMarker = 0xFFC000C0;
+    public int melodyReady = 0xFF3CFF3C;
+
     public static List<String> shapes() {
         return List.of(SHAPE_SQUARE, SHAPE_ROUNDED, SHAPE_CIRCLE, SHAPE_DIAMOND,
                 SHAPE_NOTCHED, SHAPE_HEX);
@@ -101,6 +118,18 @@ public class TerminalTemplate {
         out.hoverColour = hoverColour;
         out.showTitle = showTitle;
         out.titleColour = titleColour;
+        out.roleColours = roleColours;
+        out.rubixPlus1 = rubixPlus1;
+        out.rubixPlus2 = rubixPlus2;
+        out.rubixMinus1 = rubixMinus1;
+        out.rubixMinus2 = rubixMinus2;
+        out.order1 = order1;
+        out.order2 = order2;
+        out.order3 = order3;
+        out.selectColour = selectColour;
+        out.startsWithColour = startsWithColour;
+        out.melodyMarker = melodyMarker;
+        out.melodyReady = melodyReady;
         return out;
     }
 

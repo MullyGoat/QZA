@@ -6,6 +6,7 @@ import com.qza.terminal.TerminalGrid;
 import com.qza.terminal.TerminalLayout;
 import com.qza.terminal.TerminalOverlay;
 import com.qza.terminal.TerminalPainter;
+import com.qza.terminal.TerminalRoles;
 import com.qza.terminal.TerminalSamples;
 import com.qza.terminal.TerminalTemplate;
 import com.qza.terminal.TerminalTemplates;
@@ -49,7 +50,9 @@ public class TerminalGuiScreen extends Screen {
             "Numbers Shown",
             "Rubix Click Counts",
             "Hold Melody Button",
-            "Aim At Melody Button"};
+            "Aim At Melody Button",
+            "First Click Protection",
+            "Protection Time"};
 
     private static final String[] SET_HELP = {
             "Leaves only the slots still needing a click: red panes in Correct all "
@@ -64,7 +67,10 @@ public class TerminalGuiScreen extends Screen {
             "In Melody, keeps the button red until a marker reaches the lit note, "
                     + "then lets it go green.",
             "Puts the cursor on the melody button as the terminal opens. Moves your "
-                    + "own cursor only, nothing is sent to the server."};
+                    + "own cursor only, nothing is sent to the server.",
+            "Ignores clicks for a moment after a terminal opens, so a click meant for "
+                    + "the last one does not land on this one.",
+            "How long the terminal ignores clicks after opening, in milliseconds."};
 
     private int panelX;
     private int panelY;
@@ -168,7 +174,9 @@ public class TerminalGuiScreen extends Screen {
             case 2 -> String.valueOf(cfg.terminalNumbersShown);
             case 3 -> cfg.terminalRubixHints ? "On" : "Off";
             case 4 -> cfg.terminalMelodyHold ? "On" : "Off";
-            default -> cfg.terminalMelodyAim ? "On" : "Off";
+            case 5 -> cfg.terminalMelodyAim ? "On" : "Off";
+            case 6 -> cfg.terminalFirstClickProt ? "On" : "Off";
+            default -> cfg.terminalFirstClickMs + "ms";
         };
     }
 
@@ -181,7 +189,10 @@ public class TerminalGuiScreen extends Screen {
                     Math.max(1, Math.min(9, cfg.terminalNumbersShown + step));
             case 3 -> cfg.terminalRubixHints = !cfg.terminalRubixHints;
             case 4 -> cfg.terminalMelodyHold = !cfg.terminalMelodyHold;
-            default -> cfg.terminalMelodyAim = !cfg.terminalMelodyAim;
+            case 5 -> cfg.terminalMelodyAim = !cfg.terminalMelodyAim;
+            case 6 -> cfg.terminalFirstClickProt = !cfg.terminalFirstClickProt;
+            default -> cfg.terminalFirstClickMs =
+                    Math.max(0, Math.min(2000, cfg.terminalFirstClickMs + (step * 50)));
         }
         ConfigManager.save();
     }
@@ -314,7 +325,7 @@ public class TerminalGuiScreen extends Screen {
                             r[2] - SET_CTRL_W - 8), r[0] + 2, r[1] + 5, TEXT_DIM);
 
             int[] c = settingControl(i);
-            if (i == 2) {
+            if (i == 2 || i == 7) {
                 int[] down = new int[]{c[0], c[1], SET_STEP_W, c[3]};
                 int[] up = new int[]{c[0] + c[2] - SET_STEP_W, c[1], SET_STEP_W, c[3]};
                 stepper(graphics, down, "-", inside(mouseX, mouseY, down));
@@ -436,7 +447,9 @@ public class TerminalGuiScreen extends Screen {
 
         TerminalPainter.draw(graphics, this.font, grid, template, natural,
                 selected.sampleTitle, -1, selected.labelFor(template.label),
-                TerminalOverlay.hints(grid, selected));
+                TerminalOverlay.hints(grid, selected),
+                TerminalRoles.of(grid, selected, selected.argument(selected.sampleTitle),
+                        template));
 
         graphics.pose().popMatrix();
     }
@@ -476,7 +489,7 @@ public class TerminalGuiScreen extends Screen {
                     if (!inside(mouseX, mouseY, c)) {
                         continue;
                     }
-                    if (i == 2) {
+                    if (i == 2 || i == 7) {
                         boolean down = mouseX < c[0] + SET_STEP_W;
                         boolean up = mouseX > c[0] + c[2] - SET_STEP_W;
                         if (down || up) {

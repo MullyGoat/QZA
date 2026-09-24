@@ -19,6 +19,8 @@ public final class TerminalOverlay {
     private static double lastY;
     private static boolean pressed;
     private static Object aimedAt;
+    private static Object openedScreen;
+    private static long openedAt;
 
     private TerminalOverlay() {
     }
@@ -87,7 +89,8 @@ public final class TerminalOverlay {
 
         TerminalPainter.draw(graphics, client.font, grid, template, layout,
                 title(screen), layout.indexAt(mouseX, mouseY),
-                type.labelFor(template.label), hints(source, type));
+                type.labelFor(template.label), hints(source, type),
+                TerminalRoles.of(source, type, type.argument(title(screen)), template));
 
         aim(screen, type, source, layout);
         return true;
@@ -124,6 +127,19 @@ public final class TerminalOverlay {
         if (aimedAt != null && screen != aimedAt) {
             aimedAt = null;
         }
+        if (screen != openedScreen) {
+            openedScreen = screen;
+            openedAt = System.currentTimeMillis();
+        }
+    }
+
+    private static boolean guarded() {
+        QZAConfig cfg = ConfigManager.get();
+        if (!cfg.terminalFirstClickProt || openedAt == 0L) {
+            return false;
+        }
+        long wait = Math.max(0, Math.min(2000, cfg.terminalFirstClickMs));
+        return System.currentTimeMillis() - openedAt < wait;
     }
 
     private static void aim(AbstractContainerScreen<?> screen, TerminalType type,
@@ -169,6 +185,10 @@ public final class TerminalOverlay {
         TerminalGrid grid = limit(source, type, type.argument(title(screen)));
 
         pressed = true;
+
+        if (guarded()) {
+            return true;
+        }
 
         TerminalTemplate template = TerminalTemplates.forType(type);
         TerminalLayout layout = TerminalLayout.of(grid, template, screen.width, screen.height);

@@ -53,23 +53,23 @@ public final class TerminalMelody {
         return -1;
     }
 
-    public static boolean aligned(TerminalGrid grid) {
-        int target = targetColumn(grid);
-        if (target < 0) {
-            return true;
-        }
-        boolean sawMarker = false;
+    public static int markerColumn(TerminalGrid grid) {
         for (int position = 0; position < grid.cells.size(); position++) {
             TerminalCell cell = grid.cells.get(position);
-            if (!cell.filled() || cell.colour() != TerminalGrid.MAGENTA) {
-                continue;
-            }
-            sawMarker = true;
-            if (position % grid.columns == target) {
-                return true;
+            if (cell.filled() && cell.colour() == TerminalGrid.MAGENTA) {
+                return position % grid.columns;
             }
         }
-        return !sawMarker;
+        return -1;
+    }
+
+    public static boolean aligned(TerminalGrid grid) {
+        int target = targetColumn(grid);
+        int marker = markerColumn(grid);
+        if (target < 0 || marker < 0) {
+            return true;
+        }
+        return marker == target;
     }
 
     public static int buttonAt(TerminalGrid grid) {

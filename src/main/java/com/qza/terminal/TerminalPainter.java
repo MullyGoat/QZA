@@ -10,19 +10,20 @@ public final class TerminalPainter {
     public static void draw(GuiGraphicsExtractor graphics, Font font, TerminalGrid grid,
                             TerminalTemplate template, TerminalLayout layout,
                             String title, int hovered) {
-        draw(graphics, font, grid, template, layout, title, hovered, template.label, null);
+        draw(graphics, font, grid, template, layout, title, hovered, template.label, null, null);
     }
 
     public static void draw(GuiGraphicsExtractor graphics, Font font, TerminalGrid grid,
                             TerminalTemplate template, TerminalLayout layout,
                             String title, int hovered, String labelMode) {
-        draw(graphics, font, grid, template, layout, title, hovered, labelMode, null);
+        draw(graphics, font, grid, template, layout, title, hovered, labelMode, null, null);
     }
 
     public static void draw(GuiGraphicsExtractor graphics, Font font, TerminalGrid grid,
                             TerminalTemplate template, TerminalLayout layout,
                             String title, int hovered, String labelMode,
-                            java.util.List<String> overrides) {
+                            java.util.List<String> overrides,
+                            java.util.List<Integer> tints) {
         panel(graphics, template, layout);
 
         if (template.showTitle && title != null && !title.isBlank()) {
@@ -46,9 +47,10 @@ public final class TerminalPainter {
             }
             String override = overrides == null || position >= overrides.size()
                     ? null : overrides.get(position);
+            int tint = tints == null || position >= tints.size() ? 0 : tints.get(position);
             cell(graphics, font, template, layout, grid.cells.get(position),
                     layout.cellX(column), layout.cellY(row),
-                    position == hovered, anyMarked, grid.counts, labelMode, override);
+                    position == hovered, anyMarked, grid.counts, labelMode, override, tint);
         }
     }
 
@@ -75,9 +77,9 @@ public final class TerminalPainter {
     private static void cell(GuiGraphicsExtractor graphics, Font font, TerminalTemplate template,
                              TerminalLayout layout, TerminalCell cell, int x, int y,
                              boolean hovered, boolean anyMarked, boolean counts,
-                             String labelMode, String override) {
+                             String labelMode, String override, int role) {
         int size = layout.cell;
-        int base = baseColour(template, cell);
+        int base = role != 0 ? role : baseColour(template, cell);
 
         if (cell.marked() && TerminalTemplate.MARK_GLOW.equals(template.mark)) {
             shape(graphics, x - 2, y - 2, size + 4, template.shape,

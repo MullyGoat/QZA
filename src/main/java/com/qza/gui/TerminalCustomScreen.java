@@ -5,6 +5,7 @@ import com.qza.terminal.TerminalGrid;
 import com.qza.terminal.TerminalLayout;
 import com.qza.terminal.TerminalOverlay;
 import com.qza.terminal.TerminalPainter;
+import com.qza.terminal.TerminalRoles;
 import com.qza.terminal.TerminalPalette;
 import com.qza.terminal.TerminalSamples;
 import com.qza.terminal.TerminalTemplate;
@@ -140,6 +141,20 @@ public class TerminalCustomScreen extends Screen {
         rows.add(colour("Selected", () -> t.markColour, v -> t.markColour = v));
         rows.add(colour("Hover", () -> t.hoverColour, v -> t.hoverColour = v));
         rows.add(colour("Title", () -> t.titleColour, v -> t.titleColour = v));
+
+        rows.add(toggle("Colour By Role", () -> t.roleColours, v -> t.roleColours = v));
+        rows.add(colour("Rubix +1", () -> t.rubixPlus1, v -> t.rubixPlus1 = v));
+        rows.add(colour("Rubix +2", () -> t.rubixPlus2, v -> t.rubixPlus2 = v));
+        rows.add(colour("Rubix -1", () -> t.rubixMinus1, v -> t.rubixMinus1 = v));
+        rows.add(colour("Rubix -2", () -> t.rubixMinus2, v -> t.rubixMinus2 = v));
+        rows.add(colour("Order 1st", () -> t.order1, v -> t.order1 = v));
+        rows.add(colour("Order 2nd", () -> t.order2, v -> t.order2 = v));
+        rows.add(colour("Order 3rd", () -> t.order3, v -> t.order3 = v));
+        rows.add(colour("Select Match", () -> t.selectColour, v -> t.selectColour = v));
+        rows.add(colour("Starts With Match",
+                () -> t.startsWithColour, v -> t.startsWithColour = v));
+        rows.add(colour("Melody Marker", () -> t.melodyMarker, v -> t.melodyMarker = v));
+        rows.add(colour("Melody Ready", () -> t.melodyReady, v -> t.melodyReady = v));
     }
 
     private static String spin(List<String> all, String current, int step) {
@@ -488,7 +503,9 @@ public class TerminalCustomScreen extends Screen {
         graphics.pose().translate(-natural.width / 2f, -natural.height / 2f);
         TerminalPainter.draw(graphics, this.font, grid, template, natural,
                 preview.sampleTitle, -1, preview.labelFor(template.label),
-                TerminalOverlay.hints(grid, preview));
+                TerminalOverlay.hints(grid, preview),
+                TerminalRoles.of(grid, preview, preview.argument(preview.sampleTitle),
+                        template));
         graphics.pose().popMatrix();
     }
 
