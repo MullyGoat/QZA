@@ -193,15 +193,9 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.waypointsEnabled));
 
         settings.add(new ToggleSetting(f7, "Melody", "Aim Mouse at Melody Button",
-                Component.literal("Puts the cursor on the melody button as the terminal "
-                                + "opens. Follows ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("Odin's")
-                                .withStyle(ChatFormatting.LIGHT_PURPLE))
-                        .append(Component.literal(" terminal GUI when it is on, and the "
-                                + "chest when it is not. Moves your own cursor only, "
-                                + "nothing is sent to the server.")
-                                .withStyle(ChatFormatting.GRAY)),
+                Component.literal("Puts cursor on the melody button as terminal opens. "
+                                + "Nothing is sent to the server")
+                        .withStyle(ChatFormatting.GRAY),
                 () -> cfg.melodyAimEnabled,
                 v -> {
                     cfg.melodyAimEnabled = v;
