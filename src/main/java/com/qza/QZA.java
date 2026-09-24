@@ -15,6 +15,7 @@ import com.qza.party.PartyNotification;
 import com.qza.party.PartyState;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
+import com.qza.terminal.TerminalOverlay;
 import com.qza.timer.NecronTimer;
 import com.qza.timer.ServerTickClock;
 import com.qza.util.DungeonState;
@@ -82,6 +83,7 @@ public class QZA implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             Scheduler.tick();
             WitherKey.tick();
+            TerminalOverlay.tick(client.screen);
 
             Object level = client.level;
             if (level != lastLevel) {
@@ -98,6 +100,7 @@ public class QZA implements ClientModInitializer {
             ShitterAutoKick.reset();
             NecronTimer.reset();
             WitherKey.reset();
+            TerminalOverlay.reset();
             ServerTickClock.reset();
             PartyNotification.clear();
             PartyFullAlert.reset();

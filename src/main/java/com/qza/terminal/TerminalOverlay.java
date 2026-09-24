@@ -104,6 +104,28 @@ public final class TerminalOverlay {
         return TerminalMelody.buttonAt(grid);
     }
 
+    public static boolean allowed(TerminalGrid grid, TerminalType type,
+                                  int position, int button) {
+        List<String> hints = hints(grid, type);
+        if (hints == null || position < 0 || position >= hints.size()) {
+            return true;
+        }
+        String hint = hints.get(position);
+        if (hint.startsWith("+")) {
+            return button == 0;
+        }
+        if (hint.startsWith("-")) {
+            return button != 0;
+        }
+        return true;
+    }
+
+    public static void tick(Object screen) {
+        if (aimedAt != null && screen != aimedAt) {
+            aimedAt = null;
+        }
+    }
+
     private static void aim(AbstractContainerScreen<?> screen, TerminalType type,
                             TerminalGrid grid, TerminalLayout layout) {
         if (type != TerminalType.MELODY || !ConfigManager.get().terminalMelodyAim) {
@@ -140,10 +162,11 @@ public final class TerminalOverlay {
         if (type == null) {
             return false;
         }
-        TerminalGrid grid = shown(screen, type);
-        if (grid == null) {
+        TerminalGrid source = raw(screen, type);
+        if (source == null) {
             return false;
         }
+        TerminalGrid grid = limit(source, type, type.argument(title(screen)));
 
         pressed = true;
 
@@ -152,6 +175,9 @@ public final class TerminalOverlay {
 
         int position = layout.indexAt(event.x(), event.y());
         if (position < 0 || position >= grid.cells.size()) {
+            return true;
+        }
+        if (!allowed(source, type, position, event.button())) {
             return true;
         }
         TerminalCell cell = grid.cells.get(position);

@@ -51,6 +51,21 @@ public class TerminalGuiScreen extends Screen {
             "Hold Melody Button",
             "Aim At Melody Button"};
 
+    private static final String[] SET_HELP = {
+            "Leaves only the slots still needing a click: red panes in Correct all "
+                    + "the panes, the asked colour in Select all the items, and the asked "
+                    + "letter in What starts with. Each drops away as it is clicked.",
+            "In Click in order, hides every pane except the next few, and drops each "
+                    + "one as it is clicked.",
+            "How many panes stay on screen at once while Only Show Next Numbers is on.",
+            "In Change all to same color, works out the colour that takes the fewest "
+                    + "clicks and writes each pane's share on it. + is a left click, "
+                    + "- is a right click, and the wrong button is ignored.",
+            "In Melody, keeps the button red until a marker reaches the lit note, "
+                    + "then lets it go green.",
+            "Puts the cursor on the melody button as the terminal opens. Moves your "
+                    + "own cursor only, nothing is sent to the server."};
+
     private int panelX;
     private int panelY;
     private int panelW;
@@ -288,10 +303,12 @@ public class TerminalGuiScreen extends Screen {
         graphics.fill(box[0], box[1], box[0] + box[2], box[1] + box[3], 0xF00E1218);
         outline(graphics, box[0], box[1], box[2], box[3], PINK);
 
+        int helpFor = -1;
         for (int i = 0; i < SET_LABELS.length; i++) {
             int[] r = settingRow(i);
             if (inside(mouseX, mouseY, r)) {
                 graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], 0x18FFFFFF);
+                helpFor = i;
             }
             graphics.text(this.font, TerminalPainter.fit(this.font, SET_LABELS[i],
                             r[2] - SET_CTRL_W - 8), r[0] + 2, r[1] + 5, TEXT_DIM);
@@ -314,6 +331,38 @@ public class TerminalGuiScreen extends Screen {
                 graphics.centeredText(this.font, settingValue(i),
                         c[0] + (c[2] / 2), c[1] + 3, on ? 0xFF9BE8A0 : TEXT_DIM);
             }
+        }
+
+        if (helpFor >= 0) {
+            drawHelp(graphics, SET_HELP[helpFor], box);
+        }
+    }
+
+    private void drawHelp(GuiGraphicsExtractor graphics, String text, int[] panel) {
+        int width = Math.min(210, panelX + panelW - 16);
+        List<net.minecraft.util.FormattedCharSequence> lines =
+                this.font.split(Component.literal(text), width - 10);
+        if (lines.isEmpty()) {
+            return;
+        }
+
+        int widest = 0;
+        for (net.minecraft.util.FormattedCharSequence line : lines) {
+            widest = Math.max(widest, this.font.width(line));
+        }
+
+        int w = widest + 10;
+        int h = (lines.size() * 10) + 8;
+        int x = Math.max(panelX + 4, panel[0] - w - 4);
+        int y = Math.min(panel[1], panelY + panelH - h - 4);
+
+        graphics.fill(x, y, x + w, y + h, 0xF00E1218);
+        outline(graphics, x, y, w, h, 0xFF6A8CA8);
+
+        int lineY = y + 4;
+        for (net.minecraft.util.FormattedCharSequence line : lines) {
+            graphics.text(this.font, line, x + 5, lineY, TEXT_DIM);
+            lineY += 10;
         }
     }
 
