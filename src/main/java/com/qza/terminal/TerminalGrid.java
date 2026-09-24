@@ -18,6 +18,7 @@ public final class TerminalGrid {
 
     public static final int MAGENTA = 0xFFC74EBD;
     public static final int LIME = 0xFF80C71F;
+    public static final int GREEN = 0xFF5E7C16;
     public static final int RED = 0xFFB02E26;
 
     private static final Map<String, Integer> DYES = new LinkedHashMap<>();
@@ -36,7 +37,7 @@ public final class TerminalGrid {
         DYES.put("purple", 0xFF8932B8);
         DYES.put("blue", 0xFF3C44AA);
         DYES.put("brown", 0xFF835432);
-        DYES.put("green", 0xFF5E7C16);
+        DYES.put("green", GREEN);
         DYES.put("red", RED);
         DYES.put("black", 0xFF1D1D21);
     }
@@ -235,28 +236,22 @@ public final class TerminalGrid {
     }
 
     public TerminalGrid holdMelody() {
-        int magenta = columnOf(MAGENTA, false);
-        int lime = columnOf(LIME, false);
-        if (magenta < 0 || lime < 0 || magenta == lime) {
+        if (TerminalMelody.aligned(this)) {
+            return this;
+        }
+        int buttons = TerminalMelody.buttonColumn(this);
+        if (buttons < 0) {
             return this;
         }
 
         List<TerminalCell> out = new ArrayList<>(cells.size());
-        for (TerminalCell cell : cells) {
-            out.add(cell.filled() && cell.button() && cell.colour() == LIME
-                    ? cell.recoloured(RED) : cell);
+        for (int position = 0; position < cells.size(); position++) {
+            TerminalCell cell = cells.get(position);
+            boolean hold = cell.filled() && position % columns == buttons
+                    && TerminalMelody.isGo(cell.colour());
+            out.add(hold ? cell.recoloured(RED) : cell);
         }
         return new TerminalGrid(rows, columns, out);
-    }
-
-    private int columnOf(int argb, boolean button) {
-        for (int i = 0; i < cells.size(); i++) {
-            TerminalCell cell = cells.get(i);
-            if (cell.filled() && cell.colour() == argb && cell.button() == button) {
-                return i % columns;
-            }
-        }
-        return -1;
     }
 
     private static final Map<String, String> ODD_ITEMS = Map.of(

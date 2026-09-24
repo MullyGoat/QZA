@@ -101,20 +101,7 @@ public final class TerminalOverlay {
     }
 
     public static int aimAt(TerminalGrid grid) {
-        int fallback = -1;
-        for (int i = 0; i < grid.cells.size(); i++) {
-            TerminalCell cell = grid.cells.get(i);
-            if (!cell.filled() || !cell.button()) {
-                continue;
-            }
-            if (cell.colour() == TerminalGrid.LIME) {
-                return i;
-            }
-            if (fallback < 0) {
-                fallback = i;
-            }
-        }
-        return fallback;
+        return TerminalMelody.buttonAt(grid);
     }
 
     private static void aim(AbstractContainerScreen<?> screen, TerminalType type,
@@ -125,22 +112,26 @@ public final class TerminalOverlay {
         if (screen == aimedAt) {
             return;
         }
-        aimedAt = screen;
 
         int position = aimAt(grid);
         if (position < 0) {
             return;
         }
 
-        Window window = Minecraft.getInstance().getWindow();
+        Minecraft client = Minecraft.getInstance();
+        Window window = client.getWindow();
         if (window == null) {
             return;
         }
+
+        aimedAt = screen;
+
         double scale = Math.max(1, window.getGuiScale());
         double x = (layout.cellX(position % grid.columns) + (layout.cell / 2.0)) * scale;
         double y = (layout.cellY(position / grid.columns) + (layout.cell / 2.0)) * scale;
+        long handle = window.handle();
 
-        GLFW.glfwSetCursorPos(window.handle(), x, y);
+        client.execute(() -> GLFW.glfwSetCursorPos(handle, x, y));
     }
 
     public static boolean click(AbstractContainerScreen<?> screen, int leftPos, int topPos,

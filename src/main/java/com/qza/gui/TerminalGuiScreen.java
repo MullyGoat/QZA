@@ -1,6 +1,7 @@
 package com.qza.gui;
 
 import com.qza.config.ConfigManager;
+import com.qza.config.QZAConfig;
 import com.qza.terminal.TerminalGrid;
 import com.qza.terminal.TerminalLayout;
 import com.qza.terminal.TerminalOverlay;
@@ -35,6 +36,20 @@ public class TerminalGuiScreen extends Screen {
 
     private boolean dropping;
     private double dropScroll;
+    private boolean settingsOpen;
+
+    private static final int SET_W = 226;
+    private static final int SET_ROW_H = 18;
+    private static final int SET_CTRL_W = 64;
+    private static final int SET_STEP_W = 13;
+
+    private static final String[] SET_LABELS = {
+            "Only Show What Is Left",
+            "Only Show Next Numbers",
+            "Numbers Shown",
+            "Rubix Click Counts",
+            "Hold Melody Button",
+            "Aim At Melody Button"};
 
     private int panelX;
     private int panelY;
@@ -108,6 +123,54 @@ public class TerminalGuiScreen extends Screen {
         return new int[]{railX, custom[1] + BUTTON_H + 6, RAIL_W, BUTTON_H};
     }
 
+    private int[] gearRect() {
+        return new int[]{panelX + panelW - 28, panelY + 20, 16, 16};
+    }
+
+    private int[] settingsPanelRect() {
+        int h = (SET_LABELS.length * SET_ROW_H) + 10;
+        int[] gear = gearRect();
+        return new int[]{Math.max(panelX + 4, gear[0] + gear[2] - SET_W),
+                gear[1] + gear[3] + 3, SET_W, h};
+    }
+
+    private int[] settingRow(int index) {
+        int[] box = settingsPanelRect();
+        return new int[]{box[0] + 5, box[1] + 5 + (index * SET_ROW_H),
+                SET_W - 10, SET_ROW_H - 2};
+    }
+
+    private int[] settingControl(int index) {
+        int[] r = settingRow(index);
+        return new int[]{r[0] + r[2] - SET_CTRL_W, r[1] + 1, SET_CTRL_W, SET_ROW_H - 6};
+    }
+
+    private static String settingValue(int index) {
+        QZAConfig cfg = ConfigManager.get();
+        return switch (index) {
+            case 0 -> cfg.terminalHideDone ? "On" : "Off";
+            case 1 -> cfg.terminalNumbersLimit ? "On" : "Off";
+            case 2 -> String.valueOf(cfg.terminalNumbersShown);
+            case 3 -> cfg.terminalRubixHints ? "On" : "Off";
+            case 4 -> cfg.terminalMelodyHold ? "On" : "Off";
+            default -> cfg.terminalMelodyAim ? "On" : "Off";
+        };
+    }
+
+    private static void settingClicked(int index, int step) {
+        QZAConfig cfg = ConfigManager.get();
+        switch (index) {
+            case 0 -> cfg.terminalHideDone = !cfg.terminalHideDone;
+            case 1 -> cfg.terminalNumbersLimit = !cfg.terminalNumbersLimit;
+            case 2 -> cfg.terminalNumbersShown =
+                    Math.max(1, Math.min(9, cfg.terminalNumbersShown + step));
+            case 3 -> cfg.terminalRubixHints = !cfg.terminalRubixHints;
+            case 4 -> cfg.terminalMelodyHold = !cfg.terminalMelodyHold;
+            default -> cfg.terminalMelodyAim = !cfg.terminalMelodyAim;
+        }
+        ConfigManager.save();
+    }
+
     private int dropListH() {
         return Math.min(6, TerminalTemplates.keys().size()) * DROP_ROW_H + 2;
     }
@@ -146,11 +209,15 @@ public class TerminalGuiScreen extends Screen {
         drawRail(graphics, mx, my);
         drawButtons(graphics, mx, my);
         drawPreview(graphics);
+        drawGear(graphics, mx, my);
 
         super.extractRenderState(graphics, mx, my, delta);
 
         if (dropping) {
             drawDropList(graphics, mx, my);
+        }
+        if (settingsOpen) {
+            drawSettingsPanel(graphics, mx, my);
         }
 
         graphics.pose().popMatrix();
@@ -192,6 +259,68 @@ public class TerminalGuiScreen extends Screen {
 
         int[] all = allRect();
         button(graphics, all, "Use For Every Terminal", inside(mouseX, mouseY, all));
+    }
+
+    private void drawGear(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        int[] r = gearRect();
+        boolean hovered = inside(mouseX, mouseY, r) || settingsOpen;
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3],
+                hovered ? 0xAA3C5A70 : 0x66223140);
+        outline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFAFD4EC : 0xFF6A8CA8);
+
+        int colour = hovered ? 0xFFFFFFFF : 0xFFCCCCCC;
+        int x = r[0] + 3;
+        int y = r[1] + 3;
+
+        graphics.fill(x + 4, y, x + 7, y + 2, colour);
+        graphics.fill(x + 4, y + 9, x + 7, y + 11, colour);
+        graphics.fill(x, y + 4, x + 2, y + 7, colour);
+        graphics.fill(x + 9, y + 4, x + 11, y + 7, colour);
+
+        graphics.fill(x + 2, y + 2, x + 9, y + 4, colour);
+        graphics.fill(x + 2, y + 7, x + 9, y + 9, colour);
+        graphics.fill(x + 2, y + 4, x + 4, y + 7, colour);
+        graphics.fill(x + 7, y + 4, x + 9, y + 7, colour);
+    }
+
+    private void drawSettingsPanel(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        int[] box = settingsPanelRect();
+        graphics.fill(box[0], box[1], box[0] + box[2], box[1] + box[3], 0xF00E1218);
+        outline(graphics, box[0], box[1], box[2], box[3], PINK);
+
+        for (int i = 0; i < SET_LABELS.length; i++) {
+            int[] r = settingRow(i);
+            if (inside(mouseX, mouseY, r)) {
+                graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], 0x18FFFFFF);
+            }
+            graphics.text(this.font, TerminalPainter.fit(this.font, SET_LABELS[i],
+                            r[2] - SET_CTRL_W - 8), r[0] + 2, r[1] + 5, TEXT_DIM);
+
+            int[] c = settingControl(i);
+            if (i == 2) {
+                int[] down = new int[]{c[0], c[1], SET_STEP_W, c[3]};
+                int[] up = new int[]{c[0] + c[2] - SET_STEP_W, c[1], SET_STEP_W, c[3]};
+                stepper(graphics, down, "-", inside(mouseX, mouseY, down));
+                stepper(graphics, up, "+", inside(mouseX, mouseY, up));
+                graphics.centeredText(this.font, settingValue(i),
+                        c[0] + (c[2] / 2), c[1] + 3, TEXT);
+            } else {
+                boolean over = inside(mouseX, mouseY, c);
+                boolean on = "On".equals(settingValue(i));
+                graphics.fill(c[0], c[1], c[0] + c[2], c[1] + c[3],
+                        over ? 0xAA3C5A70 : 0x99223140);
+                outline(graphics, c[0], c[1], c[2], c[3],
+                        on ? (over ? 0xFF9BE8A0 : 0xFF7FBF86) : 0xFF6A8CA8);
+                graphics.centeredText(this.font, settingValue(i),
+                        c[0] + (c[2] / 2), c[1] + 3, on ? 0xFF9BE8A0 : TEXT_DIM);
+            }
+        }
+    }
+
+    private void stepper(GuiGraphicsExtractor graphics, int[] r, String label, boolean hovered) {
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hovered ? 0xAA3C5A70 : 0x66223140);
+        graphics.centeredText(this.font, label, r[0] + (r[2] / 2), r[1] + 3,
+                hovered ? TEXT : TEXT_FAINT);
     }
 
     private static void arrow(GuiGraphicsExtractor graphics, int x, int y, int colour) {
@@ -290,6 +419,38 @@ public class TerminalGuiScreen extends Screen {
         MouseButtonEvent local = toLogical(event);
         double mouseX = local.x();
         double mouseY = local.y();
+
+        if (settingsOpen) {
+            if (inside(mouseX, mouseY, settingsPanelRect())) {
+                for (int i = 0; i < SET_LABELS.length; i++) {
+                    int[] c = settingControl(i);
+                    if (!inside(mouseX, mouseY, c)) {
+                        continue;
+                    }
+                    if (i == 2) {
+                        boolean down = mouseX < c[0] + SET_STEP_W;
+                        boolean up = mouseX > c[0] + c[2] - SET_STEP_W;
+                        if (down || up) {
+                            settingClicked(i, down ? -1 : 1);
+                        }
+                    } else {
+                        settingClicked(i, 1);
+                    }
+                    return true;
+                }
+                return true;
+            }
+            settingsOpen = false;
+            if (inside(mouseX, mouseY, gearRect())) {
+                return true;
+            }
+        }
+
+        if (inside(mouseX, mouseY, gearRect())) {
+            settingsOpen = true;
+            dropping = false;
+            return true;
+        }
 
         if (dropping) {
             int[] box = dropListRect();
