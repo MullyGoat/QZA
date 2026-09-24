@@ -37,7 +37,15 @@ and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API
 | `/qza stats` | Check the stats source against your own profile |
 | `/qza stats <ign>` | Show someone's cata, floor PB, class, secret average and MP |
 | `/qza discord` | Show whether party full alerts are set up |
+| `/qza discord link` | Get a code to link this game to your Discord |
+| `/qza discord unlink` | Unlink and delete what the relay stored |
 | `/qza discord test` | Send a test alert to Discord |
+| `/qza waypoint` | Open the waypoint list |
+| `/qza waypoint add <x> <y> <z> [colour] [size] [name]` | Mark blocks |
+| `/qza waypoint manual add` | Right click blocks to mark them, Esc to finish |
+| `/qza waypoint remove <x> <y> <z>` | Remove one waypoint |
+| `/qza waypoint list` | Print every waypoint |
+| `/qza waypoint clear` | Remove every waypoint |
 | `/qza reload` | Reload config and list from disk |
 | `/qza help` | Print this list in game |
 
