@@ -9,6 +9,7 @@ import com.qza.terminal.TerminalRoles;
 import com.qza.terminal.TerminalPalette;
 import com.qza.terminal.TerminalSamples;
 import com.qza.terminal.TerminalTemplate;
+import com.qza.terminal.TerminalTemplates;
 import com.qza.terminal.TerminalType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -50,12 +51,17 @@ public class TerminalCustomScreen extends Screen {
     private static final String COLOUR = "colour";
     private static final String TOGGLE = "toggle";
     private static final String TEXT_ROW = "text";
+    private static final String BASE = "base";
+
+    private static final int BASE_ROW_H = 13;
 
     private static TerminalType preview = TerminalType.NUMBERS;
 
     private final List<Row> rows = new ArrayList<>();
     private double scroll;
 
+    private boolean baseOpen;
+    private double baseScroll;
     private int dragging = -1;
     private int paletteFor = -1;
     private int paletteX;
@@ -113,6 +119,7 @@ public class TerminalCustomScreen extends Screen {
         rows.clear();
         TerminalTemplate t = model();
 
+        rows.add(new Row("Start From", BASE));
         rows.add(text("Name", t.name, v -> t.name = v, 24));
 
         rows.add(cycle("Cell Shape", () -> TerminalTemplate.pretty(t.shape),
@@ -352,6 +359,9 @@ public class TerminalCustomScreen extends Screen {
 
         super.extractRenderState(graphics, mx, my, delta);
 
+        if (baseOpen) {
+            drawBaseList(graphics, mx, my);
+        }
         if (paletteFor >= 0) {
             drawPalette(graphics, mx, my);
         }
@@ -428,6 +438,14 @@ public class TerminalCustomScreen extends Screen {
                 graphics.fill(boxX - 2, c[1], c[0] + c[2], c[1] + c[3], 0x55000000);
                 outline(graphics, boxX - 2, c[1], c[0] + c[2] - boxX + 2, c[3], 0x40FFFFFF);
             }
+            case BASE -> {
+                boolean over = inside(mouseX, mouseY, c) || baseOpen;
+                graphics.fill(c[0], c[1], c[0] + c[2], c[1] + c[3],
+                        over ? 0xAA3C5A70 : 0x99223140);
+                outline(graphics, c[0], c[1], c[2], c[3], over ? 0xFFAFD4EC : 0xFF6A8CA8);
+                graphics.centeredText(this.font, "Copy A Template",
+                        c[0] + (c[2] / 2), c[1] + 3, over ? TEXT : TEXT_DIM);
+            }
             default -> {
                 graphics.fill(c[0], c[1], c[0] + c[2], c[1] + c[3], 0x55000000);
                 outline(graphics, c[0], c[1], c[2], c[3], 0x40FFFFFF);
@@ -487,6 +505,74 @@ public class TerminalCustomScreen extends Screen {
         String label = any ? hex(hovered) : hex(current);
         graphics.text(this.font, label, box[0] + PALETTE_PAD,
                 box[1] + box[3] - 10, any ? TEXT : TEXT_FAINT);
+    }
+
+    private static List<String> baseKeys() {
+        List<String> out = new ArrayList<>(TerminalTemplates.keys());
+        out.remove(TerminalTemplates.CUSTOM);
+        return out;
+    }
+
+    private int baseRowIndex() {
+        for (int i = 0; i < rows.size(); i++) {
+            if (BASE.equals(rows.get(i).kind)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private int[] baseListRect() {
+        int index = baseRowIndex();
+        int[] c = controlRect(index < 0 ? 0 : index);
+        int shown = Math.min(7, baseKeys().size());
+        return new int[]{c[0] - 40, c[1] + c[3] + 2, c[2] + 40,
+                (shown * BASE_ROW_H) + 2};
+    }
+
+    private void drawBaseList(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        int[] box = baseListRect();
+        graphics.fill(box[0], box[1], box[0] + box[2], box[1] + box[3], 0xF00E1218);
+        outline(graphics, box[0], box[1], box[2], box[3], PINK);
+
+        List<String> keys = baseKeys();
+        int first = (int) Math.round(baseScroll);
+        int shown = (box[3] - 2) / BASE_ROW_H;
+
+        for (int i = 0; i < shown && first + i < keys.size(); i++) {
+            int rowY = box[1] + 1 + (i * BASE_ROW_H);
+            boolean over = mouseX >= box[0] && mouseX <= box[0] + box[2]
+                    && mouseY >= rowY && mouseY < rowY + BASE_ROW_H;
+            if (over) {
+                graphics.fill(box[0] + 1, rowY, box[0] + box[2] - 1, rowY + BASE_ROW_H,
+                        0x663C5A70);
+            }
+            graphics.text(this.font, TerminalTemplates.label(keys.get(first + i)),
+                    box[0] + 6, rowY + 3, over ? TEXT : TEXT_DIM);
+        }
+
+        if (keys.size() > shown) {
+            String more = (first + shown) + "/" + keys.size();
+            graphics.text(this.font, more, box[0] + box[2] - this.font.width(more) - 4,
+                    box[1] + box[3] - 10, TEXT_FAINT);
+        }
+    }
+
+    private void pickBase(double mouseX, double mouseY) {
+        int[] box = baseListRect();
+        List<String> keys = baseKeys();
+        int first = (int) Math.round(baseScroll);
+        int index = first + (int) ((mouseY - (box[1] + 1)) / BASE_ROW_H);
+        if (index < 0 || index >= keys.size()) {
+            return;
+        }
+
+        String key = keys.get(index);
+        TerminalTemplate base = TerminalTemplates.get(key);
+        model().copyFrom(base);
+        model().name = base.name + " Custom";
+        ConfigManager.save();
+        this.minecraft.setScreen(new TerminalCustomScreen());
     }
 
     private int[] sliderTrack(int index) {
@@ -601,6 +687,14 @@ public class TerminalCustomScreen extends Screen {
         double mouseX = local.x();
         double mouseY = local.y();
 
+        if (baseOpen) {
+            if (inside(mouseX, mouseY, baseListRect())) {
+                pickBase(mouseX, mouseY);
+                return true;
+            }
+            baseOpen = false;
+        }
+
         if (paletteFor >= 0) {
             if (inside(mouseX, mouseY, paletteRect())) {
                 pickFromPalette(mouseX, mouseY);
@@ -644,6 +738,12 @@ public class TerminalCustomScreen extends Screen {
                     row.step.accept(local.button() == 1 ? -1 : 1);
                     model().tidy();
                     ConfigManager.save();
+                    return true;
+                }
+                if (BASE.equals(row.kind)) {
+                    baseOpen = true;
+                    baseScroll = 0;
+                    paletteFor = -1;
                     return true;
                 }
                 if (NUMBER.equals(row.kind)) {
@@ -690,6 +790,12 @@ public class TerminalCustomScreen extends Screen {
         double mx = (mouseX - offsetX()) / s;
         double my = (mouseY - offsetY()) / s;
 
+        if (baseOpen) {
+            int shown = (baseListRect()[3] - 2) / BASE_ROW_H;
+            double max = Math.max(0, baseKeys().size() - shown);
+            baseScroll = Math.max(0, Math.min(max, baseScroll - verticalAmount));
+            return true;
+        }
         if (paletteFor >= 0) {
             return true;
         }

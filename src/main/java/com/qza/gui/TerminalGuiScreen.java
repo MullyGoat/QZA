@@ -16,6 +16,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TerminalGuiScreen extends Screen {
@@ -148,8 +149,27 @@ public class TerminalGuiScreen extends Screen {
         return new int[]{panelX + panelW - 28, panelY + 20, 16, 16};
     }
 
+    private static boolean settingShown(int index) {
+        QZAConfig cfg = ConfigManager.get();
+        return switch (index) {
+            case 2 -> cfg.terminalNumbersLimit;
+            case 7 -> cfg.terminalFirstClickProt;
+            default -> true;
+        };
+    }
+
+    private static List<Integer> settingsShown() {
+        List<Integer> out = new ArrayList<>();
+        for (int i = 0; i < SET_LABELS.length; i++) {
+            if (settingShown(i)) {
+                out.add(i);
+            }
+        }
+        return out;
+    }
+
     private int[] settingsPanelRect() {
-        int h = (SET_LABELS.length * SET_ROW_H) + 10;
+        int h = (settingsShown().size() * SET_ROW_H) + 10;
         int[] gear = gearRect();
         return new int[]{Math.max(panelX + 4, gear[0] + gear[2] - SET_W),
                 gear[1] + gear[3] + 3, SET_W, h};
@@ -157,7 +177,11 @@ public class TerminalGuiScreen extends Screen {
 
     private int[] settingRow(int index) {
         int[] box = settingsPanelRect();
-        return new int[]{box[0] + 5, box[1] + 5 + (index * SET_ROW_H),
+        int slot = settingsShown().indexOf(index);
+        if (slot < 0) {
+            return new int[]{0, -1000, 0, 0};
+        }
+        return new int[]{box[0] + 5, box[1] + 5 + (slot * SET_ROW_H),
                 SET_W - 10, SET_ROW_H - 2};
     }
 
@@ -315,7 +339,7 @@ public class TerminalGuiScreen extends Screen {
         outline(graphics, box[0], box[1], box[2], box[3], PINK);
 
         int helpFor = -1;
-        for (int i = 0; i < SET_LABELS.length; i++) {
+        for (int i : settingsShown()) {
             int[] r = settingRow(i);
             if (inside(mouseX, mouseY, r)) {
                 graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], 0x18FFFFFF);
@@ -484,7 +508,7 @@ public class TerminalGuiScreen extends Screen {
 
         if (settingsOpen) {
             if (inside(mouseX, mouseY, settingsPanelRect())) {
-                for (int i = 0; i < SET_LABELS.length; i++) {
+                for (int i : settingsShown()) {
                     int[] c = settingControl(i);
                     if (!inside(mouseX, mouseY, c)) {
                         continue;

@@ -97,6 +97,51 @@ public class TerminalTemplate {
         return Character.toUpperCase(text.charAt(0)) + text.substring(1).toLowerCase(Locale.ROOT);
     }
 
+    public void copyFrom(TerminalTemplate from) {
+        if (from == null || from == this) {
+            return;
+        }
+        String kept = name;
+        TerminalTemplate source = from.copy();
+
+        shape = source.shape;
+        label = source.label;
+        mark = source.mark;
+        cell = source.cell;
+        gap = source.gap;
+        radius = source.radius;
+        pad = source.pad;
+        panel = source.panel;
+        panelEdge = source.panelEdge;
+        edgeWidth = source.edgeWidth;
+        slotEmpty = source.slotEmpty;
+        slotPlain = source.slotPlain;
+        itemColour = source.itemColour;
+        tint = source.tint;
+        textColour = source.textColour;
+        textShadow = source.textShadow;
+        markColour = source.markColour;
+        hoverColour = source.hoverColour;
+        showTitle = source.showTitle;
+        titleColour = source.titleColour;
+        alwaysOrderNumbers = source.alwaysOrderNumbers;
+        roleColours = source.roleColours;
+        rubixPlus1 = source.rubixPlus1;
+        rubixPlus2 = source.rubixPlus2;
+        rubixMinus1 = source.rubixMinus1;
+        rubixMinus2 = source.rubixMinus2;
+        order1 = source.order1;
+        order2 = source.order2;
+        order3 = source.order3;
+        selectColour = source.selectColour;
+        startsWithColour = source.startsWithColour;
+        melodyMarker = source.melodyMarker;
+        melodyReady = source.melodyReady;
+
+        name = kept;
+        tidy();
+    }
+
     public TerminalTemplate copy() {
         TerminalTemplate out = new TerminalTemplate();
         out.name = name;
