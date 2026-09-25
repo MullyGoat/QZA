@@ -10,7 +10,6 @@
     "ChatCaptureMixin",
     "ChatHideMixin",
     "ChatKeyMixin",
-    "ContainerPosAccessor",
     "TooltipHighlightMixin"
   ],
   "injectors": {

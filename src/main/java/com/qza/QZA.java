@@ -7,7 +7,6 @@ import com.qza.command.QZACommand;
 import com.qza.command.ShitterCommand;
 import com.qza.config.ConfigManager;
 import com.qza.discord.PartyFullAlert;
-import com.qza.dungeon.MelodyAim;
 import com.qza.dungeon.WitherKey;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
@@ -83,7 +82,6 @@ public class QZA implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             Scheduler.tick();
             WitherKey.tick();
-            MelodyAim.tick(client.screen);
 
             Object level = client.level;
             if (level != lastLevel) {
@@ -100,7 +98,6 @@ public class QZA implements ClientModInitializer {
             ShitterAutoKick.reset();
             NecronTimer.reset();
             WitherKey.reset();
-            MelodyAim.reset();
             ServerTickClock.reset();
             PartyNotification.clear();
             PartyFullAlert.reset();

@@ -42,8 +42,6 @@ public class QZAConfig {
 
     public boolean waypointShowNames = false;
 
-    public boolean melodyAimEnabled = false;
-
     public boolean witherKeyEnabled = false;
 
     public double witherKeyX = 0.5;

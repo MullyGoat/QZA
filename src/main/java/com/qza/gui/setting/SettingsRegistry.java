@@ -192,16 +192,6 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.waypointsEnabled));
 
-        settings.add(new ToggleSetting(f7, "Melody", "Aim Mouse at Melody Button",
-                Component.literal("Puts cursor on the melody button as terminal opens. "
-                                + "Nothing is sent to the server")
-                        .withStyle(ChatFormatting.GRAY),
-                () -> cfg.melodyAimEnabled,
-                v -> {
-                    cfg.melodyAimEnabled = v;
-                    ConfigManager.save();
-                }));
-
         settings.add(new ToggleSetting(f7, "Wither Key Pickup", "Wither Key Pickup",
                 Component.literal("Shows ")
                         .withStyle(ChatFormatting.GRAY)
