@@ -47,6 +47,53 @@ jar {
     archiveFileName = "${project.archives_base_name}-${project.version}-${project.minecraft_version}.jar"
 }
 
+// The cheat jar is the QZA jar plus src/cheat, released as its own mod, QZA Cheat.
+// Nothing in src/cheat ends up in the normal jar.
+sourceSets {
+    cheat {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+}
+
+def cheatMeta = tasks.register("cheatMeta", Copy) {
+    dependsOn tasks.jar
+    from(zipTree(tasks.jar.archiveFile)) {
+        include "fabric.mod.json", "META-INF/MANIFEST.MF"
+    }
+    into layout.buildDirectory.dir("cheat-meta")
+    doLast {
+        def file = new File(destinationDir, "fabric.mod.json")
+        def mod = new groovy.json.JsonSlurper().parse(file)
+        mod.id = "qzacheat"
+        mod.name = "QZA Cheat"
+        mod.description = "Extra cheat version of QZA featuring Shitter List, QZA's Universal Hypixel Chat, & more."
+        mod.entrypoints.client = mod.entrypoints.client + ["com.qza.cheat.QZACheat"]
+        mod.entrypoints["qza:addon"] = ["com.qza.cheat.CheatAddon"]
+        mod.mixins = mod.mixins + ["qza-cheat.mixins.json"]
+        mod.breaks = [qza: "*"]
+        file.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(mod))
+    }
+}
+
+def cheatJar = tasks.register("cheatJar", Jar) {
+    dependsOn tasks.jar, cheatMeta
+    archiveFileName = "QZA-${project.version}-${project.minecraft_version}-cheat.jar"
+    destinationDirectory = tasks.jar.destinationDirectory
+    from(zipTree(tasks.jar.archiveFile)) {
+        exclude "fabric.mod.json", "META-INF/MANIFEST.MF"
+    }
+    from(sourceSets.cheat.output)
+    from(cheatMeta) {
+        include "fabric.mod.json"
+    }
+    manifest.from(layout.buildDirectory.file("cheat-meta/META-INF/MANIFEST.MF").get().asFile)
+}
+
+tasks.named("assemble") {
+    dependsOn cheatJar
+}
+
 tasks.withType(JavaCompile).configureEach {
     it.options.release = 25
     it.options.encoding = "UTF-8"

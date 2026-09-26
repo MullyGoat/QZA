@@ -1,5 +1,6 @@
 package com.qza.gui.setting;
 
+import com.qza.addon.QZAAddon;
 import com.qza.chat.ChatFocus;
 import com.qza.chat.ChatHistory;
 import com.qza.chat.ChatKeybind;
@@ -30,16 +31,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class SettingsRegistry {
-    public static final List<String> CATEGORIES = List.of(
+    private static final List<QZAAddon> ADDONS = QZAAddon.all();
+
+    public static final List<String> CATEGORIES = withAddons(List.of(
             "Shitter List",
             "F7 / M7",
             "Music",
             "Chat",
             "Auto Check Stats",
             "Notifications",
-            "Miscellaneous");
+            "Miscellaneous"));
 
     private SettingsRegistry() {
+    }
+
+    private static List<String> withAddons(List<String> base) {
+        List<String> categories = new ArrayList<>(base);
+        for (QZAAddon addon : ADDONS) {
+            categories.add(categories.size() - 1, addon.category());
+        }
+        return List.copyOf(categories);
     }
 
     public static List<Setting> build() {
@@ -590,6 +601,10 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.discordAlertEnabled));
 
+        for (QZAAddon addon : ADDONS) {
+            addon.addSettings(settings);
+        }
+
         String misc = "Miscellaneous";
 
         settings.add(new SliderSetting(misc, "Interface", "GUI Scale",
@@ -618,6 +633,7 @@ public final class SettingsRegistry {
                     }
                     confirmReset[0] = false;
                     ConfigManager.reset();
+                    ADDONS.forEach(QZAAddon::resetSettings);
                     MusicManager.get().applySettings();
                     ChatUtil.success("Settings reset to defaults.");
                     Minecraft.getInstance().setScreen(null);
