@@ -6,7 +6,9 @@
   "client": [
     "CarriedItemInvoker",
     "ContainerPosAccessor",
-    "DeathBowReleaseMixin"
+    "DeathBowReleaseMixin",
+    "RenderPipelinesAccessor",
+    "RenderTypeInvoker"
   ],
   "injectors": {
     "defaultRequire": 0

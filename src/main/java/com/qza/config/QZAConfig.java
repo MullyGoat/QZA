@@ -50,6 +50,18 @@ public class QZAConfig {
 
     public double witherKeyScale = 1.0;
 
+    public boolean starredMobsEnabled = false;
+
+    public String starredMobColour = "yellow";
+
+    public boolean starredMobsBats = true;
+
+    public String starredMobsBatColour = "lime";
+
+    public boolean starredMobsFels = false;
+
+    public String starredMobsFelColour = "pink";
+
     public boolean partyInviteNotifyEnabled = true;
 
     public double partyNotifyDuration = 5.0;

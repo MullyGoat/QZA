@@ -103,5 +103,17 @@ public class CheatAddon implements QZAAddon {
                     cfg.melodyAimEnabled = v;
                     CheatConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(CATEGORY, "Starred Mobs", "Starred Mob ESP",
+                Component.literal("Shows the ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Starred Mob Highlight")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" boxes through walls. Turn the highlight on "
+                                + "under F7 / M7").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.starredMobEsp,
+                v -> {
+                    cfg.starredMobEsp = v;
+                    CheatConfigManager.save();
+                }));
     }
 }

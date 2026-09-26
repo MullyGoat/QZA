@@ -14,4 +14,6 @@ public class CheatConfig {
     public double deathBowCloseDelay = 5.0;
 
     public boolean melodyAimEnabled = false;
+
+    public boolean starredMobEsp = true;
 }

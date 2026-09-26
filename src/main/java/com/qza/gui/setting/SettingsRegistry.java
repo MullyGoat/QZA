@@ -21,6 +21,7 @@ import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.util.ChatUtil;
+import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -29,6 +30,8 @@ import net.minecraft.network.chat.Component;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public final class SettingsRegistry {
     private static final List<QZAAddon> ADDONS = QZAAddon.all();
@@ -224,6 +227,46 @@ public final class SettingsRegistry {
                     WitherKey.reset();
                     ConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(f7, "Starred Mobs", "Starred Mob Highlight",
+                Component.literal("Draws a box around starred mobs in dungeons")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.starredMobsEnabled,
+                v -> {
+                    cfg.starredMobsEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(colourSetting(f7, "Starred Mobs", "Star Mob Colour", "Colour of the box around starred mobs",
+                () -> cfg.starredMobColour, v -> cfg.starredMobColour = v)
+                .visibleWhen(() -> cfg.starredMobsEnabled));
+
+        settings.add(new ToggleSetting(f7, "Starred Mobs", "Highlight Bats",
+                Component.literal("Also boxes bats in dungeons").withStyle(ChatFormatting.GRAY),
+                () -> cfg.starredMobsBats,
+                v -> {
+                    cfg.starredMobsBats = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.starredMobsEnabled));
+
+        settings.add(colourSetting(f7, "Starred Mobs", "Bat Colour", "Colour of the box around bats",
+                () -> cfg.starredMobsBatColour, v -> cfg.starredMobsBatColour = v)
+                .visibleWhen(() -> cfg.starredMobsEnabled && cfg.starredMobsBats));
+
+        settings.add(new ToggleSetting(f7, "Starred Mobs", "Highlight Fels",
+                Component.literal("Also boxes Fels, even while they are invisible")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.starredMobsFels,
+                v -> {
+                    cfg.starredMobsFels = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.starredMobsEnabled));
+
+        settings.add(colourSetting(f7, "Starred Mobs", "Fel Colour", "Colour of the box around Fels",
+                () -> cfg.starredMobsFelColour, v -> cfg.starredMobsFelColour = v)
+                .visibleWhen(() -> cfg.starredMobsEnabled && cfg.starredMobsFels));
 
         String music = "Music";
 
@@ -676,6 +719,27 @@ public final class SettingsRegistry {
 
     private static String announceModeLabel(String raw) {
         return "client".equals(raw) ? "Client Notification" : "Announce to Party";
+    }
+
+    private static DropdownSetting colourSetting(String category, String section, String title,
+                                                 String description, Supplier<String> getter,
+                                                 Consumer<String> setter) {
+        return new DropdownSetting(category, section, title,
+                Component.literal(description).withStyle(ChatFormatting.GRAY),
+                WaypointColour::names,
+                getter,
+                v -> {
+                    setter.accept(v);
+                    ConfigManager.save();
+                },
+                SettingsRegistry::colourLabel,
+                null,
+                "(none)",
+                170);
+    }
+
+    private static String colourLabel(String raw) {
+        return raw == null || raw.isEmpty() ? "" : Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
 
 }

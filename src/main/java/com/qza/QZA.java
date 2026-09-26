@@ -7,6 +7,7 @@ import com.qza.command.QZACommand;
 import com.qza.command.ShitterCommand;
 import com.qza.config.ConfigManager;
 import com.qza.discord.PartyFullAlert;
+import com.qza.dungeon.StarredMobs;
 import com.qza.dungeon.WitherKey;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
@@ -52,6 +53,7 @@ public class QZA implements ClientModInitializer {
         PartyState.init();
         WaypointList.load();
         WaypointRenderer.init();
+        StarredMobs.init();
         WaypointEditor.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),

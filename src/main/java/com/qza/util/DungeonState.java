@@ -14,6 +14,7 @@ public final class DungeonState {
     private static final long CACHE_MS = 500L;
 
     private static boolean inDungeon;
+    private static int catacombsFloor = -1;
     private static long checkedAt;
 
     private DungeonState() {
@@ -25,12 +26,19 @@ public final class DungeonState {
             return inDungeon;
         }
         checkedAt = now;
+        catacombsFloor = -1;
         inDungeon = detect();
         return inDungeon;
     }
 
+    public static int catacombsFloor() {
+        inDungeon();
+        return catacombsFloor;
+    }
+
     public static void reset() {
         inDungeon = false;
+        catacombsFloor = -1;
         checkedAt = 0;
     }
 
@@ -51,6 +59,8 @@ public final class DungeonState {
         for (PlayerScoreEntry entry : scoreboard.listPlayerScores(objective)) {
             PlayerTeam team = scoreboard.getPlayersTeam(entry.owner());
             if (team != null) {
+                readFloor(IgnUtil.stripCodes(team.getPlayerPrefix().getString()
+                        + team.getPlayerSuffix().getString()));
                 append(sidebar, team.getPlayerPrefix());
                 sidebar.append(entry.owner());
                 append(sidebar, team.getPlayerSuffix());
@@ -68,6 +78,17 @@ public final class DungeonState {
             }
         }
         return false;
+    }
+
+    private static void readFloor(String line) {
+        if (catacombsFloor >= 0 || !line.contains("The Catacombs (") || line.contains("Queue")) {
+            return;
+        }
+        int open = line.indexOf('(');
+        int close = line.indexOf(')', open);
+        String floor = close < 0 ? line.substring(open + 1) : line.substring(open + 1, close);
+        char last = floor.isEmpty() ? ' ' : floor.charAt(floor.length() - 1);
+        catacombsFloor = Character.isDigit(last) ? last - '0' : 0;
     }
 
     private static void append(StringBuilder builder, Component component) {
