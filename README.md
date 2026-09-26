@@ -2,7 +2,7 @@
 
 [![Discord](https://img.shields.io/badge/CHAT-JOIN-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=23272A)](https://discord.gg/8bvjc2mK6S)
 
-Legit Hypixel Skyblock QoL Mod featuring Shitter List, QZA's Universal Hypixel Chat, & more.
+Hypixel Skyblock Mod featuring Shitter List, QZA's Universal Hypixel Chat, & more.
 
 Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other version.
 
@@ -19,32 +19,16 @@ Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other vers
 Grab the jar from the [latest release](https://github.com/MullyGoat/QZA/releases/latest)
 and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API.
 
-Every release has two jars. Install one of them, never both:
+Every release has two jars. Install one of them, not both:
 
 - `qza-<version>-26.1.2.jar` is QZA.
-- `QZA-<version>-26.1.2-cheat.jar` is QZA Cheat: all of QZA plus the
+- `qza-<version>-26.1.2-cheats.jar` is QZA Cheats: all of QZA plus the
   [cheat features](#qza-cheat). Fabric refuses to launch with both installed.
 
 ## QZA Cheat
 
 Cheat features live only in the cheat jar, under **Extras** in `/qza`. Their
 settings are kept in `config/qza/cheat.json`.
-
-### Death Bow
-
-Kicks in the moment you let go of a Death Bow:
-
-- **Auto Swap Hotbar** switches to the hotbar slot you pick (1 to 8).
-- **Auto Raider Swap** runs `/wd`, clicks the wardrobe set you pick (1 to 9) and
-  closes the wardrobe after **Close Delay** ticks. 0 closes it straight away. If
-  the wardrobe has not opened within 40 ticks it gives up.
-
-### Aim Mouse at Melody Button
-
-Puts your cursor on the melody button as the F7 / M7 melody terminal opens, so
-you are already on it when the marker lines up. It follows Odin's terminal GUI
-when that is on, and the chest slots otherwise. It only moves the cursor.
-Nothing is sent to the server.
 
 ## Commands
 
