@@ -26,7 +26,7 @@ Every release has two jars. Install one of them, not both:
 
 ## QZA Cheats
 
-Cheat features live only in the cheat jar, under **Extras** in `/qza`. Their
+Cheat features live only in the cheat jar, under **Cheats** in `/qza`. Their
 settings are kept in `config/qza/cheat.json`.
 
 ## Commands

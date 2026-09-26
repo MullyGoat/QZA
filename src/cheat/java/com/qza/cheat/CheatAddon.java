@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 public class CheatAddon implements QZAAddon {
-    private static final String CATEGORY = "Extras";
+    private static final String CATEGORY = "Cheats";
 
     @Override
     public String category() {
