@@ -22,8 +22,7 @@ and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API
 Every release has two jars. Install one of them, not both:
 
 - `qza-<version>-26.1.2.jar` is QZA.
-- `qza-<version>-26.1.2-cheats.jar` is QZA Cheats: all of QZA plus the
-  [cheat features](#qza-cheat). Fabric refuses to launch with both installed.
+- `qza-<version>-26.1.2-cheats.jar` is QZA Cheats: Normal QZA with extra cheat features
 
 ## QZA Cheats
 
