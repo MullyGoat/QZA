@@ -2,7 +2,7 @@
 
 [![Discord](https://img.shields.io/badge/CHAT-JOIN-5865F2?style=for-the-badge&logo=discord&logoColor=white&labelColor=23272A)](https://discord.gg/8bvjc2mK6S)
 
-Hypixel Skyblock QoL Mod featuring Shitter List, QZA's Universal Hypixel Chat, & more.
+Legit Hypixel Skyblock QoL Mod featuring Shitter List, QZA's Universal Hypixel Chat, & more.
 
 Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other version.
 
