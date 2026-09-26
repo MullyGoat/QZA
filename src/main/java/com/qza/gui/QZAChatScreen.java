@@ -182,6 +182,7 @@ public class QZAChatScreen extends Screen {
             ChatHistory.markRead(selected);
         }
 
+        String draft = input == null ? null : input.getValue();
         int inputW = threadW - SEND_W - 6;
         input = new EditBox(this.font, threadX + 5, inputY + 5, Math.max(40, inputW - 10), 12,
                 Component.empty());
@@ -209,6 +210,9 @@ public class QZAChatScreen extends Screen {
             input.setValue(prefill);
             input.moveCursorToEnd(false);
             prefill = null;
+        } else if (draft != null && !draft.isEmpty()) {
+            input.setValue(draft);
+            input.moveCursorToEnd(false);
         }
 
         forgetHistoryPosition();
@@ -1376,10 +1380,6 @@ public class QZAChatScreen extends Screen {
             return false;
         }
 
-        if (event instanceof ClickEvent.RunCommand run) {
-            ChatUtil.sendChat(run.command());
-            return true;
-        }
         if (event instanceof ClickEvent.SuggestCommand suggest) {
             input.setValue(suggest.command());
             input.moveCursorToEnd(false);
@@ -1402,7 +1402,11 @@ public class QZAChatScreen extends Screen {
             }, uri.toString(), false));
             return true;
         }
-        return false;
+        if (this.minecraft.player == null) {
+            return false;
+        }
+        defaultHandleGameClickEvent(event, this.minecraft, this);
+        return true;
     }
 
     private void copy(Bubble bubble) {
