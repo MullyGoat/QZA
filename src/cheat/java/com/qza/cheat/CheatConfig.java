@@ -12,4 +12,6 @@ public class CheatConfig {
     public double deathBowRaiderSlot = 1.0;
 
     public double deathBowCloseDelay = 5.0;
+
+    public boolean melodyAimEnabled = false;
 }

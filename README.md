@@ -39,6 +39,13 @@ Kicks in the moment you let go of a Death Bow:
   closes the wardrobe after **Close Delay** ticks. 0 closes it straight away. If
   the wardrobe has not opened within 40 ticks it gives up.
 
+### Aim Mouse at Melody Button
+
+Puts your cursor on the melody button as the F7 / M7 melody terminal opens, so
+you are already on it when the marker lines up. It follows Odin's terminal GUI
+when that is on, and the chest slots otherwise. It only moves the cursor.
+Nothing is sent to the server.
+
 ## Commands
 
 `/qza` opens the settings GUI. `/qzahelp` prints this list in game.
