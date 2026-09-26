@@ -25,7 +25,7 @@ Every release has two jars. Install one of them, not both:
 - `qza-<version>-26.1.2-cheats.jar` is QZA Cheats: all of QZA plus the
   [cheat features](#qza-cheat). Fabric refuses to launch with both installed.
 
-## QZA Cheat
+## QZA Cheats
 
 Cheat features live only in the cheat jar, under **Extras** in `/qza`. Their
 settings are kept in `config/qza/cheat.json`.
