@@ -5,7 +5,6 @@ import net.fabricmc.loader.api.FabricLoader;
 
 import java.util.List;
 
-// Lets another build of QZA add a settings tab. The normal jar registers none.
 public interface QZAAddon {
     String ENTRYPOINT = "qza:addon";
 

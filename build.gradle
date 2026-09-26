@@ -47,8 +47,6 @@ jar {
     archiveFileName = "${project.archives_base_name}-${project.version}-${project.minecraft_version}.jar"
 }
 
-// The cheat jar is the QZA jar plus src/cheat, released as its own mod, QZA Cheats.
-// Nothing in src/cheat ends up in the normal jar.
 sourceSets {
     cheat {
         compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output

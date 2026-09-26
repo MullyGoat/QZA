@@ -16,7 +16,6 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-// Ported from JD's Death Bow (ArcherCrit): the same hooks, packets, slots and tick timing.
 public final class DeathBow {
     private static final Pattern ARMOR_SETS_TITLE = Pattern.compile("^\\(\\d+/\\d+\\) Armor Sets$");
     private static final int WARDROBE_DYE_BASE = 35;
