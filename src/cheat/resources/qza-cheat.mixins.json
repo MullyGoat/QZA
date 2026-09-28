@@ -7,6 +7,7 @@
     "CarriedItemInvoker",
     "ContainerPosAccessor",
     "DeathBowReleaseMixin",
+    "MouseHandlerAccessor",
     "RenderPipelinesAccessor",
     "RenderTypeInvoker"
   ],
