@@ -95,7 +95,7 @@ public class CheatAddon implements QZAAddon {
                 .visibleWhen(() -> cfg.deathBowEnabled && cfg.deathBowRaiderSwap));
 
         settings.add(new ToggleSetting(CATEGORY, "Melody", "Aim Mouse at Melody Button",
-                Component.literal("Puts cursor on the lit melody button as terminal opens. "
+                Component.literal("Puts cursor on the first melody button as terminal opens. "
                                 + "Nothing is sent to the server")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.melodyAimEnabled,

@@ -37,8 +37,8 @@ public final class MelodyAim {
         return title != null && TITLE.matcher(title.trim()).matches();
     }
 
-    public static boolean isLitButton(String path) {
-        return "lime_terracotta".equals(path) || "green_terracotta".equals(path);
+    public static boolean isButton(String path) {
+        return path != null && path.endsWith("_terracotta");
     }
 
     public static void tick(Screen screen) {
@@ -58,7 +58,7 @@ public final class MelodyAim {
             return;
         }
 
-        int slot = litButton(container);
+        int slot = firstButton(container);
         if (slot < 0) {
             return;
         }
@@ -75,7 +75,7 @@ public final class MelodyAim {
         }
     }
 
-    private static int litButton(AbstractContainerScreen<?> screen) {
+    private static int firstButton(AbstractContainerScreen<?> screen) {
         List<Slot> slots = screen.getMenu().slots;
         if (slots.isEmpty()) {
             return -1;
@@ -84,7 +84,7 @@ public final class MelodyAim {
         Container chest = slots.get(0).container;
         for (int i = 0; i < slots.size() && slots.get(i).container == chest; i++) {
             ItemStack stack = slots.get(i).getItem();
-            if (stack != null && !stack.isEmpty() && isLitButton(path(stack))) {
+            if (stack != null && !stack.isEmpty() && isButton(path(stack))) {
                 return i;
             }
         }
