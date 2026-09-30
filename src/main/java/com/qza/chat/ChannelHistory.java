@@ -33,6 +33,9 @@ public final class ChannelHistory {
         }
         ChannelParser.Line line = ChannelParser.parse(plain);
         if (line == null) {
+            if (ChannelParser.isPartyEvent(plain)) {
+                note(PARTY, rich, plain);
+            }
             return;
         }
         boolean own = isOwn(plain, line.speaker());

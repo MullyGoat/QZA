@@ -2,6 +2,8 @@ package com.qza.chat;
 
 import com.qza.util.IgnUtil;
 
+import java.util.regex.Pattern;
+
 public final class ChannelParser {
     public static final String EVERYTHING = "everything";
     public static final String ALL = "all";
@@ -12,6 +14,28 @@ public final class ChannelParser {
     private static final int MAX_LENGTH = 512;
 
     private static final String PARTY_FINDER = "Party Finder > ";
+
+    private static final String RANK = "(?:\\[[^\\]]*] ?)?";
+
+    private static final String NAME = "\\w{1,16}";
+
+    private static final Pattern[] PARTY_EVENTS = {
+            Pattern.compile(RANK + NAME + " joined the party\\."),
+            Pattern.compile(RANK + NAME + " has left the party\\."),
+            Pattern.compile(RANK + NAME + " has been removed from the party\\."),
+            Pattern.compile(RANK + NAME
+                    + " was removed from your party because they disconnected\\."),
+            Pattern.compile(RANK + NAME + " has disbanded the party!"),
+            Pattern.compile("The party leader " + RANK + NAME + " has rejoined\\."),
+            Pattern.compile("The party leader, " + RANK + NAME + " has disconnected, they have "
+                    + "5 minutes to rejoin before the party is disbanded\\."),
+            Pattern.compile("You have joined " + RANK + NAME + "'s? party!"),
+            Pattern.compile("You have been kicked from the party by " + RANK + NAME),
+            Pattern.compile("You left the party\\."),
+            Pattern.compile("The party was disbanded because all invites expired "
+                    + "and the party was empty\\."),
+            Pattern.compile("The party was disbanded because the party leader disconnected\\."),
+    };
 
     private ChannelParser() {
     }
@@ -56,6 +80,22 @@ public final class ChannelParser {
 
         String speaker = speakerOf(message);
         return speaker == null ? null : new Line(ALL, speaker);
+    }
+
+    public static boolean isPartyEvent(String raw) {
+        if (raw == null || raw.length() > MAX_LENGTH) {
+            return false;
+        }
+        String message = IgnUtil.stripCodes(raw).trim();
+        if (message.isEmpty()) {
+            return false;
+        }
+        for (Pattern pattern : PARTY_EVENTS) {
+            if (pattern.matcher(message).matches()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Line tagged(String message, String prefix, String channel) {
