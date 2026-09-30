@@ -95,9 +95,8 @@ public class CheatAddon implements QZAAddon {
                 .visibleWhen(() -> cfg.deathBowEnabled && cfg.deathBowRaiderSwap));
 
         settings.add(new ToggleSetting(CATEGORY, "Melody", "Aim Mouse at Melody Button",
-                Component.literal("Moves your cursor onto the lit melody button for every row. "
-                                + "Works with the normal chest, Odin's terminal GUI and "
-                                + "NoammAddons' terminal menu. Nothing is sent to the server")
+                Component.literal("Puts cursor on the lit melody button as terminal opens. "
+                                + "Nothing is sent to the server")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.melodyAimEnabled,
                 v -> {
