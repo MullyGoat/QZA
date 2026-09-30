@@ -194,19 +194,30 @@ async function hypixel(url, apiKey) {
         headers: { 'API-Key': apiKey, 'Accept': 'application/json' },
     });
 
+    let body = null;
+    try {
+        body = await response.json();
+    } catch (e) {
+        body = null;
+    }
+    const cause = body && typeof body.cause === 'string' ? body.cause : '';
+
     if (response.status === 429) {
-        throw withStatus(new Error('Hypixel rate limit reached, try again shortly'), 429);
+        throw withStatus(new Error(cause
+            ? `Hypixel rate limit reached - ${cause}`
+            : 'Hypixel rate limit reached, try again shortly'), 429);
     }
     if (response.status === 403) {
-        throw withStatus(new Error('Proxy API key was rejected by Hypixel'), 502);
+        throw withStatus(new Error(cause
+            ? `Hypixel rejected the proxy API key - ${cause}`
+            : 'Proxy API key was rejected by Hypixel'), 502);
     }
     if (!response.ok) {
-        throw withStatus(new Error(`Hypixel returned ${response.status}`), 502);
+        throw withStatus(new Error(`Hypixel returned ${response.status}`
+            + (cause ? ` - ${cause}` : '')), 502);
     }
-
-    const body = await response.json();
     if (body && body.success === false) {
-        throw withStatus(new Error(body.cause || 'Hypixel rejected the request'), 502);
+        throw withStatus(new Error(cause || 'Hypixel rejected the request'), 502);
     }
     return body;
 }
