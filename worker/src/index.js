@@ -141,19 +141,57 @@ async function lookup(name, uuid, apiKey) {
     };
 }
 
+const MISSING = 'missing';
+
+const NAME_RESOLVERS = [
+    {
+        url: (encoded) => `https://playerdb.co/api/player/minecraft/${encoded}`,
+        read: (status, body) => {
+            if (status === 400 || status === 404) {
+                return MISSING;
+            }
+            const player = body && body.data ? body.data.player : null;
+            return player && player.id ? { id: player.id, name: player.username } : null;
+        },
+    },
+    {
+        url: (encoded) => `https://api.minetools.eu/uuid/${encoded}`,
+        read: (status, body) => {
+            if (status !== 200 || !body) {
+                return null;
+            }
+            return body.id ? { id: body.id, name: body.name } : MISSING;
+        },
+    },
+    {
+        url: (encoded) => `https://api.mojang.com/users/profiles/minecraft/${encoded}`,
+        read: (status, body) => {
+            if (status === 404 || status === 204) {
+                return MISSING;
+            }
+            return body && body.id ? { id: body.id, name: body.name } : null;
+        },
+    },
+    {
+        url: (encoded) =>
+            `https://api.minecraftservices.com/minecraft/profile/lookup/name/${encoded}`,
+        read: (status, body) => {
+            if (status === 404 || status === 204) {
+                return MISSING;
+            }
+            return body && body.id ? { id: body.id, name: body.name } : null;
+        },
+    },
+];
+
 async function resolveName(name) {
     const encoded = encodeURIComponent(name);
-    const resolvers = [
-        `https://api.mojang.com/users/profiles/minecraft/${encoded}`,
-        `https://mowojang.matdoes.dev/${encoded}`,
-        `https://api.minecraftservices.com/minecraft/profile/lookup/name/${encoded}`,
-    ];
-
     let lastStatus = 0;
-    for (const url of resolvers) {
+
+    for (const resolver of NAME_RESOLVERS) {
         let response;
         try {
-            response = await fetch(url, {
+            response = await fetch(resolver.url(encoded), {
                 headers: {
                     'Accept': 'application/json',
                     'User-Agent': 'qza-stats-proxy',
@@ -163,26 +201,21 @@ async function resolveName(name) {
             continue;
         }
 
-        if (response.status === 404 || response.status === 204) {
-            throw withStatus(new Error(`No Minecraft account named ${name}`), 404);
-        }
-        if (!response.ok) {
-            lastStatus = response.status;
-            continue;
-        }
-
-        let body;
+        let body = null;
         try {
             body = await response.json();
         } catch (e) {
-            lastStatus = 502;
-            continue;
+            body = null;
         }
 
-        if (body && body.id) {
-            return body;
+        const found = resolver.read(response.status, body);
+        if (found === MISSING) {
+            throw withStatus(new Error(`No Minecraft account named ${name}`), 404);
         }
-        throw withStatus(new Error(`No Minecraft account named ${name}`), 404);
+        if (found && found.id) {
+            return { id: found.id.replace(/-/g, ''), name: found.name || name };
+        }
+        lastStatus = response.status;
     }
 
     throw withStatus(new Error(
