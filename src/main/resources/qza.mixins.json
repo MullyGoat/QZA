@@ -12,6 +12,7 @@
     "ChatKeyMixin",
     "ContainerScreenAccessor",
     "EntityDataMixin",
+    "ItemListCharMixin",
     "ItemListRenderMixin",
     "TooltipHighlightMixin"
   ],

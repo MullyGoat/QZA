@@ -13,6 +13,7 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -55,8 +56,6 @@ public final class ItemList {
         ScreenKeyboardEvents.allowKeyPress(screen).register((current, event) ->
                 !enabled() || !overlay.keyPressed(current, event, hoveredSlotItem(container),
                         typingElsewhere(current)));
-        ScreenKeyboardEvents.allowCharType(screen).register((current, event) ->
-                !enabled() || !overlay.charTyped(event));
         ScreenEvents.remove(screen).register(current -> {
             overlay.closed();
             if (attached == current) {
@@ -70,6 +69,10 @@ public final class ItemList {
         if (screen == attached && enabled()) {
             ItemListOverlay.INSTANCE.render(screen, graphics, mouseX, mouseY, delta, containerRight(screen));
         }
+    }
+
+    public static boolean charTyped(Screen screen, CharacterEvent event) {
+        return screen != null && screen == attached && enabled() && ItemListOverlay.INSTANCE.charTyped(event);
     }
 
     static boolean typingElsewhere(Screen screen) {
