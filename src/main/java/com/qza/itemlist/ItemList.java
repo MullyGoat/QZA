@@ -12,6 +12,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.core.component.DataComponents;
@@ -91,6 +92,9 @@ public final class ItemList {
         if (!enabled() || !onSkyBlock()) {
             return false;
         }
+        if (screen instanceof InventoryScreen && !ConfigManager.get().itemListInventory) {
+            return false;
+        }
         String title = screen.getTitle() == null ? "" : IgnUtil.stripCodes(screen.getTitle().getString());
         for (String terminal : TERMINALS) {
             if (title.startsWith(terminal)) {
@@ -136,6 +140,6 @@ public final class ItemList {
             return "";
         }
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        return data == null ? "" : data.copyTag().getStringOr("id", "");
+        return data == null ? "" : data.copyTag().getStringOr("id", "").replace(':', '-');
     }
 }

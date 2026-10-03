@@ -13,6 +13,7 @@
     "ContainerScreenAccessor",
     "EntityDataMixin",
     "ItemListCharMixin",
+    "ItemListRecipeBookMixin",
     "ItemListRenderMixin",
     "TooltipHighlightMixin"
   ],

@@ -46,6 +46,8 @@ public final class ItemRepo {
     private static final String LATEST_ARCHIVE_URL =
             "https://github.com/NotEnoughUpdates/NotEnoughUpdates-REPO/archive/refs/heads/master.zip";
     private static final long RETRY_MS = 60_000L;
+    private static final long RECHECK_MS = 30 * 60_000L;
+    private static final String BOOK = "minecraft:enchanted_book";
 
     private static final Pattern MOB = Pattern.compile(".*(_MONSTER|_NPC|_ANIMAL|_MINIBOSS|_BOSS|_SC)$");
     private static final Pattern TEXTURE = Pattern.compile("Value:\"([A-Za-z0-9+/=]+)\"");
@@ -67,6 +69,8 @@ public final class ItemRepo {
     private static volatile State state = State.IDLE;
     private static volatile String status = "";
     private static volatile long failedAt;
+    private static volatile long checkedAt;
+    private static volatile boolean rechecking;
     private static volatile Data data = Data.EMPTY;
 
     record Data(List<RepoItem> items, Map<String, RepoItem> byId,
@@ -103,25 +107,63 @@ public final class ItemRepo {
 
     public static void ensureLoaded() {
         State now = state;
-        if (now == State.IDLE || (now == State.FAILED && System.currentTimeMillis() - failedAt > RETRY_MS)) {
-            start(false);
+        long time = System.currentTimeMillis();
+        if (now == State.IDLE || (now == State.FAILED && time - failedAt > RETRY_MS)) {
+            start();
+        } else if (now == State.READY && !rechecking && time - checkedAt > RECHECK_MS) {
+            recheck();
         }
     }
 
-    public static synchronized void refresh() {
-        start(true);
-    }
-
-    private static synchronized void start(boolean force) {
+    private static synchronized void start() {
         if (state == State.LOADING) {
             return;
         }
         state = State.LOADING;
         status = "Checking for item updates...";
-        WORKER.execute(() -> load(force));
+        WORKER.execute(ItemRepo::load);
     }
 
-    private static void load(boolean force) {
+    private static synchronized void recheck() {
+        if (rechecking || state != State.READY) {
+            return;
+        }
+        rechecking = true;
+        checkedAt = System.currentTimeMillis();
+        WORKER.execute(() -> {
+            try {
+                update();
+            } catch (Throwable e) {
+                QZA.LOGGER.warn("Could not update the item list", e);
+            } finally {
+                rechecking = false;
+            }
+        });
+    }
+
+    private static void update() throws Exception {
+        Path dir = ConfigManager.qzaDir().resolve("itemlist");
+        Path zip = dir.resolve("repo.zip");
+        Path commitFile = dir.resolve("commit.txt");
+        String have = Files.exists(commitFile) ? Files.readString(commitFile).trim() : "";
+        String latest = latestCommit();
+        if (latest.equals(have) && Files.exists(zip)) {
+            return;
+        }
+        Path fresh = dir.resolve("update.zip");
+        try {
+            download(String.format(ARCHIVE_URL, latest), fresh);
+            Data parsed = parse(fresh);
+            Files.move(fresh, zip, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            Files.writeString(commitFile, latest);
+            data = parsed;
+            QZA.LOGGER.info("Item list updated to {} items", parsed.items().size());
+        } finally {
+            Files.deleteIfExists(fresh);
+        }
+    }
+
+    private static void load() {
         try {
             Path dir = ConfigManager.qzaDir().resolve("itemlist");
             Files.createDirectories(dir);
@@ -130,13 +172,14 @@ public final class ItemRepo {
             String have = Files.exists(commitFile) ? Files.readString(commitFile).trim() : "";
 
             String latest = null;
+            checkedAt = System.currentTimeMillis();
             try {
                 latest = latestCommit();
             } catch (Exception e) {
                 QZA.LOGGER.warn("Could not check the item list for updates: {}", e.toString());
             }
 
-            if (latest != null && (force || !latest.equals(have) || !Files.exists(zip))) {
+            if (latest != null && (!latest.equals(have) || !Files.exists(zip))) {
                 status = "Downloading items...";
                 try {
                     download(String.format(ARCHIVE_URL, latest), zip);
@@ -274,7 +317,9 @@ public final class ItemRepo {
                 items.add(item);
             }
         }
-        items.sort(Comparator.comparing((RepoItem item) -> sortName(item))
+        items.sort(Comparator.comparing(ItemRepo::isBook)
+                .thenComparing(ItemRepo::sortName)
+                .thenComparingInt(ItemRepo::bookLevel)
                 .thenComparing(item -> item.id));
 
         Map<String, List<Recipe>> recipes = new HashMap<>();
@@ -308,8 +353,28 @@ public final class ItemRepo {
     }
 
     private static String sortName(RepoItem item) {
+        if (isBook(item)) {
+            int split = item.id.indexOf(';');
+            return split < 0 ? "" : item.id.substring(0, split);
+        }
         String name = ItemSearch.clean(item.plainName);
         return name.startsWith("lvl ") ? name.replaceFirst("^lvl [^ ]+ ", "") : name;
+    }
+
+    private static boolean isBook(RepoItem item) {
+        return BOOK.equals(item.itemId) && item.plainName.contains("Book");
+    }
+
+    private static int bookLevel(RepoItem item) {
+        int split = item.id.indexOf(';');
+        if (!isBook(item) || split < 0) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(item.id.substring(split + 1));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private static RepoItem item(JsonObject json, String file, JsonObject petNumbers, JsonObject pets) {

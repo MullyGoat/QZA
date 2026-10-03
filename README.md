@@ -98,7 +98,8 @@ Settings, the shitter list, your saved DMs and your music live in `config/qza/`,
 updating the mod never touches them.
 
 The item list downloads the public [NotEnoughUpdates item repo](https://github.com/NotEnoughUpdates/NotEnoughUpdates-REPO)
-(about 22 MB) and keeps it in `config/qza/itemlist/`. It only downloads again when the repo changes.
+(about 22 MB) and keeps it in `config/qza/itemlist/`. It checks for new items when the game starts and every
+30 minutes after, and only downloads again when the repo changes.
 
 ## Music formats
 

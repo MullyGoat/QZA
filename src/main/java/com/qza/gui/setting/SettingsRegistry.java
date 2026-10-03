@@ -663,11 +663,14 @@ public final class SettingsRegistry {
                     }
                 }));
 
-        settings.add(new ActionSetting(misc, "Item List", "Update Items",
-                Component.literal("Downloads the latest items and recipes again")
+        settings.add(new ToggleSetting(misc, "Item List", "Show in Inventory",
+                Component.literal("Shows the item list in your normal inventory too, not just in menus")
                         .withStyle(ChatFormatting.GRAY),
-                () -> ItemRepo.state() == ItemRepo.State.LOADING ? "Updating..." : "Update",
-                ItemRepo::refresh)
+                () -> cfg.itemListInventory,
+                v -> {
+                    cfg.itemListInventory = v;
+                    ConfigManager.save();
+                })
                 .visibleWhen(() -> cfg.itemListEnabled));
 
         settings.add(new SliderSetting(misc, "Interface", "GUI Scale",

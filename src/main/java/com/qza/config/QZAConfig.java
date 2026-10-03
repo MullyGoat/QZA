@@ -131,4 +131,6 @@ public class QZAConfig {
     public boolean itemListEnabled = true;
 
     public boolean itemListShown = true;
+
+    public boolean itemListInventory = true;
 }
