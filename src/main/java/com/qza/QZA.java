@@ -9,6 +9,7 @@ import com.qza.config.ConfigManager;
 import com.qza.discord.PartyFullAlert;
 import com.qza.dungeon.StarredMobs;
 import com.qza.dungeon.WitherKey;
+import com.qza.itemlist.ItemList;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationHud;
@@ -55,6 +56,7 @@ public class QZA implements ClientModInitializer {
         WaypointRenderer.init();
         StarredMobs.init();
         WaypointEditor.init();
+        ItemList.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
                 new NotificationHud());

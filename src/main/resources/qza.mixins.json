@@ -10,7 +10,9 @@
     "ChatCaptureMixin",
     "ChatHideMixin",
     "ChatKeyMixin",
+    "ContainerScreenAccessor",
     "EntityDataMixin",
+    "ItemListRenderMixin",
     "TooltipHighlightMixin"
   ],
   "injectors": {

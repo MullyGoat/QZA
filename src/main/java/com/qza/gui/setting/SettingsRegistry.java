@@ -10,6 +10,7 @@ import com.qza.config.QZAConfig;
 import com.qza.discord.DiscordAlert;
 import com.qza.dungeon.WitherKey;
 import com.qza.gui.MusicNamesScreen;
+import com.qza.itemlist.ItemRepo;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.WaypointScreen;
@@ -649,6 +650,25 @@ public final class SettingsRegistry {
         }
 
         String misc = "Miscellaneous";
+
+        settings.add(new ToggleSetting(misc, "Item List", "Item List",
+                Component.literal("Shows every SkyBlock item on the right of your inventory. Click an item to see its recipe, right-click to see its uses")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemListEnabled,
+                v -> {
+                    cfg.itemListEnabled = v;
+                    ConfigManager.save();
+                    if (v) {
+                        ItemRepo.ensureLoaded();
+                    }
+                }));
+
+        settings.add(new ActionSetting(misc, "Item List", "Update Items",
+                Component.literal("Downloads the latest items and recipes again")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> ItemRepo.state() == ItemRepo.State.LOADING ? "Updating..." : "Update",
+                ItemRepo::refresh)
+                .visibleWhen(() -> cfg.itemListEnabled));
 
         settings.add(new SliderSetting(misc, "Interface", "GUI Scale",
                 Component.literal("Size of GUI Scale (")

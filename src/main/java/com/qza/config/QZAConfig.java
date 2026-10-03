@@ -127,4 +127,8 @@ public class QZAConfig {
     public String discordAlertToken = "";
 
     public double guiScale = 100.0;
+
+    public boolean itemListEnabled = true;
+
+    public boolean itemListShown = true;
 }
