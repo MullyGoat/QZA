@@ -414,7 +414,7 @@ public final class SettingsRegistry {
 
         boolean[] confirmClear = {false};
         settings.add(new ActionSetting(chat, "History", "Clear DMs",
-                Component.literal("Deletes every saved DM conversation. ")
+                Component.literal("Deletes every saved DM conversation on every account. ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Click twice to confirm.")
                                 .withStyle(ChatFormatting.RED)),

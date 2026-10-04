@@ -59,6 +59,7 @@ public class QZAChatScreen extends Screen {
     private static final int FACE = 16;
     private static final int SMALL_FACE = 8;
     private static final int INPUT_H = 18;
+    private static final int ACCOUNT_H = 26;
     private static final int SEND_W = 46;
     private static final int BUBBLE_PAD = 5;
     private static final int BUBBLE_GAP = 4;
@@ -89,6 +90,8 @@ public class QZAChatScreen extends Screen {
     private EditBox ignInput;
     private boolean adding;
     private boolean inviting;
+    private boolean accountsOpen;
+    private List<ChatHistory.Account> accountList = List.of();
 
     private CommandSuggestions commandSuggestions;
 
@@ -133,6 +136,7 @@ public class QZAChatScreen extends Screen {
 
     public QZAChatScreen() {
         super(Component.literal("QZA Chat"));
+        ChatHistory.view(null);
 
         String wanted = ChatFocus.resolve(rememberedTab);
         selectedTab = known(wanted) ? wanted : rememberedTab;
@@ -140,6 +144,7 @@ public class QZAChatScreen extends Screen {
 
     public QZAChatScreen(String tab, String text) {
         super(Component.literal("QZA Chat"));
+        ChatHistory.view(null);
 
         if (known(tab)) {
             selectedTab = tab;
@@ -188,8 +193,8 @@ public class QZAChatScreen extends Screen {
                 Component.empty());
         input.setBordered(false);
         input.setMaxLength(240);
-        input.setHint(Component.literal("Message").withStyle(ChatFormatting.DARK_GRAY));
         addRenderableWidget(input);
+        refreshHint();
 
         ignInput = new EditBox(this.font, railX + 5, panelY + 24, RAIL_W - 41, 12,
                 Component.empty());
@@ -232,7 +237,7 @@ public class QZAChatScreen extends Screen {
         railX = panelX + 10;
         railY = panelY + HEADER_H;
         int railBottom = panelY + panelH - 10;
-        railH = Math.max(40, railBottom - railY);
+        railH = Math.max(40, railBottom - ACCOUNT_H - 4 - railY);
 
         threadX = dm ? panelX + RAIL_W + 28 : panelX + 12;
         int threadRight = panelX + panelW - 12;
@@ -287,8 +292,10 @@ public class QZAChatScreen extends Screen {
         selectedTab = tab;
         rememberedTab = tab;
         menuFor = null;
+        accountsOpen = false;
         inviting = false;
         setAdding(false);
+        refreshHint();
         refreshSuggestions();
         layout();
         repositionInput();
@@ -364,7 +371,26 @@ public class QZAChatScreen extends Screen {
     }
 
     private String builtKey() {
-        return selectedTab + "/" + (isDm() ? String.valueOf(selected) : "");
+        if (!isDm()) {
+            return selectedTab + "/";
+        }
+        String view = ChatHistory.viewingOther()
+                ? ChatHistory.shownName() + "#" + ChatHistory.revision(selected) : "";
+        return selectedTab + "/" + selected + "/" + view;
+    }
+
+    private static boolean readOnly() {
+        return isDm() && ChatHistory.viewingOther();
+    }
+
+    private void refreshHint() {
+        if (input == null) {
+            return;
+        }
+        String hint = readOnly()
+                ? "Viewing " + ChatHistory.shownName() + "'s DMs - switch back to reply"
+                : "Message";
+        input.setHint(Component.literal(hint).withStyle(ChatFormatting.DARK_GRAY));
     }
 
     private int currentRevision() {
@@ -517,6 +543,7 @@ public class QZAChatScreen extends Screen {
         if (isDm()) {
             drawAdd(graphics, mx, my);
             drawContacts(graphics, mx, my);
+            drawAccount(graphics, mx, my);
         }
         drawThread(graphics);
         drawInvite(graphics, mx, my);
@@ -526,6 +553,7 @@ public class QZAChatScreen extends Screen {
 
         drawHoverText(graphics);
         drawMenu(graphics, mx, my);
+        drawAccountMenu(graphics, mx, my);
 
         if (commandSuggestions != null && suggestionsAllowed()) {
             int shift = suggestionShiftY();
@@ -580,6 +608,9 @@ public class QZAChatScreen extends Screen {
     }
 
     private void drawAdd(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (ChatHistory.viewingOther()) {
+            return;
+        }
         if (!adding) {
             int[] r = addRect();
             boolean hovered = inside(mouseX, mouseY, r);
@@ -779,7 +810,7 @@ public class QZAChatScreen extends Screen {
             graphics.text(this.font, trim(conversation.preview(), room + 20), nameX, y + 15,
                     TEXT_FAINT);
 
-            if (hovered) {
+            if (hovered && !ChatHistory.viewingOther()) {
                 int[] kebab = kebabRect(y);
                 drawKebab(graphics, kebab, inside(mouseX, mouseY, kebab));
             } else {
@@ -808,6 +839,118 @@ public class QZAChatScreen extends Screen {
             int barY = railY + (int) ((railScroll / (total - railH)) * (railH - barH));
             graphics.fill(trackX, barY, trackX + 3, barY + barH, 0x99FFFFFF);
         }
+    }
+
+    private int[] accountRect() {
+        return new int[]{railX - 2, panelY + panelH - 10 - ACCOUNT_H, RAIL_W + 2, ACCOUNT_H};
+    }
+
+    private int accountRows() {
+        int room = (accountRect()[1] - 4) - railY;
+        return Math.max(1, Math.min(accountList.size(), room / CONTACT_H));
+    }
+
+    private int[] accountMenuRect() {
+        int[] chip = accountRect();
+        int h = (accountRows() * CONTACT_H) + 2;
+        return new int[]{chip[0], chip[1] - h - 2, chip[2], h};
+    }
+
+    private void drawAccount(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        int[] r = accountRect();
+        boolean hovered = inside(mouseX, mouseY, r);
+        boolean other = ChatHistory.viewingOther();
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3],
+                hovered || accountsOpen ? 0xAA3C5A70 : 0x66223140);
+        outline(graphics, r[0], r[1], r[2], r[3],
+                other ? PINK : (hovered || accountsOpen ? 0xFFAFD4EC : 0xFF6A8CA8));
+
+        String name = ChatHistory.shownName();
+        if (!name.isEmpty()) {
+            PlayerFaceExtractor.extractRenderState(graphics, PlayerFaces.skinFor(name),
+                    r[0] + 5, r[1] + 5, FACE);
+        }
+        int textX = r[0] + 5 + FACE + 6;
+        int room = (r[0] + r[2]) - textX - 16;
+        graphics.text(this.font, trim(name.isEmpty() ? "Unknown" : name, room), textX, r[1] + 4, TEXT);
+        graphics.text(this.font, trim(other ? "Viewing - read only" : "Your DMs", room),
+                textX, r[1] + 15, other ? PINK : TEXT_FAINT);
+
+        drawChevron(graphics, r[0] + r[2] - 13, r[1] + 11, !accountsOpen,
+                hovered || accountsOpen ? TEXT : 0xFFCCCCCC);
+    }
+
+    private static void drawChevron(GuiGraphicsExtractor graphics, int x, int y, boolean up, int colour) {
+        for (int i = 0; i < 4; i++) {
+            int rowY = up ? y + 3 - i : y + i;
+            graphics.fill(x + i, rowY, x + i + 1, rowY + 1, colour);
+            graphics.fill(x + 6 - i, rowY, x + 7 - i, rowY + 1, colour);
+        }
+    }
+
+    private void drawAccountMenu(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (!accountsOpen || !isDm()) {
+            return;
+        }
+        int[] menu = accountMenuRect();
+        graphics.fill(menu[0], menu[1], menu[0] + menu[2], menu[1] + menu[3], 0xF00E1218);
+        outline(graphics, menu[0], menu[1], menu[2], menu[3], PINK);
+
+        String shown = ChatHistory.shownName();
+        int rows = accountRows();
+        for (int i = 0; i < rows; i++) {
+            ChatHistory.Account account = accountList.get(i);
+            int y = menu[1] + 1 + (i * CONTACT_H);
+            boolean hovered = mouseX >= menu[0] && mouseX <= menu[0] + menu[2]
+                    && mouseY >= y && mouseY < y + CONTACT_H;
+            boolean active = account.name().equalsIgnoreCase(shown);
+
+            if (active) {
+                graphics.fill(menu[0] + 1, y, menu[0] + menu[2] - 1, y + CONTACT_H - 1, 0x66000000);
+                graphics.fill(menu[0] + 1, y, menu[0] + 3, y + CONTACT_H - 1, PINK);
+            } else if (hovered) {
+                graphics.fill(menu[0] + 1, y, menu[0] + menu[2] - 1, y + CONTACT_H - 1, 0x663C5A70);
+            }
+            if (i > 0) {
+                graphics.fill(menu[0] + 4, y, menu[0] + menu[2] - 4, y + 1, 0x22FFFFFF);
+            }
+
+            PlayerFaceExtractor.extractRenderState(graphics, PlayerFaces.skinFor(account.name()),
+                    menu[0] + 7, y + 5, FACE);
+            int textX = menu[0] + 7 + FACE + 6;
+            int room = (menu[0] + menu[2]) - textX - 4;
+            graphics.text(this.font, trim(account.name(), room), textX, y + 4, active ? PINK : TEXT);
+            String detail = account.current()
+                    ? "Current account"
+                    : account.chats() + (account.chats() == 1 ? " chat" : " chats") + " - view only";
+            graphics.text(this.font, trim(detail, room), textX, y + 15,
+                    account.current() ? 0xFF7FBF86 : TEXT_FAINT);
+        }
+    }
+
+    private void toggleAccounts() {
+        if (accountsOpen) {
+            accountsOpen = false;
+            return;
+        }
+        accountList = ChatHistory.accounts();
+        accountsOpen = !accountList.isEmpty();
+        menuFor = null;
+    }
+
+    private void switchAccount(ChatHistory.Account account) {
+        ChatHistory.view(account);
+        menuFor = null;
+        setAdding(false);
+        List<ChatConversation> all = ChatHistory.conversations();
+        selected = all.isEmpty() ? null : all.get(0).name;
+        if (selected != null) {
+            ChatHistory.markRead(selected);
+        }
+        railScroll = 0;
+        refreshHint();
+        builtFor = null;
+        rebuildBubbles(true);
     }
 
     private void drawThread(GuiGraphicsExtractor graphics) {
@@ -896,7 +1039,9 @@ public class QZAChatScreen extends Screen {
         outline(graphics, threadX, inputY, boxW, INPUT_H, BOX_BORDER);
 
         int[] send = sendRect();
-        boolean ready = !input.getValue().trim().isEmpty() && (!isDm() || current() != null);
+        String typed = input.getValue().trim();
+        boolean ready = !typed.isEmpty() && (!isDm() || current() != null)
+                && (!readOnly() || typed.startsWith("/"));
         boolean hovered = mouseX >= send[0] && mouseX <= send[0] + send[2]
                 && mouseY >= send[1] && mouseY <= send[1] + send[3];
 
@@ -999,7 +1144,7 @@ public class QZAChatScreen extends Screen {
             ChatUtil.sendTyped(text);
         } else if (isDm()) {
             ChatConversation conversation = current();
-            if (conversation == null) {
+            if (conversation == null || ChatHistory.viewingOther()) {
                 return;
             }
             ChatHistory.send(conversation.name, text);
@@ -1114,6 +1259,21 @@ public class QZAChatScreen extends Screen {
             }
         }
 
+        if (accountsOpen) {
+            int[] menu = accountMenuRect();
+            accountsOpen = false;
+            if (inside(mouseX, mouseY, menu)) {
+                int index = (int) ((mouseY - (menu[1] + 1)) / CONTACT_H);
+                if (local.button() == 0 && index >= 0 && index < accountRows()) {
+                    switchAccount(accountList.get(index));
+                }
+                return true;
+            }
+            if (inside(mouseX, mouseY, accountRect())) {
+                return true;
+            }
+        }
+
         if (menuFor != null) {
             boolean inMenu = mouseX >= menuX && mouseX <= menuX + MENU_W
                     && mouseY >= menuY && mouseY <= menuY + menuHeight();
@@ -1144,7 +1304,7 @@ public class QZAChatScreen extends Screen {
                 return true;
             }
             ChatConversation hit = contactAt(mouseX, mouseY);
-            if (hit != null) {
+            if (hit != null && !ChatHistory.viewingOther()) {
                 openMenu(hit.name, mouseX, mouseY);
                 return true;
             }
@@ -1189,12 +1349,16 @@ public class QZAChatScreen extends Screen {
         }
 
         if (isDm()) {
+            if (inside(mouseX, mouseY, accountRect())) {
+                toggleAccounts();
+                return true;
+            }
             if (adding) {
                 if (inside(mouseX, mouseY, goRect())) {
                     confirmAdd();
                     return true;
                 }
-            } else if (inside(mouseX, mouseY, addRect())) {
+            } else if (!ChatHistory.viewingOther() && inside(mouseX, mouseY, addRect())) {
                 setAdding(true);
                 return true;
             }
@@ -1208,7 +1372,8 @@ public class QZAChatScreen extends Screen {
         if (isDm() && mouseX >= railX - 2 && mouseX <= railX + RAIL_W
                 && mouseY >= railY && mouseY <= railY + railH) {
             ChatConversation hit = contactAt(mouseX, mouseY);
-            if (hit != null && inside(mouseX, mouseY, kebabRect(contactRowY(hit)))) {
+            if (hit != null && !ChatHistory.viewingOther()
+                    && inside(mouseX, mouseY, kebabRect(contactRowY(hit)))) {
                 openMenu(hit.name, mouseX, mouseY);
                 return true;
             }
@@ -1465,6 +1630,7 @@ public class QZAChatScreen extends Screen {
         }
 
         menuFor = null;
+        accountsOpen = false;
 
         float s = scale();
         double mx = (mouseX - offsetX()) / s;
@@ -1516,6 +1682,10 @@ public class QZAChatScreen extends Screen {
             return true;
         }
         if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            if (accountsOpen) {
+                accountsOpen = false;
+                return true;
+            }
             if (menuFor != null) {
                 menuFor = null;
                 return true;
