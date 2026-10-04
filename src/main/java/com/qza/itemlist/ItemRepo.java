@@ -46,7 +46,6 @@ public final class ItemRepo {
     private static final String LATEST_ARCHIVE_URL =
             "https://github.com/NotEnoughUpdates/NotEnoughUpdates-REPO/archive/refs/heads/master.zip";
     private static final long RETRY_MS = 60_000L;
-    private static final long RECHECK_MS = 30 * 60_000L;
     private static final String BOOK = "minecraft:enchanted_book";
 
     private static final Pattern MOB = Pattern.compile(".*(_MONSTER|_NPC|_ANIMAL|_MINIBOSS|_BOSS|_SC)$");
@@ -69,8 +68,6 @@ public final class ItemRepo {
     private static volatile State state = State.IDLE;
     private static volatile String status = "";
     private static volatile long failedAt;
-    private static volatile long checkedAt;
-    private static volatile boolean rechecking;
     private static volatile Data data = Data.EMPTY;
 
     record Data(List<RepoItem> items, Map<String, RepoItem> byId,
@@ -107,11 +104,8 @@ public final class ItemRepo {
 
     public static void ensureLoaded() {
         State now = state;
-        long time = System.currentTimeMillis();
-        if (now == State.IDLE || (now == State.FAILED && time - failedAt > RETRY_MS)) {
+        if (now == State.IDLE || (now == State.FAILED && System.currentTimeMillis() - failedAt > RETRY_MS)) {
             start();
-        } else if (now == State.READY && !rechecking && time - checkedAt > RECHECK_MS) {
-            recheck();
         }
     }
 
@@ -120,47 +114,8 @@ public final class ItemRepo {
             return;
         }
         state = State.LOADING;
-        status = "Checking for item updates...";
+        status = "Loading items...";
         WORKER.execute(ItemRepo::load);
-    }
-
-    private static synchronized void recheck() {
-        if (rechecking || state != State.READY) {
-            return;
-        }
-        rechecking = true;
-        checkedAt = System.currentTimeMillis();
-        WORKER.execute(() -> {
-            try {
-                update();
-            } catch (Throwable e) {
-                QZA.LOGGER.warn("Could not update the item list", e);
-            } finally {
-                rechecking = false;
-            }
-        });
-    }
-
-    private static void update() throws Exception {
-        Path dir = ConfigManager.qzaDir().resolve("itemlist");
-        Path zip = dir.resolve("repo.zip");
-        Path commitFile = dir.resolve("commit.txt");
-        String have = Files.exists(commitFile) ? Files.readString(commitFile).trim() : "";
-        String latest = latestCommit();
-        if (latest.equals(have) && Files.exists(zip)) {
-            return;
-        }
-        Path fresh = dir.resolve("update.zip");
-        try {
-            download(String.format(ARCHIVE_URL, latest), fresh);
-            Data parsed = parse(fresh);
-            Files.move(fresh, zip, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            Files.writeString(commitFile, latest);
-            data = parsed;
-            QZA.LOGGER.info("Item list updated to {} items", parsed.items().size());
-        } finally {
-            Files.deleteIfExists(fresh);
-        }
     }
 
     private static void load() {
@@ -171,53 +126,62 @@ public final class ItemRepo {
             Path commitFile = dir.resolve("commit.txt");
             String have = Files.exists(commitFile) ? Files.readString(commitFile).trim() : "";
 
+            if (Files.exists(zip)) {
+                try {
+                    ready(parse(zip));
+                } catch (Exception e) {
+                    QZA.LOGGER.warn("Could not read the saved item list: {}", e.toString());
+                    Files.deleteIfExists(zip);
+                    Files.deleteIfExists(commitFile);
+                    have = "";
+                }
+            }
+
             String latest = null;
-            checkedAt = System.currentTimeMillis();
             try {
                 latest = latestCommit();
             } catch (Exception e) {
                 QZA.LOGGER.warn("Could not check the item list for updates: {}", e.toString());
             }
-
-            if (latest != null && (!latest.equals(have) || !Files.exists(zip))) {
-                status = "Downloading items...";
-                try {
-                    download(String.format(ARCHIVE_URL, latest), zip);
-                    Files.writeString(commitFile, latest);
-                } catch (Exception e) {
-                    QZA.LOGGER.warn("Could not download the item list: {}", e.toString());
-                }
-            } else if (latest == null && !Files.exists(zip)) {
-                status = "Downloading items...";
-                try {
-                    download(LATEST_ARCHIVE_URL, zip);
-                    Files.deleteIfExists(commitFile);
-                } catch (Exception e) {
-                    QZA.LOGGER.warn("Could not download the item list: {}", e.toString());
-                }
-            }
-            if (!Files.exists(zip)) {
-                fail("Could not download the item list");
+            if (state == State.READY && (latest == null || latest.equals(have))) {
                 return;
             }
 
-            status = "Loading items...";
-            long started = System.currentTimeMillis();
-            try {
-                data = parse(zip);
-            } catch (Exception e) {
-                Files.deleteIfExists(zip);
-                Files.deleteIfExists(commitFile);
-                throw e;
+            if (state != State.READY) {
+                status = "Downloading items...";
             }
-            state = State.READY;
-            status = "";
-            QZA.LOGGER.info("Item list loaded {} items in {} ms", data.items().size(),
-                    System.currentTimeMillis() - started);
+            Path fresh = dir.resolve("update.zip");
+            try {
+                download(latest == null ? LATEST_ARCHIVE_URL : String.format(ARCHIVE_URL, latest), fresh);
+                if (state != State.READY) {
+                    status = "Loading items...";
+                }
+                Data parsed = parse(fresh);
+                Files.move(fresh, zip, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                if (latest == null) {
+                    Files.deleteIfExists(commitFile);
+                } else {
+                    Files.writeString(commitFile, latest);
+                }
+                ready(parsed);
+            } finally {
+                Files.deleteIfExists(fresh);
+            }
         } catch (Throwable e) {
-            QZA.LOGGER.warn("Could not load the item list", e);
-            fail("Could not load the item list");
+            if (state == State.READY) {
+                QZA.LOGGER.warn("Could not download new items", e);
+            } else {
+                QZA.LOGGER.warn("Could not load the item list", e);
+                fail("Could not load the item list");
+            }
         }
+    }
+
+    private static void ready(Data parsed) {
+        data = parsed;
+        state = State.READY;
+        status = "";
+        QZA.LOGGER.info("Item list loaded {} items", parsed.items().size());
     }
 
     private static void fail(String message) {
