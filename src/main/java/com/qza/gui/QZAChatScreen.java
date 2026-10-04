@@ -872,9 +872,8 @@ public class QZAChatScreen extends Screen {
         }
         int textX = r[0] + 5 + FACE + 6;
         int room = (r[0] + r[2]) - textX - 16;
-        graphics.text(this.font, trim(name.isEmpty() ? "Unknown" : name, room), textX, r[1] + 4, TEXT);
-        graphics.text(this.font, trim(other ? "Viewing - read only" : "Your DMs", room),
-                textX, r[1] + 15, other ? PINK : TEXT_FAINT);
+        graphics.text(this.font, trim(name.isEmpty() ? "Unknown" : name, room), textX, r[1] + 9,
+                other ? PINK : TEXT);
 
         drawChevron(graphics, r[0] + r[2] - 13, r[1] + 11, !accountsOpen,
                 hovered || accountsOpen ? TEXT : 0xFFCCCCCC);
