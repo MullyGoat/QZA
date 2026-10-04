@@ -24,6 +24,7 @@ public final class WaypointList {
     public static final int MAX = 500;
 
     private static final List<Waypoint> waypoints = new ArrayList<>();
+    private static List<WaypointGroup> groups;
 
     private WaypointList() {
     }
@@ -34,6 +35,7 @@ public final class WaypointList {
 
     public static void load() {
         waypoints.clear();
+        groups = null;
 
         Path path = file();
         if (!Files.isRegularFile(path)) {
@@ -67,6 +69,7 @@ public final class WaypointList {
     }
 
     public static void save() {
+        groups = null;
         Path path = file();
         try {
             Files.createDirectories(path.getParent());
@@ -80,6 +83,26 @@ public final class WaypointList {
 
     public static List<Waypoint> all() {
         return List.copyOf(waypoints);
+    }
+
+    public static List<WaypointGroup> groups() {
+        if (groups == null) {
+            groups = WaypointGroup.of(waypoints);
+        }
+        return groups;
+    }
+
+    public static WaypointGroup groupOf(Waypoint waypoint) {
+        for (WaypointGroup group : groups()) {
+            if (group.members().contains(waypoint)) {
+                return group;
+            }
+        }
+        return null;
+    }
+
+    public static Waypoint neighbour(int x, int y, int z) {
+        return WaypointGroup.neighbour(waypoints, x, y, z);
     }
 
     public static int size() {
@@ -117,6 +140,28 @@ public final class WaypointList {
         return waypoint;
     }
 
+    public static boolean addAll(List<Waypoint> added) {
+        int fresh = 0;
+        for (Waypoint waypoint : added) {
+            if (atBlock(waypoint.x, waypoint.y, waypoint.z) == null) {
+                fresh++;
+            }
+        }
+        if (waypoints.size() + fresh > MAX) {
+            return false;
+        }
+        for (Waypoint waypoint : added) {
+            Waypoint existing = atBlock(waypoint.x, waypoint.y, waypoint.z);
+            if (existing != null) {
+                waypoints.set(waypoints.indexOf(existing), waypoint);
+            } else {
+                waypoints.add(waypoint);
+            }
+        }
+        save();
+        return true;
+    }
+
     public static boolean remove(Waypoint waypoint) {
         boolean gone = waypoints.remove(waypoint);
         if (gone) {
@@ -133,6 +178,7 @@ public final class WaypointList {
     public static int clear() {
         int had = waypoints.size();
         waypoints.clear();
+        groups = null;
         save();
         return had;
     }

@@ -95,16 +95,16 @@ public final class WaypointRenderer {
         }
         Vec3 camera = cameraState.pos;
 
-        for (Waypoint waypoint : WaypointList.all()) {
-            if (waypoint.enabled) {
-                label(poseStack, collector, cameraState, camera, waypoint);
+        for (WaypointGroup group : WaypointList.groups()) {
+            if (group.visible()) {
+                label(poseStack, collector, cameraState, camera, group);
             }
         }
     }
 
     private static void label(PoseStack poseStack, SubmitNodeCollector collector,
-                              CameraRenderState cameraState, Vec3 camera, Waypoint waypoint) {
-        String name = waypoint.label();
+                              CameraRenderState cameraState, Vec3 camera, WaypointGroup group) {
+        String name = group.label();
         if (name == null || name.isBlank()) {
             return;
         }
@@ -114,9 +114,9 @@ public final class WaypointRenderer {
             return;
         }
 
-        double x = (waypoint.minX() + waypoint.maxX()) / 2.0;
-        double y = waypoint.maxY() + 0.35;
-        double z = (waypoint.minZ() + waypoint.maxZ()) / 2.0;
+        double x = (group.minX() + group.maxX()) / 2.0;
+        double y = group.maxY() + 0.35;
+        double z = (group.minZ() + group.maxZ()) / 2.0;
 
         Matrix4f matrix = new Matrix4f()
                 .translate((float) (x - camera.x), (float) (y - camera.y),
@@ -125,7 +125,7 @@ public final class WaypointRenderer {
                 .scale(TEXT_SCALE, -TEXT_SCALE, TEXT_SCALE);
 
         Font.PreparedText prepared = font.prepareText(name,
-                -font.width(name) / 2.0f, 0.0f, waypoint.argb(), false, BACKDROP);
+                -font.width(name) / 2.0f, 0.0f, group.argb(), false, BACKDROP);
 
         prepared.visit(new Font.GlyphVisitor() {
             @Override

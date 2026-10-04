@@ -19,12 +19,16 @@ import com.qza.util.ChatUtil;
 import com.qza.waypoint.Waypoint;
 import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
+import com.qza.waypoint.WaypointGroup;
 import com.qza.waypoint.WaypointList;
 import com.qza.waypoint.WaypointSize;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
@@ -212,7 +216,9 @@ public final class QZACommand {
             return 0;
         }
 
-        WaypointSize.Size parsed = WaypointSize.parse(size);
+        int dot = size.indexOf('.');
+        String mask = dot < 0 ? null : size.substring(dot + 1);
+        WaypointSize.Size parsed = WaypointSize.parse(dot < 0 ? size : size.substring(0, dot));
         if (parsed == null) {
             ChatUtil.error("\"" + size + "\" is not a size. Use 3x3 for a flat patch, "
                     + "3x3x3 for a cube, up to " + WaypointSize.MAX + " a side.");
@@ -222,6 +228,10 @@ public final class QZACommand {
         int x = IntegerArgumentType.getInteger(ctx, "x");
         int y = IntegerArgumentType.getInteger(ctx, "y");
         int z = IntegerArgumentType.getInteger(ctx, "z");
+
+        if (mask != null) {
+            return addShape(x, y, z, WaypointColour.tidy(colour), parsed, mask, name);
+        }
 
         Waypoint added = WaypointList.add(new Waypoint(x, y, z,
                 WaypointColour.tidy(colour), parsed.width(), parsed.height(), parsed.depth(),
@@ -235,6 +245,37 @@ public final class QZACommand {
                 .append(Component.literal(added.label()).withStyle(ChatFormatting.GREEN))
                 .append(Component.literal(" at " + x + " " + y + " " + z + ", "
                         + added.sizeText() + " in " + added.colour + ".")
+                        .withStyle(ChatFormatting.GRAY)));
+
+        if (!ConfigManager.get().waypointsEnabled) {
+            ChatUtil.info("Waypoints are switched off, so it will not show yet. "
+                    + "Turn them on under F7 / M7 in /qza.");
+        }
+        return 1;
+    }
+
+    private static int addShape(int x, int y, int z, String colour, WaypointSize.Size size,
+                                String mask, String name) {
+        List<int[]> blocks = WaypointGroup.shape(x, y, z, size, mask);
+        if (blocks == null || blocks.isEmpty()) {
+            ChatUtil.error("That waypoint shape is not valid. Copy the command again.");
+            return 0;
+        }
+
+        List<Waypoint> added = new ArrayList<>(blocks.size());
+        for (int[] block : blocks) {
+            added.add(new Waypoint(block[0], block[1], block[2], colour, 1, 1, 1, name));
+        }
+        if (!WaypointList.addAll(added)) {
+            ChatUtil.error("That would go past " + WaypointList.MAX + " waypoints, which is the limit.");
+            return 0;
+        }
+
+        WaypointGroup group = WaypointList.groupOf(added.get(0));
+        String label = group == null ? x + " " + y + " " + z : group.label();
+        ChatUtil.send(Component.literal("Waypoint ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(label).withStyle(ChatFormatting.GREEN))
+                .append(Component.literal(", " + blocks.size() + " blocks in " + colour + ".")
                         .withStyle(ChatFormatting.GRAY)));
 
         if (!ConfigManager.get().waypointsEnabled) {
@@ -259,17 +300,18 @@ public final class QZACommand {
             return;
         }
 
+        List<WaypointGroup> groups = WaypointList.groups();
         ChatUtil.raw(Component.literal("QZA")
                 .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD)
-                .append(Component.literal(" waypoints (" + WaypointList.size() + ")")
+                .append(Component.literal(" waypoints (" + groups.size() + ")")
                         .withStyle(ChatFormatting.WHITE)));
 
-        for (Waypoint waypoint : WaypointList.all()) {
-            ChatUtil.raw(Component.literal(" " + waypoint.label() + " ")
-                    .withStyle(style -> style.withColor(waypoint.argb() & 0xFFFFFF))
-                    .append(Component.literal(waypoint.x + " " + waypoint.y + " "
-                            + waypoint.z + "  " + waypoint.sizeText() + "  "
-                            + waypoint.colour).withStyle(ChatFormatting.GRAY)));
+        for (WaypointGroup group : groups) {
+            ChatUtil.raw(Component.literal(" " + group.label() + " ")
+                    .withStyle(style -> style.withColor(group.argb() & 0xFFFFFF))
+                    .append(Component.literal(group.coordsText() + "  " + group.sizeText() + "  "
+                            + group.colour() + (group.visible() ? "" : "  hidden"))
+                            .withStyle(ChatFormatting.GRAY)));
         }
     }
 

@@ -99,9 +99,15 @@ public final class WaypointEditor {
             return;
         }
 
-        String colour = "blue";
-        WaypointList.add(new Waypoint(pos.getX(), pos.getY(), pos.getZ(),
-                colour, 1, 1, 1, ""));
+        Waypoint next = WaypointList.neighbour(pos.getX(), pos.getY(), pos.getZ());
+        String colour = next == null ? "blue" : next.colour;
+        Waypoint added = WaypointList.add(new Waypoint(pos.getX(), pos.getY(), pos.getZ(),
+                colour, 1, 1, 1, next == null ? "" : next.name));
+        WaypointGroup group = added == null ? null : WaypointList.groupOf(added);
+        if (group != null && !group.single()) {
+            group.setVisible(true);
+            WaypointList.save();
+        }
         ChatUtil.send(Component.literal("Marked ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(pos.getX() + " " + pos.getY() + " " + pos.getZ())
                         .withStyle(ChatFormatting.GREEN))

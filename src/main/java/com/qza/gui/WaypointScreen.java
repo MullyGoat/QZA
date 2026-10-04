@@ -5,6 +5,7 @@ import com.qza.util.ChatUtil;
 import com.qza.waypoint.Waypoint;
 import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
+import com.qza.waypoint.WaypointGroup;
 import com.qza.waypoint.WaypointList;
 import com.qza.waypoint.WaypointSize;
 import net.minecraft.ChatFormatting;
@@ -26,6 +27,20 @@ public class WaypointScreen extends Screen {
     private static final int TEXT_DIM = 0xFFAAAAAA;
     private static final int TEXT_FAINT = 0xFF8A8A8A;
     private static final int PINK = 0xFFFF55FF;
+    private static final int GREEN = 0xFF7BE87B;
+    private static final int ICON = 0xFFE0E0E0;
+    private static final int ICON_OFF = 0xFF8A8A8A;
+    private static final int STRIKE = 0xFFFF6B6B;
+    private static final long COPIED_MS = 2500L;
+
+    private static final String[] EYE = {
+            "...#####...",
+            ".##.....##.",
+            "#...###...#",
+            "#...###...#",
+            "#...###...#",
+            ".##.....##.",
+            "...#####..."};
 
     private static final float TITLE_SCALE = 1.5f;
     private static final int HEADER_H = 52;
@@ -34,11 +49,16 @@ public class WaypointScreen extends Screen {
     private static final int FIELD_H = 16;
     private static final int SWATCH_W = 46;
     private static final int DEL_W = 16;
+    private static final int GAP = 4;
     private static final int COORD_W = 96;
     private static final int SIZE_W = 54;
 
     private final List<Row> rows = new ArrayList<>();
     private double scroll;
+    private Component tooltip;
+    private String copied;
+    private Waypoint copiedFrom;
+    private long copiedAt;
 
     private int panelX;
     private int panelY;
@@ -72,19 +92,21 @@ public class WaypointScreen extends Screen {
         layout();
         rows.clear();
 
-        for (Waypoint waypoint : WaypointList.all()) {
-            EditBox name = field(nameW - 10, 32, waypoint.label());
+        for (WaypointGroup group : WaypointList.groups()) {
+            EditBox name = field(nameW - 10, 32, group.label());
             name.setHint(Component.literal("Name").withStyle(ChatFormatting.DARK_GRAY));
-            name.setValue(waypoint.name);
+            name.setValue(group.name());
 
-            EditBox coords = field(COORD_W - 10, 20,
-                    waypoint.x + " " + waypoint.y + " " + waypoint.z);
-            coords.setValue(waypoint.x + " " + waypoint.y + " " + waypoint.z);
+            EditBox coords = field(COORD_W - 10, 20, group.coordsText());
+            coords.setValue(group.coordsText());
 
-            EditBox size = field(SIZE_W - 10, 11, waypoint.sizeText());
-            size.setValue(waypoint.sizeText());
+            EditBox size = null;
+            if (group.single()) {
+                size = field(SIZE_W - 10, 11, group.sizeText());
+                size.setValue(group.sizeText());
+            }
 
-            rows.add(new Row(waypoint, name, coords, size));
+            rows.add(new Row(group, name, coords, size));
         }
     }
 
@@ -110,7 +132,7 @@ public class WaypointScreen extends Screen {
         listY = panelY + HEADER_H;
         listH = Math.max(ROW_H, (panelY + panelH - 10) - listY);
 
-        int fixed = COORD_W + SIZE_W + SWATCH_W + DEL_W + 30;
+        int fixed = COORD_W + SIZE_W + SWATCH_W + (DEL_W * 3) + (GAP * 2) + 42;
         nameW = Math.max(70, listW - fixed);
     }
 
@@ -138,8 +160,16 @@ public class WaypointScreen extends Screen {
         return sizeX() + SIZE_W + 8;
     }
 
-    private int deleteX() {
+    private int eyeX() {
         return swatchX() + SWATCH_W + 8;
+    }
+
+    private int copyX() {
+        return eyeX() + DEL_W + GAP;
+    }
+
+    private int deleteX() {
+        return copyX() + DEL_W + GAP;
     }
 
     @Override
@@ -153,6 +183,7 @@ public class WaypointScreen extends Screen {
         int my = Math.round((mouseY - offsetY()) / s);
 
         positionFields();
+        tooltip = null;
 
         graphics.pose().pushMatrix();
         graphics.pose().translate(offsetX(), offsetY());
@@ -167,6 +198,10 @@ public class WaypointScreen extends Screen {
         super.extractRenderState(graphics, mx, my, delta);
 
         graphics.pose().popMatrix();
+
+        if (tooltip != null) {
+            graphics.setTooltipForNextFrame(this.font, tooltip, mouseX, mouseY);
+        }
     }
 
     private static void outline(GuiGraphicsExtractor graphics, int x, int y, int w, int h, int colour) {
@@ -193,8 +228,14 @@ public class WaypointScreen extends Screen {
         graphics.centeredText(this.font, on ? "Editing - click to stop" : "Manual Add",
                 add[0] + (add[2] / 2), add[1] + 4, on ? 0xFF7BE87B : TEXT);
 
-        graphics.text(this.font, WaypointList.size() + "/" + WaypointList.MAX,
-                listX, panelY + HEADER_H - 20, TEXT_FAINT);
+        if (copiedNow()) {
+            int room = manualRect()[0] - listX - 8;
+            graphics.text(this.font, this.font.plainSubstrByWidth("Copied " + copied, room),
+                    listX, panelY + HEADER_H - 20, GREEN);
+        } else {
+            graphics.text(this.font, WaypointList.size() + "/" + WaypointList.MAX,
+                    listX, panelY + HEADER_H - 20, TEXT_FAINT);
+        }
 
         graphics.fill(panelX + 8, panelY + HEADER_H - 6,
                 panelX + panelW - 8, panelY + HEADER_H - 5, DIVIDER);
@@ -218,14 +259,18 @@ public class WaypointScreen extends Screen {
 
             row.name.visible = shown;
             row.coords.visible = shown;
-            row.size.visible = shown;
+            if (row.size != null) {
+                row.size.visible = shown;
+            }
             if (!shown) {
                 continue;
             }
             row.name.setPosition(nameX() + 3, y + 3);
             row.name.setWidth(Math.max(20, nameW - 10));
             row.coords.setPosition(coordX() + 3, y + 3);
-            row.size.setPosition(sizeX() + 3, y + 3);
+            if (row.size != null) {
+                row.size.setPosition(sizeX() + 3, y + 3);
+            }
         }
     }
 
@@ -250,18 +295,47 @@ public class WaypointScreen extends Screen {
                 continue;
             }
 
+            WaypointGroup group = row.group;
             box(graphics, nameX(), y, nameW - 6);
             box(graphics, coordX(), y, COORD_W - 6);
             box(graphics, sizeX(), y, SIZE_W - 6);
+            if (row.size == null) {
+                String text = group.sizeText();
+                if (this.font.width(text) > SIZE_W - 12) {
+                    text = String.valueOf(group.members().size());
+                }
+                graphics.text(this.font, text, sizeX() + 3, y + 4, TEXT_DIM);
+            }
 
             int[] swatch = new int[]{swatchX(), y, SWATCH_W, FIELD_H};
             boolean overSwatch = inside(mx, my, swatch);
             graphics.fill(swatch[0], swatch[1], swatch[0] + swatch[2], swatch[1] + swatch[3],
-                    row.waypoint.argb());
+                    group.argb());
             outline(graphics, swatch[0], swatch[1], swatch[2], swatch[3],
                     overSwatch ? 0xFFFFFFFF : 0x80FFFFFF);
-            graphics.centeredText(this.font, row.waypoint.colour,
+            graphics.centeredText(this.font, group.colour(),
                     swatch[0] + (swatch[2] / 2), swatch[1] + 4, 0xFF101010);
+
+            if (!group.visible()) {
+                graphics.fill(nameX(), y, swatchX() + SWATCH_W, y + FIELD_H, 0x66000000);
+            }
+
+            int[] eye = new int[]{eyeX(), y, DEL_W, FIELD_H};
+            boolean overEye = inside(mx, my, eye);
+            button(graphics, eye, overEye, false);
+            drawEye(graphics, eye[0] + 2, eye[1] + 4, group.visible());
+            if (overEye) {
+                tooltip = Component.literal(group.visible() ? "Hide in game" : "Show in game");
+            }
+
+            int[] copy = new int[]{copyX(), y, DEL_W, FIELD_H};
+            boolean overCopy = inside(mx, my, copy);
+            boolean justCopied = copiedNow() && group.members().contains(copiedFrom);
+            button(graphics, copy, overCopy, justCopied);
+            drawCopy(graphics, copy[0] + 3, copy[1] + 2, justCopied ? GREEN : ICON);
+            if (overCopy) {
+                tooltip = Component.literal("Copy the command that makes this waypoint");
+            }
 
             int[] del = new int[]{deleteX(), y, DEL_W, FIELD_H};
             boolean overDel = inside(mx, my, del);
@@ -271,11 +345,41 @@ public class WaypointScreen extends Screen {
                     overDel ? 0xFFFF9A9A : 0xFFA85C5C);
             graphics.centeredText(this.font, "x", del[0] + (del[2] / 2), del[1] + 4,
                     overDel ? 0xFFFFFFFF : 0xFFCCCCCC);
+        }
+    }
 
-            if (!row.waypoint.enabled) {
-                graphics.fill(nameX(), y, deleteX() + DEL_W, y + FIELD_H, 0x66000000);
+    private static void button(GuiGraphicsExtractor graphics, int[] r, boolean hovered, boolean done) {
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hovered ? 0xAA3C5A70 : 0x66223140);
+        outline(graphics, r[0], r[1], r[2], r[3],
+                done ? GREEN : (hovered ? 0xFFAFD4EC : 0xFF6A8CA8));
+    }
+
+    private static void drawEye(GuiGraphicsExtractor graphics, int x, int y, boolean visible) {
+        int colour = visible ? ICON : ICON_OFF;
+        for (int row = 0; row < EYE.length; row++) {
+            for (int col = 0; col < EYE[row].length(); col++) {
+                if (EYE[row].charAt(col) == '#') {
+                    graphics.fill(x + col, y + row, x + col + 1, y + row + 1, colour);
+                }
             }
         }
+        if (!visible) {
+            for (int i = 0; i < 11; i++) {
+                graphics.fill(x + i, y - 2 + i, x + i + 1, y - 1 + i, STRIKE);
+            }
+        }
+    }
+
+    private static void drawCopy(GuiGraphicsExtractor graphics, int x, int y, int colour) {
+        graphics.fill(x, y, x + 7, y + 1, colour);
+        graphics.fill(x, y + 1, x + 1, y + 8, colour);
+        graphics.fill(x + 1, y + 7, x + 3, y + 8, colour);
+        graphics.fill(x + 6, y + 1, x + 7, y + 3, colour);
+        outline(graphics, x + 3, y + 3, 7, 8, colour);
+    }
+
+    private boolean copiedNow() {
+        return copied != null && System.currentTimeMillis() - copiedAt < COPIED_MS;
     }
 
     private void box(GuiGraphicsExtractor graphics, int x, int y, int w) {
@@ -316,13 +420,25 @@ public class WaypointScreen extends Screen {
                 }
 
                 if (inside(local.x(), local.y(), new int[]{swatchX(), y, SWATCH_W, FIELD_H})) {
-                    row.waypoint.colour = WaypointColour.next(row.waypoint.colour);
+                    row.group.setColour(WaypointColour.next(row.group.colour()));
                     WaypointList.save();
+                    return true;
+                }
+                if (inside(local.x(), local.y(), new int[]{eyeX(), y, DEL_W, FIELD_H})) {
+                    row.group.setVisible(!row.group.visible());
+                    WaypointList.save();
+                    return true;
+                }
+                if (inside(local.x(), local.y(), new int[]{copyX(), y, DEL_W, FIELD_H})) {
+                    apply();
+                    copy(row.group);
                     return true;
                 }
                 if (inside(local.x(), local.y(), new int[]{deleteX(), y, DEL_W, FIELD_H})) {
                     apply();
-                    WaypointList.remove(row.waypoint);
+                    for (Waypoint waypoint : row.group.members()) {
+                        WaypointList.remove(waypoint);
+                    }
                     rebuild();
                     return true;
                 }
@@ -358,6 +474,18 @@ public class WaypointScreen extends Screen {
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
+    private void copy(WaypointGroup group) {
+        String command = group.command();
+        if (command == null) {
+            ChatUtil.error("That waypoint is too big to fit in one command.");
+            return;
+        }
+        this.minecraft.keyboardHandler.setClipboard(command);
+        copied = command;
+        copiedFrom = group.first();
+        copiedAt = System.currentTimeMillis();
+    }
+
     private void rebuild() {
         this.rebuildWidgets();
     }
@@ -366,23 +494,25 @@ public class WaypointScreen extends Screen {
         boolean changed = false;
 
         for (Row row : rows) {
-            Waypoint waypoint = row.waypoint;
+            WaypointGroup group = row.group;
 
             String name = row.name.getValue().trim();
-            if (!name.equals(waypoint.name)) {
-                waypoint.name = name;
+            if (!name.equals(group.name())) {
+                group.setName(name);
                 changed = true;
             }
 
             int[] coords = coords(row.coords.getValue());
-            if (coords != null && (coords[0] != waypoint.x || coords[1] != waypoint.y
-                    || coords[2] != waypoint.z)) {
-                waypoint.x = coords[0];
-                waypoint.y = coords[1];
-                waypoint.z = coords[2];
+            int[] at = group.coords();
+            if (coords != null && (coords[0] != at[0] || coords[1] != at[1] || coords[2] != at[2])) {
+                group.moveTo(coords[0], coords[1], coords[2]);
                 changed = true;
             }
 
+            if (row.size == null) {
+                continue;
+            }
+            Waypoint waypoint = group.first();
             WaypointSize.Size size = WaypointSize.parse(row.size.getValue());
             if (size != null && (size.width() != waypoint.width
                     || size.height() != waypoint.height || size.depth() != waypoint.depth)) {
@@ -428,13 +558,13 @@ public class WaypointScreen extends Screen {
     }
 
     private static final class Row {
-        final Waypoint waypoint;
+        final WaypointGroup group;
         final EditBox name;
         final EditBox coords;
         final EditBox size;
 
-        Row(Waypoint waypoint, EditBox name, EditBox coords, EditBox size) {
-            this.waypoint = waypoint;
+        Row(WaypointGroup group, EditBox name, EditBox coords, EditBox size) {
+            this.group = group;
             this.name = name;
             this.coords = coords;
             this.size = size;
