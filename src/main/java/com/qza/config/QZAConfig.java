@@ -61,6 +61,10 @@ public class QZAConfig {
     public double splitTimersY = 0.32;
 
     public double splitTimersScale = 1.0;
+
+    public boolean lagTimerEnabled = false;
+
+    public String lagAnnounceMode = "party";
     public boolean pyTimerEnabled = false;
 
     public double pyTimerX = 0.5;

@@ -5,9 +5,13 @@ import com.qza.config.QZAConfig;
 import com.qza.notify.NotificationBox;
 import com.qza.timer.ServerTickClock;
 import com.qza.util.DungeonState;
+import com.qza.util.ChatUtil;
 import com.qza.util.IgnUtil;
+import com.qza.util.Scheduler;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +20,9 @@ import java.util.regex.Pattern;
 
 public final class SplitTimers {
     public static final int LINE_GAP = 1;
+
+    private static final int ANNOUNCE_DELAY_TICKS = 10;
+    private static final double SECONDS_PER_TICK = 0.05;
 
     private static final Pattern MORT = Pattern.compile(
             "^\\[NPC] Mort: (Here, I found this map when I first entered the dungeon\\."
@@ -66,7 +73,8 @@ public final class SplitTimers {
     }
 
     public static void onChatMessage(String raw) {
-        if (!ConfigManager.get().splitTimersEnabled || raw == null || runOver) {
+        QZAConfig cfg = ConfigManager.get();
+        if (!(cfg.splitTimersEnabled || cfg.lagTimerEnabled) || raw == null || runOver) {
             return;
         }
         String message = IgnUtil.stripCodes(raw).trim();
@@ -84,6 +92,9 @@ public final class SplitTimers {
                 }
             }
             runOver = true;
+            if (cfg.lagTimerEnabled && TOTAL_SPLIT.started() && TOTAL_SPLIT.ticks() > 0L) {
+                announceLag((TOTAL_SPLIT.millis() / 1000.0) - (TOTAL_SPLIT.ticks() * SECONDS_PER_TICK));
+            }
             return;
         }
 
@@ -97,6 +108,30 @@ public final class SplitTimers {
                 split.start(now, tick);
             }
         }
+    }
+
+    private static void announceLag(double seconds) {
+        String lost = lagText(seconds);
+        if ("client".equals(ConfigManager.get().lagAnnounceMode)) {
+            Scheduler.schedule(ANNOUNCE_DELAY_TICKS, () -> ChatUtil.raw(
+                    Component.literal("[QZA] ").withStyle(ChatFormatting.LIGHT_PURPLE)
+                            .append(Component.literal("Time Lost to Lag: ").withStyle(ChatFormatting.GRAY))
+                            .append(Component.literal(lost).withStyle(ChatFormatting.GREEN))));
+        } else {
+            String text = "pc [QZA] Time Lost to Lag: " + lost;
+            Scheduler.schedule(ANNOUNCE_DELAY_TICKS, () -> ChatUtil.sendCommand(text));
+        }
+    }
+
+    static String lagText(double seconds) {
+        long hundredths = Math.round(Math.max(0.0, seconds) * 100.0);
+        long minutes = hundredths / 6000L;
+        long rest = hundredths % 6000L;
+        String secs = String.format(Locale.ROOT, "%d.%02d Seconds", rest / 100L, rest % 100L);
+        if (minutes == 0L) {
+            return secs;
+        }
+        return minutes + (minutes == 1L ? " Minute " : " Minutes ") + secs;
     }
 
     public static void reset() {

@@ -259,6 +259,30 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.splitTimersEnabled));
 
+        settings.add(new ToggleSetting(f7, "Time Lost to Lag", "Time Lost to Lag",
+                Component.literal("When the run ends, says how much longer it took in real time than in server ticks")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.lagTimerEnabled,
+                v -> {
+                    cfg.lagTimerEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new DropdownSetting(f7, "Time Lost to Lag", "Announce Mode",
+                Component.literal("Send the time lost to the whole party, or only to yourself.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> List.of("party", "client"),
+                () -> cfg.lagAnnounceMode,
+                v -> {
+                    cfg.lagAnnounceMode = v;
+                    ConfigManager.save();
+                },
+                SettingsRegistry::announceModeLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.lagTimerEnabled));
+
         settings.add(new ToggleSetting(f7, "PY Timer", "PY Timer",
                 Component.literal("Updated Timer for PY in Storm Phase")
                         .withStyle(ChatFormatting.GRAY),
