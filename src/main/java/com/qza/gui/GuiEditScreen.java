@@ -4,9 +4,11 @@ import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.dungeon.SplitTimers;
+import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.WitherKey;
 import com.qza.notify.NotificationBox;
 import com.qza.party.PartyNotification;
+import com.qza.timer.ClockDisplay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -47,6 +49,8 @@ public class GuiEditScreen extends Screen {
         ChatNotification.resetPlacement();
         WitherKey.resetPlacement();
         SplitTimers.resetPlacement();
+        PYTimer.resetPlacement();
+        ClockDisplay.resetPlacement();
         ConfigManager.save();
     }
 
@@ -98,6 +102,30 @@ public class GuiEditScreen extends Screen {
                     cfg.splitTimersY = y;
                 },
                 s -> cfg.splitTimersScale = s));
+
+        targets.add(new Target(
+                true,
+                PYTimer.text(3.0),
+                PYTimer.TEXT_COLOUR,
+                () -> cfg.pyTimerEnabled,
+                () -> cfg.pyTimerX, () -> cfg.pyTimerY, () -> cfg.pyTimerScale,
+                (x, y) -> {
+                    cfg.pyTimerX = x;
+                    cfg.pyTimerY = y;
+                },
+                s -> cfg.pyTimerScale = s));
+
+        targets.add(new Target(
+                true,
+                ClockDisplay.text(),
+                ClockDisplay.TEXT_COLOUR,
+                () -> cfg.clockEnabled,
+                () -> cfg.clockX, () -> cfg.clockY, () -> cfg.clockScale,
+                (x, y) -> {
+                    cfg.clockX = x;
+                    cfg.clockY = y;
+                },
+                s -> cfg.clockScale = s));
     }
 
     @Override

@@ -8,6 +8,8 @@ import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.discord.DiscordAlert;
+import com.qza.dungeon.PYTimer;
+import com.qza.timer.ClockDisplay;
 import com.qza.dungeon.WitherKey;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.itemlist.ItemRepo;
@@ -256,6 +258,16 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.splitTimersEnabled));
+
+        settings.add(new ToggleSetting(f7, "PY Timer", "PY Timer",
+                Component.literal("Updated Timer for PY in Storm Phase")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.pyTimerEnabled,
+                v -> {
+                    cfg.pyTimerEnabled = v;
+                    PYTimer.reset();
+                    ConfigManager.save();
+                }));
 
         settings.add(new ToggleSetting(f7, "Starred Mobs", "Starred Mob Highlight",
                 Component.literal("Draws a box around starred mobs in dungeons")
@@ -712,6 +724,38 @@ public final class SettingsRegistry {
                     cfg.guiScale = v;
                     ConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(misc, "Clock", "Clock",
+                Component.literal("Shows the current time on screen. Drag it in ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Edit GUI")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.clockEnabled,
+                v -> {
+                    cfg.clockEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new DropdownSetting(misc, "Clock", "Clock Format",
+                Component.literal("12 hour shows ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("AM").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" or ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("PM").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" after the time, 24 hour does not.")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> List.of(ClockDisplay.TWELVE_HOUR, ClockDisplay.TWENTY_FOUR_HOUR),
+                () -> cfg.clockFormat,
+                v -> {
+                    cfg.clockFormat = v;
+                    ConfigManager.save();
+                },
+                ClockDisplay::label,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.clockEnabled));
 
         boolean[] confirmReset = {false};
         settings.add(new ActionSetting(misc, "Config", "Reset Settings",

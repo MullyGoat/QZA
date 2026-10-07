@@ -61,6 +61,13 @@ public class QZAConfig {
     public double splitTimersY = 0.32;
 
     public double splitTimersScale = 1.0;
+    public boolean pyTimerEnabled = false;
+
+    public double pyTimerX = 0.5;
+
+    public double pyTimerY = 0.56;
+
+    public double pyTimerScale = 1.5;
 
     public boolean starredMobsEnabled = false;
 
@@ -137,6 +144,16 @@ public class QZAConfig {
     public String discordAlertUrl = "";
 
     public String discordAlertToken = "";
+
+    public boolean clockEnabled = false;
+
+    public String clockFormat = "12";
+
+    public double clockX = 0.5;
+
+    public double clockY = 0.08;
+
+    public double clockScale = 1.0;
 
     public double guiScale = 100.0;
 
