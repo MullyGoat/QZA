@@ -3,6 +3,7 @@ package com.qza.gui;
 import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.WitherKey;
@@ -49,6 +50,7 @@ public class GuiEditScreen extends Screen {
         ChatNotification.resetPlacement();
         WitherKey.resetPlacement();
         SplitTimers.resetPlacement();
+        LeapNotification.resetPlacement();
         PYTimer.resetPlacement();
         ClockDisplay.resetPlacement();
         ConfigManager.save();
@@ -92,6 +94,16 @@ public class GuiEditScreen extends Screen {
                     cfg.witherKeyY = y;
                 },
                 s -> cfg.witherKeyScale = s));
+
+        targets.add(new Target(
+                LeapNotification::preview,
+                () -> cfg.leapNotifyEnabled,
+                () -> cfg.leapNotifyX, () -> cfg.leapNotifyY, () -> cfg.leapNotifyScale,
+                (x, y) -> {
+                    cfg.leapNotifyX = x;
+                    cfg.leapNotifyY = y;
+                },
+                s -> cfg.leapNotifyScale = s));
 
         targets.add(new Target(
                 SplitTimers::preview,

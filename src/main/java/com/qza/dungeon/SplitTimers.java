@@ -174,13 +174,9 @@ public final class SplitTimers {
     }
 
     private static List<String> lines(QZAConfig cfg) {
-        boolean master = DungeonState.catacombsMaster() || DRAGONS_SPLIT.started();
         List<String> out = new ArrayList<>();
         for (Split split : ALL) {
-            if (split == BOSS_ENTRY_SPLIT && !cfg.splitTimersBossEntry) {
-                continue;
-            }
-            if (split == DRAGONS_SPLIT && !master) {
+            if (!split.started() || (split == BOSS_ENTRY_SPLIT && !cfg.splitTimersBossEntry)) {
                 continue;
             }
             out.add(row(split.name, split.millis(), split.ticks(), cfg.splitTimersTickTime));

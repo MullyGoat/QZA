@@ -1,64 +1,93 @@
 package com.qza.timer;
 
 import com.qza.config.ConfigManager;
-import com.qza.config.QZAConfig;
+import com.qza.mixin.BossOverlayAccessor;
 import com.qza.util.ChatUtil;
+import com.qza.util.IgnUtil;
 import com.qza.util.Scheduler;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.LerpingBossEvent;
 import net.minecraft.network.chat.Component;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 public final class NecronTimer {
     private static final int ANNOUNCE_DELAY_TICKS = 10;
     private static final double SECONDS_PER_TICK = 0.05;
-    private static final long ANIMATION_TICKS = 62L;
+    private static final int GONE_TICKS = 2;
+
+    private static final Pattern START = Pattern.compile(
+            "^\\[BOSS] Necron: You went further than any human before, congratulations\\.$");
 
     private static boolean running;
+    private static boolean seenBar;
     private static long startTicks = -1L;
-    private static int deathHits;
+    private static long goneSince = -1L;
+    private static int goneFor;
 
     private NecronTimer() {
     }
 
     public static void onChatMessage(String raw) {
-        QZAConfig cfg = ConfigManager.get();
-        if (!cfg.necronTimerEnabled) {
+        if (!ConfigManager.get().necronTimerEnabled || raw == null) {
             return;
         }
+        if (START.matcher(IgnUtil.stripCodes(raw).trim()).matches()) {
+            running = true;
+            seenBar = false;
+            goneFor = 0;
+            startTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticks() : -1L;
+        }
+    }
 
-        String message = raw.replace("§", "");
-
-        if (matches(message, cfg.necronStartTrigger)) {
-            start();
+    public static void tick() {
+        if (!running) {
             return;
         }
+        Float progress = necronProgress();
+        if (progress != null) {
+            seenBar = true;
+            goneFor = 0;
+            if (progress <= 0.0001f) {
+                announce(ServerTickClock.ticks());
+            }
+            return;
+        }
+        if (!seenBar) {
+            return;
+        }
+        if (goneFor++ == 0) {
+            goneSince = ServerTickClock.ticks();
+        }
+        if (goneFor >= GONE_TICKS) {
+            announce(goneSince);
+        }
+    }
 
-        if (running && matches(message, cfg.necronDeathTrigger)) {
-            deathHits++;
-            if (deathHits >= Math.max(1, cfg.necronDeathTriggerCount)) {
-                announce();
+    private static Float necronProgress() {
+        Minecraft client = Minecraft.getInstance();
+        if (client.gui == null || !(client.gui.getBossOverlay() instanceof BossOverlayAccessor overlay)) {
+            return null;
+        }
+        for (LerpingBossEvent event : overlay.qzaEvents().values()) {
+            if (IgnUtil.stripCodes(event.getName().getString()).contains("Necron")) {
+                return event.getProgress();
             }
         }
+        return null;
     }
 
-    private static void start() {
-        running = true;
-        deathHits = 0;
-        startTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticks() : -1L;
-    }
-
-    private static void announce() {
+    private static void announce(long killTick) {
         running = false;
-        deathHits = 0;
 
         if (startTicks < 0L || !ServerTickClock.isAvailable()) {
             ChatUtil.error("Server tick time unavailable - no Necron time to report.");
             return;
         }
 
-        long totalTicks = (ServerTickClock.ticks() - startTicks) + ANIMATION_TICKS;
-        String seconds = String.format(Locale.ROOT, "%.2f", totalTicks * SECONDS_PER_TICK);
+        String seconds = String.format(Locale.ROOT, "%.2f", (killTick - startTicks) * SECONDS_PER_TICK);
 
         if ("client".equals(ConfigManager.get().necronAnnounceMode)) {
             Scheduler.schedule(ANNOUNCE_DELAY_TICKS, () -> ChatUtil.send(
@@ -70,14 +99,11 @@ public final class NecronTimer {
         }
     }
 
-    private static boolean matches(String message, String trigger) {
-        return trigger != null && !trigger.isBlank() && message.contains(trigger);
-    }
-
     public static void reset() {
         running = false;
+        seenBar = false;
         startTicks = -1L;
-        deathHits = 0;
+        goneFor = 0;
     }
 
     public static boolean isRunning() {

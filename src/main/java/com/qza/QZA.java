@@ -7,6 +7,7 @@ import com.qza.command.QZACommand;
 import com.qza.command.ShitterCommand;
 import com.qza.config.ConfigManager;
 import com.qza.discord.PartyFullAlert;
+import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.StarredMobs;
@@ -80,6 +81,7 @@ public class QZA implements ClientModInitializer {
             NecronTimer.onChatMessage(plain);
             WitherKey.onChatMessage(plain);
             SplitTimers.onChatMessage(plain);
+            LeapNotification.onChatMessage(plain);
             PYTimer.onChatMessage(plain);
             PartyNotification.onChatMessage(plain);
             PartyFullAlert.onChatMessage(plain);
@@ -90,6 +92,7 @@ public class QZA implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             Scheduler.tick();
             WitherKey.tick();
+            NecronTimer.tick();
 
             Object level = client.level;
             if (level != lastLevel) {
@@ -98,6 +101,7 @@ public class QZA implements ClientModInitializer {
                 NecronTimer.reset();
                 WitherKey.reset();
                 SplitTimers.reset();
+                LeapNotification.reset();
                 PYTimer.reset();
             }
         });
@@ -109,6 +113,7 @@ public class QZA implements ClientModInitializer {
             NecronTimer.reset();
             WitherKey.reset();
             SplitTimers.reset();
+            LeapNotification.reset();
             PYTimer.reset();
             ServerTickClock.reset();
             PartyNotification.clear();

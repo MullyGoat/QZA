@@ -7,6 +7,7 @@
     "ServerTickMixin"
   ],
   "client": [
+    "BossOverlayAccessor",
     "ChatCaptureMixin",
     "ChatHideMixin",
     "ChatKeyMixin",

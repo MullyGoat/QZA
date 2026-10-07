@@ -26,6 +26,7 @@ import com.qza.stats.DungeonFloor;
 import com.qza.util.ChatUtil;
 import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
+import com.qza.dungeon.LeapNotification;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -614,6 +615,50 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.partyInviteNotifyEnabled));
+
+        settings.add(new ToggleSetting(notify, "Leap Notifications", "Leap Notifications",
+                Component.literal("Shows <ign> Leaped to You! on screen when someone leaps to you. Drag it in ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.leapNotifyEnabled,
+                v -> {
+                    cfg.leapNotifyEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(notify, "Leap Notifications", "Show Class",
+                Component.literal("Shows the player's class instead of their IGN, like ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Bers").withStyle(ChatFormatting.DARK_RED))
+                        .append(Component.literal(" Leaped to You!").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.leapNotifyClass,
+                v -> {
+                    cfg.leapNotifyClass = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.leapNotifyEnabled));
+
+        settings.add(new ToggleSetting(notify, "Leap Notifications", "Boss Only",
+                Component.literal("Only shows leap notifications in boss, after you go through the portal")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.leapNotifyBossOnly,
+                v -> {
+                    cfg.leapNotifyBossOnly = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.leapNotifyEnabled));
+
+        settings.add(new SliderSetting(notify, "Leap Notifications", "Notification Duration",
+                Component.literal("How long the leap notification stays on screen")
+                        .withStyle(ChatFormatting.GRAY),
+                LeapNotification.MIN_DURATION, LeapNotification.MAX_DURATION, 0.5, "s",
+                () -> cfg.leapNotifyDuration,
+                v -> {
+                    cfg.leapNotifyDuration = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.leapNotifyEnabled));
 
         settings.add(new ToggleSetting(notify, "QZA Chat", "Message Alert",
                 Component.literal("Pops a notification showing what someone whispered you.")

@@ -28,12 +28,6 @@ public class QZAConfig {
 
     public boolean necronTimerEnabled = true;
 
-    public String necronStartTrigger = "You went further than any human before";
-
-    public String necronDeathTrigger = "Necron: ARGH";
-
-    public int necronDeathTriggerCount = 2;
-
     public String necronAnnounceMode = "party";
 
     public boolean waypointsEnabled = false;
@@ -65,6 +59,21 @@ public class QZAConfig {
     public boolean lagTimerEnabled = false;
 
     public String lagAnnounceMode = "party";
+
+    public boolean leapNotifyEnabled = false;
+
+    public boolean leapNotifyClass = false;
+
+    public boolean leapNotifyBossOnly = false;
+
+    public double leapNotifyDuration = 2.0;
+
+    public double leapNotifyX = 0.5;
+
+    public double leapNotifyY = 0.36;
+
+    public double leapNotifyScale = 1.5;
+
     public boolean pyTimerEnabled = false;
 
     public double pyTimerX = 0.5;
