@@ -1,14 +1,19 @@
 
-import { magicalPower } from './magicalpower.js';
 
 const NAME_PATTERN = /^[A-Za-z0-9_]{1,16}$/;
 const UUID_PATTERN = /^[0-9a-fA-F]{32}$/;
+
+const SOOPY = 'https://soopy.dev/api/v2/';
+
+const CATA_FLOORS = { e: 0, f1: 1, f2: 2, f3: 3, f4: 4, f5: 5, f6: 6, f7: 7 };
+
+const MASTER_FLOORS = { m1: 1, m2: 2, m3: 3, m4: 4, m5: 5, m6: 6, m7: 7 };
 
 const CACHE_SECONDS = 3600;
 const NOT_FOUND_CACHE_SECONDS = 600;
 
 const IP_LIMIT_PER_MINUTE = 30;
-const UPSTREAM_LIMIT_PER_MINUTE = 30;
+const UPSTREAM_LIMIT_PER_MINUTE = 15;
 
 export default {
     async fetch(request, env, ctx) {
@@ -19,9 +24,6 @@ export default {
         }
         if (url.pathname !== '/stats' && url.pathname !== '/') {
             return fail('Unknown path', 404);
-        }
-        if (!env.HYPIXEL_API_KEY) {
-            return fail('Proxy is missing its Hypixel API key', 500);
         }
 
         const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
@@ -60,7 +62,7 @@ export default {
         let payload;
         let status = 200;
         try {
-            payload = await lookup(rawName, rawUuid, env.HYPIXEL_API_KEY);
+            payload = await lookup(rawName, rawUuid);
         } catch (e) {
             payload = { ok: false, error: e && e.message ? e.message : 'Lookup failed' };
             status = e && e.status ? e.status : 502;
@@ -76,69 +78,136 @@ export default {
     },
 };
 
-async function lookup(name, uuid, apiKey) {
+async function lookup(name, uuid) {
     let id = uuid;
     let resolved = name;
 
     if (!id) {
         const profile = await resolveName(name);
-        id = profile.id.replace(/-/g, '');
+        id = profile.id;
         resolved = profile.name || name;
     }
 
-    const [profiles, player] = await Promise.all([
-        hypixel(`https://api.hypixel.net/v2/skyblock/profiles?uuid=${id}`, apiKey),
-        hypixel(`https://api.hypixel.net/v2/player?uuid=${id}`, apiKey),
+    const [skyblock, player] = await Promise.all([
+        soopy(`${SOOPY}player_skyblock/${id}`, resolved || id),
+        soopy(`${SOOPY}player/${id}`, resolved || id),
     ]);
 
-    if (!resolved && player && player.player && player.player.displayname) {
-        resolved = player.player.displayname;
-    }
-
-    const list = profiles && Array.isArray(profiles.profiles) ? profiles.profiles : null;
-    if (!list || list.length === 0) {
+    const profiles = (skyblock.data && skyblock.data.profiles) || {};
+    const chosen = pickProfile(profiles, id);
+    if (!chosen) {
         throw withStatus(new Error(`${resolved || id} has no SkyBlock profiles`), 404);
     }
 
-    const chosen = list.find((p) => p && p.selected) || list[0];
-    const member = chosen && chosen.members ? chosen.members[id] : null;
-    if (!member) {
-        throw withStatus(new Error(`${resolved} is not on their selected profile`), 404);
+    const member = chosen.members ? chosen.members[id] : null;
+    const dungeons = (member && member.dungeons) || null;
+    const floors = dungeons ? dungeons.floorStats : null;
+    if (!floors) {
+        throw withStatus(new Error(`${resolved} has no Catacombs data`), 404);
     }
 
-    const dungeons = member.dungeons || {};
-    const types = dungeons.dungeon_types || {};
-    const cata = types.catacombs || {};
-    const master = types.master_catacombs || {};
-
-    if (!types.catacombs) {
-        throw withStatus(new Error(`${resolved} has no Catacombs data (API may be off)`), 404);
+    const current = player.data && typeof player.data.username === 'string'
+        ? player.data.username : '';
+    if (current) {
+        resolved = current;
+    } else if (!resolved) {
+        resolved = id;
     }
-
-    const achievements = player && player.player ? (player.player.achievements || {}) : {};
-    const secrets = numberOr(achievements.skyblock_treasure_hunter, numberOr(dungeons.secrets, 0));
-
-    const power = await magicalPower(member);
 
     return {
         ok: true,
         name: resolved,
         uuid: id,
 
-        class: typeof dungeons.selected_dungeon_class === 'string'
-            ? dungeons.selected_dungeon_class : '',
-        cataExp: numberOr(cata.experience, 0),
-        secrets: secrets,
-        magicalPower: power,
+        class: typeof dungeons.selected_class === 'string' ? dungeons.selected_class : '',
+        cataExp: numberOr(dungeons.catacombs_xp, 0),
+        secrets: secretsOf(player),
+        magicalPower: powerOf(member),
         runs: {
-            cata: intMap(cata.tier_completions),
-            master: intMap(master.tier_completions),
+            cata: completions(floors, CATA_FLOORS),
+            master: completions(floors, MASTER_FLOORS),
         },
         pb: {
-            cata: intMap(cata.fastest_time_s_plus),
-            master: intMap(master.fastest_time_s_plus),
+            cata: bests(floors, CATA_FLOORS),
+            master: bests(floors, MASTER_FLOORS),
         },
     };
+}
+
+function pickProfile(profiles, id) {
+    let chosen = null;
+    let bestExp = -1;
+
+    for (const key of Object.keys(profiles)) {
+        const profile = profiles[key];
+        const member = profile && profile.members ? profile.members[id] : null;
+        if (!member) {
+            continue;
+        }
+        if (profile.current || profile.selected) {
+            return profile;
+        }
+        const exp = member.dungeons ? numberOr(member.dungeons.catacombs_xp, 0) : 0;
+        if (exp > bestExp) {
+            bestExp = exp;
+            chosen = profile;
+        }
+    }
+    return chosen;
+}
+
+function secretsOf(player) {
+    const stats = player && player.data ? player.data.stats : null;
+    const achievements = stats && stats.achievements ? stats.achievements.skyblock : null;
+    return achievements ? numberOr(achievements.dungeon_secrets, 0) : 0;
+}
+
+function powerOf(member) {
+    const reforge = member ? member.accessory_reforge : null;
+    if (!reforge) {
+        return null;
+    }
+    const power = Number(reforge.highest_magical_power);
+    return Number.isFinite(power) && power >= 0 ? Math.round(power) : null;
+}
+
+function completions(floors, map) {
+    const out = {};
+    let total = 0;
+
+    for (const key of Object.keys(map)) {
+        const entry = floors[key];
+        const runs = entry ? Number(entry.completions) : 0;
+        if (Number.isFinite(runs) && runs > 0) {
+            out[String(map[key])] = Math.round(runs);
+            total += Math.round(runs);
+        }
+    }
+    if (total > 0) {
+        out.total = total;
+    }
+    return out;
+}
+
+function bests(floors, map) {
+    const out = {};
+    let best = 0;
+
+    for (const key of Object.keys(map)) {
+        const entry = floors[key];
+        const time = entry && entry.fastest_time_s_plus
+            ? Number(entry.fastest_time_s_plus.raw) : 0;
+        if (Number.isFinite(time) && time > 0) {
+            out[String(map[key])] = Math.round(time);
+            if (best === 0 || time < best) {
+                best = Math.round(time);
+            }
+        }
+    }
+    if (best > 0) {
+        out.best = best;
+    }
+    return out;
 }
 
 const MISSING = 'missing';
@@ -222,9 +291,9 @@ async function resolveName(name) {
         `Could not look up ${name}` + (lastStatus ? ` (name service returned ${lastStatus})` : '')), 502);
 }
 
-async function hypixel(url, apiKey) {
+async function soopy(url, who) {
     const response = await fetch(url, {
-        headers: { 'API-Key': apiKey, 'Accept': 'application/json' },
+        headers: { 'Accept': 'application/json', 'User-Agent': 'qza-stats-proxy' },
     });
 
     let body = null;
@@ -233,40 +302,23 @@ async function hypixel(url, apiKey) {
     } catch (e) {
         body = null;
     }
-    const cause = body && typeof body.cause === 'string' ? body.cause : '';
 
     if (response.status === 429) {
-        throw withStatus(new Error(cause
-            ? `Hypixel rate limit reached - ${cause}`
-            : 'Hypixel rate limit reached, try again shortly'), 429);
+        throw withStatus(new Error('Stats source is busy right now, try again shortly'), 429);
     }
-    if (response.status === 403) {
-        throw withStatus(new Error(cause
-            ? `Hypixel rejected the proxy API key - ${cause}`
-            : 'Proxy API key was rejected by Hypixel'), 502);
+    if (!body) {
+        throw withStatus(new Error(`Stats source returned ${response.status}`), 502);
     }
-    if (!response.ok) {
-        throw withStatus(new Error(`Hypixel returned ${response.status}`
-            + (cause ? ` - ${cause}` : '')), 502);
-    }
-    if (body && body.success === false) {
-        throw withStatus(new Error(cause || 'Hypixel rejected the request'), 502);
+    if (body.success !== true) {
+        const why = body.error && body.error.description
+            ? body.error.description
+            : (body.error && body.error.name ? body.error.name : null);
+        if (response.status === 404 || (why && /not found|invalid/i.test(why))) {
+            throw withStatus(new Error(`No SkyBlock data for ${who}`), 404);
+        }
+        throw withStatus(new Error(why || 'Stats source rejected the request'), 502);
     }
     return body;
-}
-
-function intMap(source) {
-    const out = {};
-    if (!source || typeof source !== 'object') {
-        return out;
-    }
-    for (const [floor, value] of Object.entries(source)) {
-        const n = Number(value);
-        if (Number.isFinite(n) && n >= 0) {
-            out[String(floor)] = Math.round(n);
-        }
-    }
-    return out;
 }
 
 function numberOr(value, fallback) {
