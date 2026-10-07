@@ -118,6 +118,7 @@ public class QZAChatScreen extends Screen {
 
     private double railScroll;
     private double threadScroll;
+    private int unseen;
 
     private int panelX;
     private int panelY;
@@ -437,6 +438,12 @@ public class QZAChatScreen extends Screen {
         }
 
         boolean grew = key.equals(builtFor) && revision != builtRevision;
+        int arrived = grew ? Math.max(0, revision - builtRevision) : 0;
+
+        boolean wasAtBottom = atBottom();
+        Bubble anchor = wasAtBottom ? null : firstVisible();
+        int anchorOrdinal = anchor == null ? -1 : anchor.ordinal;
+        double anchorOffset = anchor == null ? 0 : anchor.y - threadScroll;
 
         int firstOrdinal = revision - count;
         int keepFrom = builtRevision - firstOrdinal;
@@ -476,11 +483,73 @@ public class QZAChatScreen extends Screen {
         builtWidth = threadW;
         builtSize = count;
 
-        if (toBottom || grew) {
+        if (toBottom || (grew && wasAtBottom)) {
             threadScroll = maxThreadScroll();
-        } else {
-            clampThreadScroll();
+            unseen = 0;
+            return;
         }
+        if (anchorOrdinal >= 0) {
+            Bubble same = byOrdinal(anchorOrdinal);
+            threadScroll = same == null ? 0 : same.y - anchorOffset;
+        }
+        clampThreadScroll();
+        if (atBottom()) {
+            unseen = 0;
+        } else {
+            unseen += arrived;
+        }
+    }
+
+    private boolean atBottom() {
+        return threadScroll >= maxThreadScroll() - 1;
+    }
+
+    private Bubble firstVisible() {
+        for (Bubble bubble : bubbles) {
+            if (bubble.y + bubble.h > threadScroll) {
+                return bubble;
+            }
+        }
+        return null;
+    }
+
+    private Bubble byOrdinal(int ordinal) {
+        for (Bubble bubble : bubbles) {
+            if (bubble.ordinal == ordinal) {
+                return bubble;
+            }
+        }
+        return null;
+    }
+
+    private void jumpToPresent() {
+        threadScroll = maxThreadScroll();
+        unseen = 0;
+    }
+
+    private int[] jumpRect() {
+        String label = jumpLabel();
+        int w = this.font.width(label) + 16;
+        return new int[]{threadX + (threadW / 2) - (w / 2), threadY + threadH - 18, w, 16};
+    }
+
+    private String jumpLabel() {
+        if (unseen <= 0) {
+            return "Jump to Present";
+        }
+        return (unseen > 99 ? "99+" : String.valueOf(unseen))
+                + (unseen == 1 ? " new message" : " new messages") + " - Jump to Present";
+    }
+
+    private void drawJump(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (bubbles.isEmpty() || atBottom()) {
+            return;
+        }
+        int[] r = jumpRect();
+        boolean hovered = inside(mouseX, mouseY, r);
+        graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hovered ? 0xF03C5A70 : 0xF0223140);
+        outline(graphics, r[0], r[1], r[2], r[3], hovered ? PINK : 0xFFB05CB8);
+        graphics.centeredText(this.font, jumpLabel(), r[0] + (r[2] / 2), r[1] + 4, TEXT);
     }
 
     private int threadContentHeight() {
@@ -546,6 +615,7 @@ public class QZAChatScreen extends Screen {
             drawAccount(graphics, mx, my);
         }
         drawThread(graphics);
+        drawJump(graphics, mx, my);
         drawInvite(graphics, mx, my);
         drawInput(graphics, mx, my);
 
@@ -1296,6 +1366,12 @@ public class QZAChatScreen extends Screen {
             }
         }
 
+        if (local.button() == 0 && !bubbles.isEmpty() && !atBottom()
+                && inside(mouseX, mouseY, jumpRect())) {
+            jumpToPresent();
+            return true;
+        }
+
         if (local.button() == 1) {
             Bubble bubble = bubbleAt(mouseX, mouseY);
             if (bubble != null) {
@@ -1645,6 +1721,9 @@ public class QZAChatScreen extends Screen {
         if (mx >= threadX && mx <= threadX + threadW + 6 && my >= threadY && my <= threadY + threadH) {
             threadScroll -= verticalAmount * 18;
             clampThreadScroll();
+            if (atBottom()) {
+                unseen = 0;
+            }
             return true;
         }
 
