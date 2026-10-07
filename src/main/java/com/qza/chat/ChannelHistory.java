@@ -24,6 +24,24 @@ public final class ChannelHistory {
 
     private static final Map<String, Integer> revisions = new LinkedHashMap<>();
 
+    private static final int NO_BLOCK = 0;
+
+    private static final int PARTY_LIST = 1;
+
+    private static final int PLAYER_STATS = 2;
+
+    private static final int MAX_LIST_ROWS = 12;
+
+    private static final int MAX_STATS_ROWS = 16;
+
+    private static Component pendingDivider;
+
+    private static String pendingDividerText;
+
+    private static int blockKind = NO_BLOCK;
+
+    private static int blockRows = -1;
+
     private ChannelHistory() {
     }
 
@@ -33,6 +51,9 @@ public final class ChannelHistory {
         }
         ChannelParser.Line line = ChannelParser.parse(plain);
         if (line == null) {
+            if (capturePartyBlock(rich, plain)) {
+                return;
+            }
             if (ChannelParser.isPartyEvent(plain)) {
                 note(PARTY, rich, plain);
             }
@@ -49,6 +70,65 @@ public final class ChannelHistory {
         } else {
             ChatFocus.received(line.channel());
         }
+    }
+
+    private static boolean capturePartyBlock(Component rich, String plain) {
+        String message = IgnUtil.stripCodes(plain).trim();
+
+        int opened = NO_BLOCK;
+        if (ChannelParser.isPartyListHeader(message)) {
+            opened = PARTY_LIST;
+        } else if (ChannelParser.isStatsHeader(message)) {
+            opened = PLAYER_STATS;
+        }
+
+        if (opened != NO_BLOCK) {
+            if (pendingDividerText != null) {
+                note(PARTY, pendingDivider, pendingDividerText);
+                forgetDivider();
+            }
+            note(PARTY, rich, plain);
+            blockKind = opened;
+            blockRows = 0;
+            return true;
+        }
+
+        if (blockRows >= 0) {
+            if (ChannelParser.isDivider(message)) {
+                note(PARTY, rich, plain);
+                endBlock();
+                return true;
+            }
+            boolean belongs = blockKind == PARTY_LIST
+                    ? ChannelParser.isPartyListRow(message)
+                    : !message.isEmpty();
+            int limit = blockKind == PARTY_LIST ? MAX_LIST_ROWS : MAX_STATS_ROWS;
+            if (belongs && ++blockRows <= limit) {
+                note(PARTY, rich, plain);
+                return true;
+            }
+            endBlock();
+            return false;
+        }
+
+        if (ChannelParser.isDivider(message)) {
+            pendingDivider = rich;
+            pendingDividerText = plain;
+            return false;
+        }
+
+        forgetDivider();
+        return false;
+    }
+
+    private static void endBlock() {
+        blockKind = NO_BLOCK;
+        blockRows = -1;
+    }
+
+    private static void forgetDivider() {
+        pendingDivider = null;
+        pendingDividerText = null;
     }
 
     public static void onAnyChatLine(Component rich, String plain) {
@@ -103,6 +183,8 @@ public final class ChannelHistory {
 
     public static void clear() {
         logs.clear();
+        endBlock();
+        forgetDivider();
     }
 
     public static String inviteCommand(String channel) {

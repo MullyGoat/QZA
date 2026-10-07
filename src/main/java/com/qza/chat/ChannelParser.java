@@ -19,6 +19,33 @@ public final class ChannelParser {
 
     private static final String NAME = "\\w{1,16}";
 
+    private static final Pattern PARTY_LIST_HEADER =
+            Pattern.compile("^Party Members \\(\\d+\\)$");
+
+    private static final Pattern STATS_HEADER =
+            Pattern.compile("^-+ ?.{1,32}'s Dungeon Stats ?-+$");
+
+    private static final String[] PARTY_LIST_ROWS = {
+            "Party Leader:",
+            "Party Moderators:",
+            "Party Members:",
+    };
+
+    private static final int DIVIDER_MIN = 5;
+
+    private static final String[] PARTY_EVENT_PHRASES = {
+            " has left the party",
+            " has been removed from the party",
+            " joined the party",
+            " has disbanded the party",
+            " was removed from your party",
+            " has left the dungeon group",
+            " left the dungeon group",
+            " joined the dungeon group",
+            " has disconnected, they have",
+            " has rejoined",
+    };
+
     private static final Pattern[] PARTY_EVENTS = {
             Pattern.compile(RANK + NAME + " joined the party\\."),
             Pattern.compile(RANK + NAME + " has left the party\\."),
@@ -29,9 +56,12 @@ public final class ChannelParser {
             Pattern.compile("The party leader " + RANK + NAME + " has rejoined\\."),
             Pattern.compile("The party leader, " + RANK + NAME + " has disconnected, they have "
                     + "5 minutes to rejoin before the party is disbanded\\."),
+            Pattern.compile(RANK + NAME + " has disconnected, they have 5 minutes to rejoin "
+                    + "before they are removed from the party\\."),
             Pattern.compile("You have joined " + RANK + NAME + "'s? party!"),
             Pattern.compile("You have been kicked from the party by " + RANK + NAME),
             Pattern.compile("You left the party\\."),
+            Pattern.compile("You are not currently in a party\\.?"),
             Pattern.compile("The party was disbanded because all invites expired "
                     + "and the party was empty\\."),
             Pattern.compile("The party was disbanded because the party leader disconnected\\."),
@@ -92,6 +122,50 @@ public final class ChannelParser {
         }
         for (Pattern pattern : PARTY_EVENTS) {
             if (pattern.matcher(message).matches()) {
+                return true;
+            }
+        }
+        return membershipWording(message);
+    }
+
+    public static boolean isPartyListHeader(String message) {
+        return message != null && PARTY_LIST_HEADER.matcher(message).matches();
+    }
+
+    public static boolean isStatsHeader(String message) {
+        return message != null && STATS_HEADER.matcher(message).matches();
+    }
+
+    public static boolean isPartyListRow(String message) {
+        if (message == null) {
+            return false;
+        }
+        for (String row : PARTY_LIST_ROWS) {
+            if (message.startsWith(row)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isDivider(String message) {
+        if (message == null || message.length() < DIVIDER_MIN) {
+            return false;
+        }
+        for (int i = 0; i < message.length(); i++) {
+            if (message.charAt(i) != '-') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean membershipWording(String message) {
+        if (message.contains(": ")) {
+            return false;
+        }
+        for (String phrase : PARTY_EVENT_PHRASES) {
+            if (message.contains(phrase)) {
                 return true;
             }
         }
