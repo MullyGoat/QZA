@@ -68,6 +68,7 @@ public final class SplitTimers {
             TERMINALS_SPLIT, GOLDOR_SPLIT, NECRON_SPLIT, DRAGONS_SPLIT, TOTAL_SPLIT};
 
     private static boolean runOver;
+    private static boolean floorSeven;
 
     private SplitTimers() {
     }
@@ -136,6 +137,7 @@ public final class SplitTimers {
 
     public static void reset() {
         runOver = false;
+        floorSeven = false;
         for (Split split : ALL) {
             split.reset();
         }
@@ -143,7 +145,13 @@ public final class SplitTimers {
 
     public static void renderHud(GuiGraphicsExtractor graphics, Font font) {
         QZAConfig cfg = ConfigManager.get();
-        if (!cfg.splitTimersEnabled || !DungeonState.inDungeon() || DungeonState.catacombsFloor() != 7) {
+        if (!cfg.splitTimersEnabled) {
+            return;
+        }
+        if (!floorSeven && DungeonState.inDungeon() && DungeonState.catacombsFloor() == 7) {
+            floorSeven = true;
+        }
+        if (!floorSeven) {
             return;
         }
         draw(graphics, font, lines(cfg), cfg.splitTimersX, cfg.splitTimersY, cfg.splitTimersScale);

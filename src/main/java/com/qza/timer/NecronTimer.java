@@ -1,6 +1,7 @@
 package com.qza.timer;
 
 import com.qza.config.ConfigManager;
+import com.qza.mixin.BossEventAccessor;
 import com.qza.mixin.BossOverlayAccessor;
 import com.qza.util.ChatUtil;
 import com.qza.util.IgnUtil;
@@ -17,6 +18,7 @@ public final class NecronTimer {
     private static final int ANNOUNCE_DELAY_TICKS = 10;
     private static final double SECONDS_PER_TICK = 0.05;
     private static final int GONE_TICKS = 2;
+    private static final float ARMED_PROGRESS = 0.5f;
 
     private static final Pattern START = Pattern.compile(
             "^\\[BOSS] Necron: You went further than any human before, congratulations\\.$");
@@ -48,9 +50,10 @@ public final class NecronTimer {
         }
         Float progress = necronProgress();
         if (progress != null) {
-            seenBar = true;
             goneFor = 0;
-            if (progress <= 0.0001f) {
+            if (progress >= ARMED_PROGRESS) {
+                seenBar = true;
+            } else if (seenBar && progress <= 0.0001f) {
                 announce(ServerTickClock.ticks());
             }
             return;
@@ -73,7 +76,7 @@ public final class NecronTimer {
         }
         for (LerpingBossEvent event : overlay.qzaEvents().values()) {
             if (IgnUtil.stripCodes(event.getName().getString()).contains("Necron")) {
-                return event.getProgress();
+                return event instanceof BossEventAccessor target ? target.qzaTargetPercent() : event.getProgress();
             }
         }
         return null;
