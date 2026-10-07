@@ -3,6 +3,7 @@ package com.qza.stats;
 import com.qza.chat.ChatHistory;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.party.PartyFinderQueue;
 import com.qza.party.PartyInvite;
 import com.qza.party.PartyState;
 import com.qza.util.ChatUtil;
@@ -57,13 +58,46 @@ public final class AutoInvite {
     }
 
     public static void onWhisper(String ign, String text) {
-        if (!ConfigManager.get().autoInviteEnabled || !isRequest(text)) {
+        QZAConfig cfg = ConfigManager.get();
+        if (!cfg.autoInviteEnabled) {
             return;
         }
-        if (onCooldown(ign)) {
+        if (isRequest(text)) {
+            if (!onCooldown(ign)) {
+                run(ign, true, true, requestedRole(text));
+            }
             return;
         }
-        run(ign, true, true, requestedRole(text));
+        if (!cfg.autoInviteWhileQueued || !PartyFinderQueue.queued()) {
+            return;
+        }
+        PartyState.request().thenAccept(snapshot -> {
+            if (!leading(snapshot) || onCooldown(ign)) {
+                return;
+            }
+            run(ign, true, true, roleIn(text));
+        });
+    }
+
+    private static boolean leading(PartyState.Snapshot snapshot) {
+        if (snapshot == null || !snapshot.inParty()) {
+            return true;
+        }
+        User user = Minecraft.getInstance().getUser();
+        return user != null && snapshot.ledBy(user.getProfileId());
+    }
+
+    private static String roleIn(String text) {
+        if (text == null) {
+            return null;
+        }
+        for (String word : text.toLowerCase(Locale.ROOT).split("[^a-z]+")) {
+            String role = DungeonClass.of(word);
+            if (role != null) {
+                return role;
+            }
+        }
+        return null;
     }
 
     public static void check(String ign) {

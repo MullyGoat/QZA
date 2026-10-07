@@ -518,6 +518,17 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.autoInviteEnabled));
 
+        settings.add(new ToggleSetting(invite, "Stats", "Anyone While Queued",
+                Component.literal("While you are party leader and queued in Party Finder, "
+                                + "anyone who messages you counts, not just \"lf inv\"")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.autoInviteWhileQueued,
+                v -> {
+                    cfg.autoInviteWhileQueued = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.autoInviteEnabled));
+
         settings.add(new NumberSetting(invite, "Requirements", "Cata Level",
                 Component.literal("Catacomb level requirement. 0 = Any Cata Level")
                         .withStyle(ChatFormatting.GRAY),

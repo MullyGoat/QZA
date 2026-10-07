@@ -17,6 +17,7 @@ import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationHud;
 import com.qza.party.PartyNotification;
+import com.qza.party.PartyFinderQueue;
 import com.qza.party.PartyState;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
@@ -85,6 +86,7 @@ public class QZA implements ClientModInitializer {
             PYTimer.onChatMessage(plain);
             PartyNotification.onChatMessage(plain);
             PartyFullAlert.onChatMessage(plain);
+            PartyFinderQueue.onChatMessage(plain);
             ChatHistory.onChatMessage(message, plain);
             ChannelHistory.onChatMessage(message, plain);
         });
@@ -118,6 +120,7 @@ public class QZA implements ClientModInitializer {
             ServerTickClock.reset();
             PartyNotification.clear();
             PartyFullAlert.reset();
+            PartyFinderQueue.reset();
             WaypointEditor.reset();
             ChatNotification.clear();
             PlayerFaces.clearCache();

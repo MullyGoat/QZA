@@ -138,6 +138,8 @@ public class QZAConfig {
 
     public boolean autoInviteRespond = false;
 
+    public boolean autoInviteWhileQueued = false;
+
     public double autoInviteCataReq = 40.0;
 
     public String autoInviteFloor = "m7";
