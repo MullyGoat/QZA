@@ -223,7 +223,7 @@ public final class AutoInvite {
                 + (pb > 0 ? DungeonFloor.time(pb) : "no S+")
                 + " | " + DungeonClass.label(shownClass)
                 + " | Secrets " + String.format(Locale.ROOT, "%.2f", stats.secretAverage()) + "/run"
-                + " | MP " + stats.magicalPowerLabel();
+                + " | Highest MP " + stats.magicalPowerLabel();
     }
 
     private static MutableComponent failLine(String failure) {
@@ -262,7 +262,7 @@ public final class AutoInvite {
                         .withStyle(ChatFormatting.AQUA))
                 .append(Component.literal("/run").withStyle(ChatFormatting.DARK_GRAY))
                 .append(Component.literal(" | ").withStyle(ChatFormatting.DARK_GRAY))
-                .append(Component.literal("MP ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal("Highest MP ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(stats.magicalPowerLabel())
                         .withStyle(stats.magicalPower() == null
                                 ? ChatFormatting.RED : ChatFormatting.AQUA));

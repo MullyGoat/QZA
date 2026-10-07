@@ -45,7 +45,7 @@ settings are kept in `config/qza/cheat.json`.
 | `/qza music folder` | Open the music folder |
 | `/qza music reload` | Re-scan the music folder |
 | `/qza stats` | Check the stats source against your own profile |
-| `/qza stats <ign>` | Show someone's cata, floor PB, class, secret average and MP |
+| `/qza stats <ign>` | Show someone's cata, floor PB, class, secret average and highest MP |
 | `/qza discord` | Show whether party full alerts are set up |
 | `/qza discord link` | Get a code to link this game to your Discord |
 | `/qza discord unlink` | Unlink and delete what the relay stored |
