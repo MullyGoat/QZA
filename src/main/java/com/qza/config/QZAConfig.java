@@ -50,6 +50,18 @@ public class QZAConfig {
 
     public double witherKeyScale = 1.0;
 
+    public boolean splitTimersEnabled = false;
+
+    public boolean splitTimersTickTime = true;
+
+    public boolean splitTimersBossEntry = false;
+
+    public double splitTimersX = 0.1;
+
+    public double splitTimersY = 0.32;
+
+    public double splitTimersScale = 1.0;
+
     public boolean starredMobsEnabled = false;
 
     public String starredMobColour = "yellow";

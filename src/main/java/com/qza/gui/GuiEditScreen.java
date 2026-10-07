@@ -3,6 +3,7 @@ package com.qza.gui;
 import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.WitherKey;
 import com.qza.notify.NotificationBox;
 import com.qza.party.PartyNotification;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 public class GuiEditScreen extends Screen {
     private static final double SCALE_STEP = 0.05;
@@ -44,6 +46,7 @@ public class GuiEditScreen extends Screen {
         PartyNotification.resetPlacement();
         ChatNotification.resetPlacement();
         WitherKey.resetPlacement();
+        SplitTimers.resetPlacement();
         ConfigManager.save();
     }
 
@@ -85,6 +88,16 @@ public class GuiEditScreen extends Screen {
                     cfg.witherKeyY = y;
                 },
                 s -> cfg.witherKeyScale = s));
+
+        targets.add(new Target(
+                SplitTimers::preview,
+                () -> cfg.splitTimersEnabled,
+                () -> cfg.splitTimersX, () -> cfg.splitTimersY, () -> cfg.splitTimersScale,
+                (x, y) -> {
+                    cfg.splitTimersX = x;
+                    cfg.splitTimersY = y;
+                },
+                s -> cfg.splitTimersScale = s));
     }
 
     @Override
@@ -102,7 +115,10 @@ public class GuiEditScreen extends Screen {
                 continue;
             }
             int[] box = rect(target);
-            if (target.plain) {
+            if (target.lines != null) {
+                SplitTimers.draw(graphics, this.font, target.lines.get(), target.getX.getAsDouble(),
+                        target.getY.getAsDouble(), target.getScale.getAsDouble());
+            } else if (target.plain) {
                 NotificationBox.drawPlain(graphics, this.font, text(target),
                         box[0], box[1], scale(target), target.colour);
             } else {
@@ -147,8 +163,14 @@ public class GuiEditScreen extends Screen {
     }
 
     private int[] rect(Target target) {
-        String text = text(target);
         float scale = scale(target);
+        if (target.lines != null) {
+            int[] size = SplitTimers.size(this.font, target.lines.get(), scale);
+            int[] pos = NotificationBox.topLeft(target.getX.getAsDouble(), target.getY.getAsDouble(),
+                    this.width, this.height, size[0], size[1]);
+            return new int[]{pos[0], pos[1], size[0], size[1]};
+        }
+        String text = text(target);
         int w = Math.round((target.plain ? this.font.width(text)
                 : NotificationBox.width(this.font, text)) * scale);
         int h = Math.round((target.plain ? this.font.lineHeight
@@ -255,6 +277,7 @@ public class GuiEditScreen extends Screen {
 
     private static final class Target {
         final boolean plain;
+        final Supplier<List<String>> lines;
         final String preview;
         final int colour;
         final BooleanSupplier enabled;
@@ -270,10 +293,23 @@ public class GuiEditScreen extends Screen {
             this(false, preview, colour, enabled, getX, getY, getScale, setPosition, setScale);
         }
 
+        Target(Supplier<List<String>> lines, BooleanSupplier enabled,
+               DoubleSupplier getX, DoubleSupplier getY, DoubleSupplier getScale,
+               PositionWriter setPosition, ScaleWriter setScale) {
+            this(true, lines, "", 0xFFFFFFFF, enabled, getX, getY, getScale, setPosition, setScale);
+        }
+
         Target(boolean plain, String preview, int colour, BooleanSupplier enabled,
                DoubleSupplier getX, DoubleSupplier getY, DoubleSupplier getScale,
                PositionWriter setPosition, ScaleWriter setScale) {
+            this(plain, null, preview, colour, enabled, getX, getY, getScale, setPosition, setScale);
+        }
+
+        Target(boolean plain, Supplier<List<String>> lines, String preview, int colour,
+               BooleanSupplier enabled, DoubleSupplier getX, DoubleSupplier getY,
+               DoubleSupplier getScale, PositionWriter setPosition, ScaleWriter setScale) {
             this.plain = plain;
+            this.lines = lines;
             this.preview = preview;
             this.colour = colour;
             this.enabled = enabled;

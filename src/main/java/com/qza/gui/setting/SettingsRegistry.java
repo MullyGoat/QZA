@@ -229,6 +229,34 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        settings.add(new ToggleSetting(f7, "Split Timers", "Split Timers",
+                Component.literal("Updated Split Timers").withStyle(ChatFormatting.GRAY),
+                () -> cfg.splitTimersEnabled,
+                v -> {
+                    cfg.splitTimersEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(f7, "Split Timers", "Show Tick Time",
+                Component.literal("Shows the lag-free server tick time next to each split")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.splitTimersTickTime,
+                v -> {
+                    cfg.splitTimersTickTime = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.splitTimersEnabled));
+
+        settings.add(new ToggleSetting(f7, "Split Timers", "Boss Entry Split",
+                Component.literal("Adds a split from the start of the run to boss entry")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.splitTimersBossEntry,
+                v -> {
+                    cfg.splitTimersBossEntry = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.splitTimersEnabled));
+
         settings.add(new ToggleSetting(f7, "Starred Mobs", "Starred Mob Highlight",
                 Component.literal("Draws a box around starred mobs in dungeons")
                         .withStyle(ChatFormatting.GRAY),

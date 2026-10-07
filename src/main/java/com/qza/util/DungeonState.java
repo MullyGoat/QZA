@@ -15,6 +15,7 @@ public final class DungeonState {
 
     private static boolean inDungeon;
     private static int catacombsFloor = -1;
+    private static boolean catacombsMaster;
     private static long checkedAt;
 
     private DungeonState() {
@@ -27,6 +28,7 @@ public final class DungeonState {
         }
         checkedAt = now;
         catacombsFloor = -1;
+        catacombsMaster = false;
         inDungeon = detect();
         return inDungeon;
     }
@@ -36,9 +38,15 @@ public final class DungeonState {
         return catacombsFloor;
     }
 
+    public static boolean catacombsMaster() {
+        inDungeon();
+        return catacombsMaster;
+    }
+
     public static void reset() {
         inDungeon = false;
         catacombsFloor = -1;
+        catacombsMaster = false;
         checkedAt = 0;
     }
 
@@ -89,6 +97,7 @@ public final class DungeonState {
         String floor = close < 0 ? line.substring(open + 1) : line.substring(open + 1, close);
         char last = floor.isEmpty() ? ' ' : floor.charAt(floor.length() - 1);
         catacombsFloor = Character.isDigit(last) ? last - '0' : 0;
+        catacombsMaster = floor.startsWith("M");
     }
 
     private static void append(StringBuilder builder, Component component) {
