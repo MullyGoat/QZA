@@ -1,8 +1,8 @@
 package com.qza.gui;
 
-import com.qza.compat.Mc;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.chat.ChatKeybind;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.gui.setting.ActionSetting;
 import com.qza.gui.setting.DropdownSetting;

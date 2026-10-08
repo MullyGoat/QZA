@@ -1,7 +1,7 @@
 package com.qza.cheat;
 
-import com.qza.compat.Mc;
 import com.qza.cheat.mixin.CarriedItemInvoker;
+import com.qza.compat.Mc;
 import com.qza.util.IgnUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;

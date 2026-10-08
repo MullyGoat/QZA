@@ -1,7 +1,7 @@
 package com.qza.shitter;
 
-import com.qza.util.LegacyColours;
 import com.qza.compat.Mc;
+import com.qza.util.LegacyColours;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;

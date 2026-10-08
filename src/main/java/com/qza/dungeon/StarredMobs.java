@@ -1,15 +1,12 @@
 package com.qza.dungeon;
 
-import java.util.ArrayList;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import com.qza.util.LegacyColours;
-import com.qza.render.WorldDraw;
 import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.render.WorldDraw;
 import com.qza.util.DungeonState;
 import com.qza.util.IgnUtil;
+import com.qza.util.LegacyColours;
 import com.qza.waypoint.WaypointColour;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
@@ -19,8 +16,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
@@ -34,6 +33,7 @@ import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;

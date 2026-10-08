@@ -1,7 +1,7 @@
 package com.qza.music;
 
-import com.qza.compat.Mc;
 import com.qza.QZA;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import net.minecraft.client.Minecraft;
 

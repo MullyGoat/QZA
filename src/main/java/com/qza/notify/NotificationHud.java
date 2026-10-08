@@ -1,10 +1,10 @@
 package com.qza.notify;
 
-import com.qza.compat.Mc;
 import com.qza.chat.ChatNotification;
+import com.qza.compat.Mc;
 import com.qza.dungeon.LeapNotification;
-import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
+import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.WitherKey;
 import com.qza.party.PartyNotification;
 import com.qza.timer.ClockDisplay;

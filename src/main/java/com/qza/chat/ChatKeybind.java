@@ -1,7 +1,7 @@
 package com.qza.chat;
 
-import com.qza.compat.Mc;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 

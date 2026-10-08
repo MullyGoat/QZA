@@ -1,14 +1,13 @@
 package com.qza.command;
 
-import com.qza.compat.Mc;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.discord.DiscordAlert;
 import com.qza.discord.PartyFullAlert;
-import com.qza.stats.AutoInvite;
 import com.qza.gui.GuiEditScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.QZAScreen;
@@ -16,6 +15,7 @@ import com.qza.gui.WaypointScreen;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.shitter.ShitterList;
+import com.qza.stats.AutoInvite;
 import com.qza.util.ChatUtil;
 import com.qza.waypoint.Waypoint;
 import com.qza.waypoint.WaypointColour;

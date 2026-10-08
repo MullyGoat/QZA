@@ -1,6 +1,5 @@
 package com.qza.gui;
 
-import com.qza.compat.Mc;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.qza.chat.ChannelHistory;
@@ -8,9 +7,10 @@ import com.qza.chat.ChatConversation;
 import com.qza.chat.ChatFocus;
 import com.qza.chat.ChatHistory;
 import com.qza.chat.ChatMessage;
+import com.qza.compat.Mc;
+import com.qza.config.ConfigManager;
 import com.qza.party.PartyInvite;
 import com.qza.stats.AutoInvite;
-import com.qza.config.ConfigManager;
 import com.qza.util.ChatUtil;
 import com.qza.util.IgnUtil;
 import com.qza.util.PlayerFaces;

@@ -1,7 +1,7 @@
 package com.qza.gui;
 
-import com.qza.compat.Mc;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;

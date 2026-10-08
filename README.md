@@ -4,11 +4,12 @@
 
 Hypixel Skyblock Mod featuring Shitter List, QZA's Universal Hypixel Chat, & more.
 
-Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other version.
+Built for **Minecraft 26.1.2, 26.2 and 26.3** on **Fabric**. Each version has its own jar.
+On 26.2 and 26.3 everything QZA draws works with both the OpenGL and Vulkan graphics backends.
 
 ## Requirements
 
-- Minecraft 26.1.2
+- Minecraft 26.1.2, 26.2 or 26.3
 - Fabric Loader 0.19.0 or newer
 - Fabric API
 - [Hypixel Mod API](https://modrinth.com/mod/hypixel-mod-api)
@@ -19,10 +20,17 @@ Built for **Minecraft 26.1.2** on **Fabric**. It will not load on any other vers
 Grab the jar from the [latest release](https://github.com/MullyGoat/QZA/releases/latest)
 and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API.
 
-Every release has two jars. Install one of them, not both:
+Every release has two jars for each Minecraft version. Pick the ones ending in your
+version (`26.1.2`, `26.2` or `26.3`) and install one of them, not both:
 
-- `qza-<version>-26.1.2.jar` is QZA.
-- `qza-<version>-26.1.2-cheats.jar` is QZA Cheats: Normal QZA with extra cheat features
+- `qza-<version>-<minecraft>.jar` is QZA.
+- `qza-<version>-<minecraft>-cheats.jar` is QZA Cheats: Normal QZA with extra cheat features
+
+## Building
+
+`./gradlew build` builds for 26.1.2. Add `-Pmc=26.2` or `-Pmc=26.3` for the other versions.
+Each version's Minecraft and Fabric API numbers live in `versions/<minecraft>.properties`, and
+code that differs between versions lives in `src/compat/<minecraft>` and `src/cheatcompat/<minecraft>`.
 
 ## QZA Cheats
 

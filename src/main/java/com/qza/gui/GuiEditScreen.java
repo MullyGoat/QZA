@@ -1,13 +1,13 @@
 package com.qza.gui;
 
-import com.qza.compat.Mc;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.chat.ChatNotification;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.dungeon.LeapNotification;
-import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
+import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.WitherKey;
 import com.qza.notify.NotificationBox;
 import com.qza.party.PartyNotification;

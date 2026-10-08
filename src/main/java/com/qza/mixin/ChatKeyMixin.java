@@ -1,9 +1,9 @@
 package com.qza.mixin;
 
-import com.qza.compat.Mc;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.chat.ChannelHistory;
 import com.qza.chat.ChatKeybind;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.gui.QZAChatScreen;
 import net.minecraft.client.KeyboardHandler;
