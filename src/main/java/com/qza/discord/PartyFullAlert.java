@@ -3,12 +3,13 @@ package com.qza.discord;
 import com.qza.config.QZAConfig;
 import com.qza.config.ConfigManager;
 import com.qza.party.PartyState;
+import com.qza.util.DungeonState;
 import com.qza.util.IgnUtil;
 import com.qza.util.Scheduler;
 import net.minecraft.client.Minecraft;
 
-import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 public final class PartyFullAlert {
 
@@ -16,47 +17,50 @@ public final class PartyFullAlert {
 
     private static final long COOLDOWN_MILLIS = 60_000L;
 
-    private static final String[] MEMBERSHIP_CHANGED = {
-            "joined the dungeon group",
-            "joined the party",
-            "left the dungeon group",
-            "left the party",
-            "removed from the party",
-            "kicked from the party",
+    private static final String RANK = "(?:\\[[^\\]]{1,20}\\]\\s*)?";
+
+    private static final Pattern[] JOINED = {
+            Pattern.compile("^" + RANK + "\\w{1,16} joined the party\\.$"),
+            Pattern.compile("^Party Finder > " + RANK + "\\w{1,16} joined the dungeon group!(?: \\(.+\\))?$"),
     };
 
-    private static boolean wasFull;
     private static boolean checkPending;
+    private static long joinedAt;
     private static long lastSentAt;
 
     private PartyFullAlert() {
     }
 
     public static void reset() {
-        wasFull = false;
         checkPending = false;
+        joinedAt = 0L;
         lastSentAt = 0L;
     }
 
     public static void onChatMessage(String raw) {
-        if (raw == null || raw.isEmpty() || !DiscordAlert.active()) {
+        if (raw == null || raw.isEmpty() || !DiscordAlert.active() || !isJoin(raw)) {
             return;
         }
 
-        String message = IgnUtil.stripCodes(raw).toLowerCase(Locale.ROOT);
-        boolean relevant = false;
-        for (String marker : MEMBERSHIP_CHANGED) {
-            if (message.contains(marker)) {
-                relevant = true;
-                break;
-            }
-        }
-        if (!relevant || checkPending) {
+        joinedAt = System.currentTimeMillis();
+        if (checkPending) {
             return;
         }
 
         checkPending = true;
         Scheduler.schedule(SETTLE_TICKS, PartyFullAlert::check);
+    }
+
+    private static boolean isJoin(String raw) {
+        for (String line : IgnUtil.stripCodes(raw).split("\n")) {
+            String message = line.trim();
+            for (Pattern joined : JOINED) {
+                if (joined.matcher(message).matches()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static void check() {
@@ -65,23 +69,19 @@ public final class PartyFullAlert {
             return;
         }
 
-        PartyState.request().thenAccept(snapshot -> {
+        long since = joinedAt;
+        PartyState.refresh().thenAccept(snapshot -> {
             Minecraft client = Minecraft.getInstance();
-            client.execute(() -> evaluate(client, snapshot));
+            client.execute(() -> evaluate(client, snapshot, since));
         });
     }
 
-    private static void evaluate(Minecraft client, PartyState.Snapshot snapshot) {
+    private static void evaluate(Minecraft client, PartyState.Snapshot snapshot, long since) {
 
-        if (snapshot == null || !snapshot.fresh()) {
+        if (snapshot == null || snapshot.at() < since || !snapshot.full() || client.player == null) {
             return;
         }
-
-        boolean full = snapshot.full();
-        boolean filledJustNow = full && !wasFull;
-        wasFull = full;
-
-        if (!filledJustNow || client.player == null) {
+        if (DungeonState.inDungeon()) {
             return;
         }
 

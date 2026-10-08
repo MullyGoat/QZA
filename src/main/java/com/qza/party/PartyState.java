@@ -73,7 +73,14 @@ public final class PartyState {
         if (known != null && known.fresh()) {
             return CompletableFuture.completedFuture(known);
         }
+        return ask(known);
+    }
 
+    public static CompletableFuture<Snapshot> refresh() {
+        return ask(latest);
+    }
+
+    private static CompletableFuture<Snapshot> ask(Snapshot known) {
         CompletableFuture<Snapshot> existing = pending;
         if (existing != null) {
             return existing;
