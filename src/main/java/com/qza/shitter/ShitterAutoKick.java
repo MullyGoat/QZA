@@ -24,7 +24,7 @@ public final class ShitterAutoKick {
 
     private static final Pattern DUNGEON_JOIN =
             Pattern.compile("^(?:Party Finder > )?" + RANK + IGN
-                    + " joined the dungeon group! \\(\\d+/\\d+\\)$");
+                    + " joined the dungeon group!(?: \\(.+\\))?$");
 
     private static final String[] NOT_LEADER = {
             "not this partys leader",
