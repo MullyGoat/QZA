@@ -5,7 +5,6 @@ import com.qza.mixin.BossEventAccessor;
 import com.qza.mixin.BossOverlayAccessor;
 import com.qza.util.ChatUtil;
 import com.qza.util.IgnUtil;
-import com.qza.util.Scheduler;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.LerpingBossEvent;
@@ -15,10 +14,10 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 public final class NecronTimer {
-    private static final int ANNOUNCE_DELAY_TICKS = 10;
     private static final double SECONDS_PER_TICK = 0.05;
     private static final int GONE_TICKS = 2;
     private static final float ARMED_PROGRESS = 0.5f;
+    private static final float KILL_PROGRESS = 0.0505f;
 
     private static final Pattern START = Pattern.compile(
             "^\\[BOSS] Necron: You went further than any human before, congratulations\\.$");
@@ -53,7 +52,7 @@ public final class NecronTimer {
             goneFor = 0;
             if (progress >= ARMED_PROGRESS) {
                 seenBar = true;
-            } else if (seenBar && progress <= 0.0001f) {
+            } else if (seenBar && progress <= KILL_PROGRESS) {
                 announce(ServerTickClock.ticks());
             }
             return;
@@ -93,12 +92,10 @@ public final class NecronTimer {
         String seconds = String.format(Locale.ROOT, "%.2f", (killTick - startTicks) * SECONDS_PER_TICK);
 
         if ("client".equals(ConfigManager.get().necronAnnounceMode)) {
-            Scheduler.schedule(ANNOUNCE_DELAY_TICKS, () -> ChatUtil.send(
-                    Component.literal("Necron was killed in ").withStyle(ChatFormatting.GRAY)
-                            .append(Component.literal(seconds + " seconds").withStyle(ChatFormatting.GREEN))));
+            ChatUtil.send(Component.literal("Necron was killed in ").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal(seconds + " seconds").withStyle(ChatFormatting.GREEN)));
         } else {
-            String text = "pc [QZA] Necron was killed in " + seconds + " seconds";
-            Scheduler.schedule(ANNOUNCE_DELAY_TICKS, () -> ChatUtil.sendCommand(text));
+            ChatUtil.sendCommand("pc [QZA] Necron was killed in " + seconds + " seconds");
         }
     }
 
