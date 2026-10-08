@@ -1,5 +1,6 @@
 package com.qza.mixin;
 
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.gui.QZAChatScreen;
 import net.minecraft.client.Minecraft;
@@ -24,7 +25,7 @@ public class ChatHideMixin {
         if (!ConfigManager.get().hideVanillaChat) {
             return;
         }
-        if (Minecraft.getInstance().screen instanceof QZAChatScreen) {
+        if (Mc.screen() instanceof QZAChatScreen) {
             ci.cancel();
         }
     }

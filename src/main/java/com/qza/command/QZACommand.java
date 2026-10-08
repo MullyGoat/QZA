@@ -1,5 +1,6 @@
 package com.qza.command;
 
+import com.qza.compat.Mc;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -186,25 +187,25 @@ public final class QZACommand {
     private static void openSettings() {
         Minecraft client = Minecraft.getInstance();
 
-        client.execute(() -> client.setScreen(new QZAScreen()));
+        client.execute(() -> Mc.setScreen(new QZAScreen()));
     }
 
     private static void openEditor() {
         Minecraft client = Minecraft.getInstance();
 
-        client.execute(() -> client.setScreen(new GuiEditScreen(false)));
+        client.execute(() -> Mc.setScreen(new GuiEditScreen(false)));
     }
 
     private static void openChat() {
         Minecraft client = Minecraft.getInstance();
 
-        client.execute(() -> client.setScreen(new QZAChatScreen()));
+        client.execute(() -> Mc.setScreen(new QZAChatScreen()));
     }
 
     private static void openWaypoints() {
         Minecraft client = Minecraft.getInstance();
 
-        client.execute(() -> client.setScreen(new WaypointScreen()));
+        client.execute(() -> Mc.setScreen(new WaypointScreen()));
     }
 
     private static int addWaypoint(

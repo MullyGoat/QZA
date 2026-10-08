@@ -1,5 +1,6 @@
 package com.qza.cheat;
 
+import com.qza.compat.Mc;
 import com.qza.cheat.mixin.CarriedItemInvoker;
 import com.qza.util.IgnUtil;
 import net.minecraft.client.Minecraft;
@@ -161,7 +162,7 @@ public final class DeathBow {
     }
 
     private static boolean wardrobeOpen() {
-        if (!(Minecraft.getInstance().screen instanceof AbstractContainerScreen<?> screen)) {
+        if (!(Mc.screen() instanceof AbstractContainerScreen<?> screen)) {
             return false;
         }
         String title = IgnUtil.stripCodes(screen.getTitle().getString());
@@ -180,7 +181,7 @@ public final class DeathBow {
         if (gameMode == null) {
             return false;
         }
-        Screen current = client.screen;
+        Screen current = Mc.screen();
         if (!(current instanceof AbstractContainerScreen<?> screen)) {
             return false;
         }

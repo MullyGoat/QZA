@@ -1,5 +1,7 @@
 package com.qza.gui;
 
+import com.qza.compat.Mc;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.chat.ChatKeybind;
 import com.qza.config.ConfigManager;
 import com.qza.gui.setting.ActionSetting;
@@ -18,7 +20,6 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -705,7 +706,7 @@ public class QZAScreen extends Screen {
         if (super.mouseClicked(local, doubleClick)) {
             return true;
         }
-        if (local.button() != 0) {
+        if (local.button() != InputConstants.MOUSE_BUTTON_LEFT) {
             return false;
         }
 
@@ -714,7 +715,7 @@ public class QZAScreen extends Screen {
 
         if (inside(mouseX, mouseY, editGuiRect())) {
             ConfigManager.save();
-            this.minecraft.setScreen(new GuiEditScreen());
+            Mc.setScreen(new GuiEditScreen());
             return true;
         }
 
@@ -853,7 +854,7 @@ public class QZAScreen extends Screen {
         }
 
         if (numberFocus != null) {
-            if (event.key() == GLFW.GLFW_KEY_BACKSPACE) {
+            if (event.key() == InputConstants.KEY_BACKSPACE) {
                 if (!numberText.isEmpty()) {
                     numberText = numberText.substring(0, numberText.length() - 1);
                     numberFocus.commit(numberBox, numberText);
@@ -861,18 +862,18 @@ public class QZAScreen extends Screen {
                 }
                 return true;
             }
-            if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
+            if (event.key() == InputConstants.KEY_RETURN || event.key() == InputConstants.KEY_NUMPADENTER) {
                 commitNumber();
                 return true;
             }
-            if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+            if (event.key() == InputConstants.KEY_ESCAPE) {
 
                 numberFocus = null;
                 numberBox = -1;
                 numberText = "";
                 return true;
             }
-            if (event.key() == GLFW.GLFW_KEY_TAB) {
+            if (event.key() == InputConstants.KEY_TAB) {
                 NumberSetting current = numberFocus;
                 int next = (numberBox + 1) % current.fields.size();
                 focusNumber(current, next);

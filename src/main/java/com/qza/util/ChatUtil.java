@@ -1,7 +1,9 @@
 package com.qza.util;
 
+import com.qza.compat.Mc;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
@@ -20,8 +22,9 @@ public final class ChatUtil {
     public static void send(Component message) {
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
-            if (client.gui != null) {
-                client.gui.getChat().addClientSystemMessage(prefix().append(message));
+            ChatComponent chat = Mc.chat();
+            if (chat != null) {
+                chat.addClientSystemMessage(prefix().append(message));
             }
         });
     }
@@ -29,8 +32,9 @@ public final class ChatUtil {
     public static void raw(Component message) {
         Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
-            if (client.gui != null) {
-                client.gui.getChat().addClientSystemMessage(message);
+            ChatComponent chat = Mc.chat();
+            if (chat != null) {
+                chat.addClientSystemMessage(message);
             }
         });
     }

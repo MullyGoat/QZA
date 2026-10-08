@@ -1,5 +1,6 @@
 package com.qza.waypoint;
 
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.util.ChatUtil;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -31,8 +32,8 @@ public final class WaypointEditor {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (active && client.screen instanceof PauseScreen) {
-                client.setScreen(null);
+            if (active && Mc.screen() instanceof PauseScreen) {
+                Mc.setScreen(null);
                 stop();
             }
         });

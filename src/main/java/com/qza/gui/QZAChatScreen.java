@@ -1,5 +1,8 @@
 package com.qza.gui;
 
+import com.qza.compat.Mc;
+import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.qza.chat.ChannelHistory;
 import com.qza.chat.ChatConversation;
 import com.qza.chat.ChatFocus;
@@ -17,7 +20,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
-import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -28,8 +30,6 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
-import net.minecraft.util.Util;
-import org.lwjgl.glfw.GLFW;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -107,7 +107,6 @@ public class QZAChatScreen extends Screen {
 
     private Bubble hoverBubble;
     private Segment hoverSegment;
-    private long handCursor;
     private boolean handApplied;
 
     private final List<Bubble> bubbles = new ArrayList<>();
@@ -593,6 +592,9 @@ public class QZAChatScreen extends Screen {
         int my = Math.round((mouseY - offsetY()) / s);
 
         updateHover(mx, my);
+        if (handApplied) {
+            graphics.requestCursor(CursorTypes.POINTING_HAND);
+        }
         updateSuggestionGate();
 
         graphics.pose().pushMatrix();
@@ -1164,7 +1166,7 @@ public class QZAChatScreen extends Screen {
     }
 
     private List<String> sentHistory() {
-        return this.minecraft.gui.getChat().getRecentChat();
+        return Mc.chat().getRecentChat();
     }
 
     private void forgetHistoryPosition() {
@@ -1333,7 +1335,7 @@ public class QZAChatScreen extends Screen {
             accountsOpen = false;
             if (inside(mouseX, mouseY, menu)) {
                 int index = (int) ((mouseY - (menu[1] + 1)) / CONTACT_H);
-                if (local.button() == 0 && index >= 0 && index < accountRows()) {
+                if (local.button() == InputConstants.MOUSE_BUTTON_LEFT && index >= 0 && index < accountRows()) {
                     switchAccount(accountList.get(index));
                 }
                 return true;
@@ -1349,7 +1351,7 @@ public class QZAChatScreen extends Screen {
             String target = menuFor;
             menuFor = null;
 
-            if (inMenu && local.button() == 0) {
+            if (inMenu && local.button() == InputConstants.MOUSE_BUTTON_LEFT) {
                 int index = (int) ((mouseY - (menuY + 1)) / MENU_ROW_H);
                 if (index == 0) {
                     ChatHistory.hide(target);
@@ -1366,13 +1368,13 @@ public class QZAChatScreen extends Screen {
             }
         }
 
-        if (local.button() == 0 && !bubbles.isEmpty() && !atBottom()
+        if (local.button() == InputConstants.MOUSE_BUTTON_LEFT && !bubbles.isEmpty() && !atBottom()
                 && inside(mouseX, mouseY, jumpRect())) {
             jumpToPresent();
             return true;
         }
 
-        if (local.button() == 1) {
+        if (local.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
             Bubble bubble = bubbleAt(mouseX, mouseY);
             if (bubble != null) {
                 copy(bubble);
@@ -1389,7 +1391,7 @@ public class QZAChatScreen extends Screen {
         if (super.mouseClicked(local, doubleClick)) {
             return true;
         }
-        if (local.button() != 0) {
+        if (local.button() != InputConstants.MOUSE_BUTTON_LEFT) {
             return false;
         }
 
@@ -1400,7 +1402,7 @@ public class QZAChatScreen extends Screen {
 
         if (inside(mouseX, mouseY, settingsRect())) {
             QZAScreen.openCategory("Chat");
-            this.minecraft.setScreen(new QZAScreen());
+            Mc.setScreen(new QZAScreen());
             return true;
         }
 
@@ -1586,32 +1588,7 @@ public class QZAChatScreen extends Screen {
     }
 
     private void applyHandCursor(boolean hand) {
-        if (hand == handApplied) {
-            return;
-        }
-        long window = this.minecraft.getWindow().handle();
-        if (hand) {
-            if (handCursor == 0L) {
-                handCursor = GLFW.glfwCreateStandardCursor(GLFW.GLFW_POINTING_HAND_CURSOR);
-            }
-            if (handCursor == 0L) {
-                return;
-            }
-            GLFW.glfwSetCursor(window, handCursor);
-        } else {
-            GLFW.glfwSetCursor(window, 0L);
-        }
         handApplied = hand;
-    }
-
-    @Override
-    public void removed() {
-        applyHandCursor(false);
-        if (handCursor != 0L) {
-            GLFW.glfwDestroyCursor(handCursor);
-            handCursor = 0L;
-        }
-        super.removed();
     }
 
     private boolean runClick(Style style) {
@@ -1634,12 +1611,12 @@ public class QZAChatScreen extends Screen {
         if (event instanceof ClickEvent.OpenUrl open) {
             URI uri = open.uri();
             QZAChatScreen self = this;
-            this.minecraft.setScreen(new ConfirmLinkScreen(confirmed -> {
+            Mc.setScreen(Mc.confirmLink(confirmed -> {
                 if (confirmed) {
-                    Util.getPlatform().openUri(uri);
+                    Mc.openUri(uri);
                 }
-                this.minecraft.setScreen(self);
-            }, uri.toString(), false));
+                Mc.setScreen(self);
+            }, uri));
             return true;
         }
         if (this.minecraft.player == null) {
@@ -1740,16 +1717,16 @@ public class QZAChatScreen extends Screen {
         }
 
         if (!adding && !inviting) {
-            if (event.key() == GLFW.GLFW_KEY_UP) {
+            if (event.key() == InputConstants.KEY_UP) {
                 moveInHistory(-1);
                 return true;
             }
-            if (event.key() == GLFW.GLFW_KEY_DOWN) {
+            if (event.key() == InputConstants.KEY_DOWN) {
                 moveInHistory(1);
                 return true;
             }
         }
-        if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
+        if (event.key() == InputConstants.KEY_RETURN || event.key() == InputConstants.KEY_NUMPADENTER) {
             if (adding) {
                 confirmAdd();
             } else if (inviting) {
@@ -1759,7 +1736,7 @@ public class QZAChatScreen extends Screen {
             }
             return true;
         }
-        if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (event.key() == InputConstants.KEY_ESCAPE) {
             if (accountsOpen) {
                 accountsOpen = false;
                 return true;

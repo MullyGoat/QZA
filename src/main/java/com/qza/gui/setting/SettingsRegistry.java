@@ -1,5 +1,6 @@
 package com.qza.gui.setting;
 
+import com.qza.compat.Mc;
 import com.qza.addon.QZAAddon;
 import com.qza.chat.ChatFocus;
 import com.qza.chat.ChatHistory;
@@ -91,7 +92,7 @@ public final class SettingsRegistry {
                 Component.literal("Displays list of shitters").withStyle(ChatFormatting.GRAY),
                 "Open",
                 () -> {
-                    Minecraft.getInstance().setScreen(null);
+                    Mc.setScreen(null);
                     ShitterListPage.print(1);
                 }));
 
@@ -130,7 +131,7 @@ public final class SettingsRegistry {
                 170,
                 () -> {
                     MusicLibrary.reload();
-                    Minecraft.getInstance().setScreen(new MusicNamesScreen());
+                    Mc.setScreen(new MusicNamesScreen());
                 })
                 .visibleWhen(() -> cfg.terminalMusicEnabled && !cfg.shuffleMode));
 
@@ -174,7 +175,7 @@ public final class SettingsRegistry {
                 Component.literal("View and change the coords, colour, size and name of "
                                 + "every waypoint").withStyle(ChatFormatting.GRAY),
                 "Open",
-                () -> Minecraft.getInstance().setScreen(new WaypointScreen()))
+                () -> Mc.setScreen(new WaypointScreen()))
                 .visibleWhen(() -> cfg.waypointsEnabled));
 
         settings.add(new ActionSetting(f7, "Waypoints", "Manual Waypoint Add",
@@ -185,7 +186,7 @@ public final class SettingsRegistry {
                         .append(Component.literal(" to finish.").withStyle(ChatFormatting.GRAY)),
                 () -> WaypointEditor.active() ? "Stop" : "Add",
                 () -> {
-                    Minecraft.getInstance().setScreen(null);
+                    Mc.setScreen(null);
                     WaypointEditor.toggle();
                 })
                 .visibleWhen(() -> cfg.waypointsEnabled));
@@ -401,7 +402,7 @@ public final class SettingsRegistry {
                     int unread = ChatHistory.unreadTotal();
                     return unread > 0 ? "Open (" + unread + ")" : "Open";
                 },
-                () -> Minecraft.getInstance().setScreen(new QZAChatScreen()))
+                () -> Mc.setScreen(new QZAChatScreen()))
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
         settings.add(new ToggleSetting(chat, "QZA Chat", "Hide Vanilla Chat",
@@ -736,7 +737,7 @@ public final class SettingsRegistry {
                                 + "everything stored about you.").withStyle(ChatFormatting.GRAY)),
                 () -> DiscordAlert.linked() ? "Unlink" : "Link",
                 () -> {
-                    Minecraft.getInstance().setScreen(null);
+                    Mc.setScreen(null);
                     if (DiscordAlert.linked()) {
                         DiscordAlert.unlink(ChatUtil::success, ChatUtil::error);
                     } else {
@@ -854,7 +855,7 @@ public final class SettingsRegistry {
                     ADDONS.forEach(QZAAddon::resetSettings);
                     MusicManager.get().applySettings();
                     ChatUtil.success("Settings reset to defaults.");
-                    Minecraft.getInstance().setScreen(null);
+                    Mc.setScreen(null);
                 }));
 
         return settings;

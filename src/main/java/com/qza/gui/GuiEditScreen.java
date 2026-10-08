@@ -1,5 +1,7 @@
 package com.qza.gui;
 
+import com.qza.compat.Mc;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.chat.ChatNotification;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
@@ -249,7 +251,7 @@ public class GuiEditScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if (event.button() == 0) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             Target target = targetAt(event.x(), event.y());
             if (target != null) {
                 int[] box = rect(target);
@@ -299,7 +301,7 @@ public class GuiEditScreen extends Screen {
     public void onClose() {
         dragging = null;
         ConfigManager.save();
-        Minecraft.getInstance().setScreen(returnToSettings ? new QZAScreen() : null);
+        Mc.setScreen(returnToSettings ? new QZAScreen() : null);
     }
 
     @Override

@@ -17,6 +17,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mc: [ '26.1.2', '26.2', '26.3' ]
     steps:
       - uses: actions/checkout@v7
 
@@ -38,18 +42,28 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - name: Build
-        run: ./gradlew build --stacktrace
+      - name: Build for Minecraft ${{ matrix.mc }}
+        run: ./gradlew build -Pmc=${{ matrix.mc }} --stacktrace
 
       - uses: actions/upload-artifact@v7
         with:
-          name: qza-dev-build
-          path: build/libs/*.jar
+          name: qza-${{ matrix.mc }}
+          path: build/libs/*-${{ matrix.mc }}*.jar
           if-no-files-found: error
 
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: qza-*
+          merge-multiple: true
+          path: jars
+
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
-          files: build/libs/*.jar
+          files: jars/*.jar
           generate_release_notes: true

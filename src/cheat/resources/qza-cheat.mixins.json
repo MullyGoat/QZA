@@ -7,9 +7,7 @@
     "CarriedItemInvoker",
     "ContainerPosAccessor",
     "DeathBowReleaseMixin",
-    "MouseHandlerAccessor",
-    "RenderPipelinesAccessor",
-    "RenderTypeInvoker"
+    "MouseHandlerAccessor"
   ],
   "injectors": {
     "defaultRequire": 0

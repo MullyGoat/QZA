@@ -1,5 +1,7 @@
 package com.qza.gui;
 
+import com.qza.compat.Mc;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.config.ConfigManager;
 import com.qza.util.ChatUtil;
 import com.qza.waypoint.Waypoint;
@@ -401,16 +403,16 @@ public class WaypointScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         MouseButtonEvent local = toLogical(event);
 
-        if (local.button() == 0 && inside(local.x(), local.y(), manualRect())) {
+        if (local.button() == InputConstants.MOUSE_BUTTON_LEFT && inside(local.x(), local.y(), manualRect())) {
             apply();
             WaypointEditor.toggle();
             if (WaypointEditor.active()) {
-                this.minecraft.setScreen(null);
+                Mc.setScreen(null);
             }
             return true;
         }
 
-        if (local.button() == 0) {
+        if (local.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             int top = listY - (int) Math.round(scroll);
             for (int i = 0; i < rows.size(); i++) {
                 Row row = rows.get(i);
@@ -549,7 +551,7 @@ public class WaypointScreen extends Screen {
         apply();
         ChatUtil.info(WaypointList.size() + " waypoint"
                 + (WaypointList.size() == 1 ? "" : "s") + " saved.");
-        Minecraft.getInstance().setScreen(new QZAScreen());
+        Mc.setScreen(new QZAScreen());
     }
 
     @Override

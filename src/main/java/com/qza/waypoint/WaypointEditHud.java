@@ -1,5 +1,6 @@
 package com.qza.waypoint;
 
+import com.qza.compat.Mc;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -25,7 +26,7 @@ public final class WaypointEditHud implements HudElement {
 
         Minecraft client = Minecraft.getInstance();
         Font font = client.font;
-        if (client.options.hideGui || font == null) {
+        if (Mc.hudHidden() || font == null) {
             return;
         }
 

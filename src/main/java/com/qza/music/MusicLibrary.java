@@ -1,8 +1,8 @@
 package com.qza.music;
 
+import com.qza.compat.Mc;
 import com.qza.QZA;
 import com.qza.config.ConfigManager;
-import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 
 import java.io.IOException;
@@ -93,7 +93,7 @@ public final class MusicLibrary {
         Path dir = musicDir();
         Minecraft.getInstance().execute(() -> {
             try {
-                Util.getPlatform().openUri(dir.toUri());
+                Mc.openUri(dir.toUri());
             } catch (Throwable first) {
                 try {
                     java.awt.Desktop.getDesktop().open(dir.toFile());

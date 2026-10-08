@@ -1,5 +1,7 @@
 package com.qza.shitter;
 
+import com.qza.util.LegacyColours;
+import com.qza.compat.Mc;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -72,7 +74,7 @@ public final class ShitterHighlight {
     }
 
     private static boolean inPartyFinder() {
-        Screen screen = Minecraft.getInstance().screen;
+        Screen screen = Mc.screen();
         if (screen == null) {
             return false;
         }
@@ -164,7 +166,7 @@ public final class ShitterHighlight {
 
             if (code == ChatFormatting.RESET) {
                 current = base;
-            } else if (code.isColor()) {
+            } else if (LegacyColours.isColour(code)) {
                 current = base.withColor(TextColor.fromLegacyFormat(code));
             } else {
                 current = current.applyFormat(code);

@@ -1,5 +1,6 @@
 package com.qza.itemlist;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import net.minecraft.ChatFormatting;
@@ -13,7 +14,6 @@ import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -373,7 +373,7 @@ public final class ItemListOverlay {
         }
 
         if (search != null && inside(x, y, searchRect())) {
-            if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+            if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
                 search.setValue("");
             }
             search.setFocused(true);
@@ -395,7 +395,7 @@ public final class ItemListOverlay {
 
         RepoItem item = itemAt(x, y);
         if (item != null) {
-            open(screen, item, event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT);
+            open(screen, item, event.button() == InputConstants.MOUSE_BUTTON_RIGHT);
         }
         return true;
     }
@@ -425,11 +425,11 @@ public final class ItemListOverlay {
                               boolean typingElsewhere) {
         if (searchFocused()) {
             int key = event.key();
-            if (key == GLFW.GLFW_KEY_ESCAPE) {
+            if (key == InputConstants.KEY_ESCAPE) {
                 search.setFocused(false);
                 return false;
             }
-            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+            if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
                 search.setFocused(false);
                 return true;
             }
@@ -439,14 +439,14 @@ public final class ItemListOverlay {
         if (!visible || !cfg().itemListEnabled || !shown() || typingElsewhere) {
             return false;
         }
-        if (event.key() == GLFW.GLFW_KEY_F && event.hasControlDown() && search != null) {
+        if (event.key() == InputConstants.KEY_F && event.hasControlDown() && search != null) {
             search.setFocused(true);
             return true;
         }
-        if (event.key() == GLFW.GLFW_KEY_R || event.key() == GLFW.GLFW_KEY_U) {
+        if (event.key() == InputConstants.KEY_R || event.key() == InputConstants.KEY_U) {
             RepoItem target = hovered != null ? hovered : screenHovered;
             if (target != null) {
-                open(screen, target, event.key() == GLFW.GLFW_KEY_U);
+                open(screen, target, event.key() == InputConstants.KEY_U);
                 return true;
             }
         }

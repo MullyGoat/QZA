@@ -1,5 +1,6 @@
 package com.qza.cheat;
 
+import com.qza.compat.Mc;
 import com.qza.dungeon.StarredMobs;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
@@ -15,7 +16,7 @@ public class QZACheat implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             DeathBow.tick();
-            MelodyAim.tick(client.screen);
+            MelodyAim.tick(Mc.screen());
         });
         ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register((client, level) -> DeathBow.reset());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> MelodyAim.reset());

@@ -1,5 +1,6 @@
 package com.qza.timer;
 
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.mixin.BossEventAccessor;
 import com.qza.mixin.BossOverlayAccessor;
@@ -70,7 +71,7 @@ public final class NecronTimer {
 
     private static Float necronProgress() {
         Minecraft client = Minecraft.getInstance();
-        if (client.gui == null || !(client.gui.getBossOverlay() instanceof BossOverlayAccessor overlay)) {
+        if (!(Mc.bossOverlay() instanceof BossOverlayAccessor overlay)) {
             return null;
         }
         for (LerpingBossEvent event : overlay.qzaEvents().values()) {

@@ -1,5 +1,6 @@
 package com.qza.notify;
 
+import com.qza.compat.Mc;
 import com.qza.chat.ChatNotification;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.SplitTimers;
@@ -16,7 +17,7 @@ public final class NotificationHud implements HudElement {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft client = Minecraft.getInstance();
-        if (client.options.hideGui || client.font == null) {
+        if (Mc.hudHidden() || client.font == null) {
             return;
         }
         PartyNotification.renderHud(graphics, client.font);

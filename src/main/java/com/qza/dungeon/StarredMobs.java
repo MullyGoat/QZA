@@ -1,7 +1,11 @@
 package com.qza.dungeon;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import java.util.ArrayList;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import com.qza.util.LegacyColours;
+import com.qza.render.WorldDraw;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.util.DungeonState;
@@ -15,8 +19,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.network.chat.Component;
@@ -27,12 +29,10 @@ import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.Shapes;
 
 import java.util.HashSet;
 import java.util.List;
@@ -65,8 +65,12 @@ public final class StarredMobs {
     }
 
     public static void init() {
-        LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(context ->
-                draw(context.poseStack(), context.bufferSource()));
+        LevelRenderEvents.COLLECT_SUBMITS.register(context -> {
+            CameraRenderState camera = context.levelState().cameraRenderState;
+            if (camera != null && camera.pos != null) {
+                draw(context.submitNodeCollector(), camera.pos);
+            }
+        });
         ClientEntityEvents.ENTITY_UNLOAD.register((entity, level) -> {
             if (active()) {
                 starred.remove(entity.getId());
@@ -159,7 +163,7 @@ public final class StarredMobs {
         return !BOSS_ROOMS[floor - 1].contains(player.getX(), player.getY(), player.getZ());
     }
 
-    private static void draw(PoseStack poseStack, MultiBufferSource.BufferSource buffers) {
+    private static void draw(SubmitNodeCollector collector, Vec3 camera) {
         QZAConfig cfg = ConfigManager.get();
         Minecraft client = Minecraft.getInstance();
         if (!cfg.starredMobsEnabled || client.level == null || !active()) {
@@ -167,23 +171,27 @@ public final class StarredMobs {
         }
 
         float partial = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        Vec3 camera = client.gameRenderer.getMainCamera().position();
-        VertexConsumer consumer = buffers.getBuffer(lines.get());
-
-        poseStack.pushPose();
-        poseStack.translate(-camera.x, -camera.y, -camera.z);
+        List<AABB> boxes = new ArrayList<>();
+        List<Integer> colours = new ArrayList<>();
         for (Entity entity : client.level.entitiesForRendering()) {
             Integer colour = colour(cfg, entity);
             if (colour == null) {
                 continue;
             }
             Vec3 at = entity.getPosition(partial);
-            AABB box = entity.getBoundingBox().move(at.subtract(entity.position()));
-            ShapeRenderer.renderShape(poseStack, consumer,
-                    Shapes.create(box.move(-box.minX, -box.minY, -box.minZ)),
-                    box.minX, box.minY, box.minZ, colour, LINE_WIDTH);
+            boxes.add(entity.getBoundingBox().move(at.subtract(entity.position()))
+                    .move(-camera.x, -camera.y, -camera.z));
+            colours.add(colour);
         }
-        poseStack.popPose();
+        if (boxes.isEmpty()) {
+            return;
+        }
+
+        WorldDraw.submit(collector, lines.get(), (pose, buffer) -> {
+            for (int i = 0; i < boxes.size(); i++) {
+                WorldDraw.outline(buffer, pose, boxes.get(i), colours.get(i), LINE_WIDTH);
+            }
+        });
     }
 
     private static Integer colour(QZAConfig cfg, Entity entity) {
@@ -194,7 +202,7 @@ public final class StarredMobs {
             return cfg.starredMobsBats && !bat.isInvisible() && !bat.isPassenger()
                     ? WaypointColour.argb(cfg.starredMobsBatColour) : null;
         }
-        if (entity instanceof EnderMan && cfg.starredMobsFels) {
+        if (Mc.isEnderman(entity) && cfg.starredMobsFels) {
             Component name = entity.getCustomName();
             if (name != null && "Dinnerbone".equals(name.getString())) {
                 return WaypointColour.argb(cfg.starredMobsFelColour);
@@ -216,12 +224,9 @@ public final class StarredMobs {
     private static void appendStyle(StringBuilder out, Style style) {
         TextColor colour = style.getColor();
         if (colour != null) {
-            for (ChatFormatting format : ChatFormatting.values()) {
-                if (format.isColor() && format.getColor() != null
-                        && format.getColor() == colour.getValue()) {
-                    out.append('§').append(format.getChar());
-                    break;
-                }
+            char code = LegacyColours.codeFor(colour.getValue());
+            if (code != 0) {
+                out.append('§').append(code);
             }
         }
         if (style.isBold()) {

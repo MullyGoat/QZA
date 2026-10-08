@@ -1,5 +1,6 @@
 package com.qza.mixin;
 
+import com.qza.compat.Mc;
 import com.qza.itemlist.ItemList;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
@@ -15,8 +16,8 @@ public class ItemListCharMixin {
     @Inject(method = "charTyped", at = @At("HEAD"), cancellable = true)
     private void qzaItemListSearch(long window, CharacterEvent event, CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
-        if (window == client.getWindow().handle() && client.getOverlay() == null
-                && ItemList.charTyped(client.screen, event)) {
+        if (window == client.getWindow().handle() && Mc.overlay() == null
+                && ItemList.charTyped(Mc.screen(), event)) {
             ci.cancel();
         }
     }

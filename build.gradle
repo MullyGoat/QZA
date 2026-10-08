@@ -2,6 +2,11 @@ plugins {
     id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
 
+def mcVersion = project.findProperty("mc") ?: "26.1.2"
+def mcProps = new Properties()
+file("versions/${mcVersion}.properties").withInputStream { mcProps.load(it) }
+mcProps.each { key, value -> project.ext.set(key, value) }
+
 base {
     archivesName = project.archives_base_name
 }
@@ -38,8 +43,9 @@ dependencies {
 
 processResources {
     inputs.property "version", project.version
+    inputs.property "minecraft", project.minecraft_dependency
     filesMatching("fabric.mod.json") {
-        expand "version": project.version
+        expand "version": project.version, "minecraft": project.minecraft_dependency
     }
 }
 
@@ -48,7 +54,13 @@ jar {
 }
 
 sourceSets {
+    main {
+        java.srcDir "src/compat/${mcVersion}/java"
+        resources.srcDir "src/compat/${mcVersion}/resources"
+    }
     cheat {
+        java.srcDir "src/cheatcompat/${mcVersion}/java"
+        resources.srcDir "src/cheatcompat/${mcVersion}/resources"
         compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
         runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
     }
@@ -68,7 +80,7 @@ def cheatMeta = tasks.register("cheatMeta", Copy) {
         mod.description = "Extra cheat version of QZA featuring Shitter List, QZA's Universal Hypixel Chat, & more."
         mod.entrypoints.client = mod.entrypoints.client + ["com.qza.cheat.QZACheat"]
         mod.entrypoints["qza:addon"] = ["com.qza.cheat.CheatAddon"]
-        mod.mixins = mod.mixins + ["qza-cheat.mixins.json"]
+        mod.mixins = mod.mixins + ["qza-cheat.mixins.json", "qza-cheat-compat.mixins.json"]
         mod.breaks = [qza: "*"]
         file.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(mod))
     }

@@ -1,5 +1,7 @@
 package com.qza.itemlist;
 
+import com.qza.compat.Mc;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -19,7 +21,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -91,7 +92,7 @@ public final class RecipeScreen extends Screen {
         boolean chest = from instanceof AbstractContainerScreen<?> && !inventory && player != null
                 && player.containerMenu != player.inventoryMenu;
         int containerId = chest ? player.containerMenu.containerId : -1;
-        client.setScreen(screen);
+        Mc.setScreen(screen);
         if (chest) {
             player.connection.send(new ServerboundContainerClosePacket(containerId));
             player.containerMenu = player.inventoryMenu;
@@ -577,11 +578,11 @@ public final class RecipeScreen extends Screen {
         double y = event.y();
         int button = event.button();
 
-        if (button == GLFW.GLFW_MOUSE_BUTTON_4) {
+        if (button == InputConstants.MOUSE_BUTTON_4) {
             back();
             return true;
         }
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             if (!HISTORY.isEmpty() && inside(x, y, backRect())) {
                 back();
                 return true;
@@ -607,8 +608,8 @@ public final class RecipeScreen extends Screen {
                 }
             }
         }
-        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT || button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
-            boolean showUsages = button == GLFW.GLFW_MOUSE_BUTTON_RIGHT;
+        if (button == InputConstants.MOUSE_BUTTON_LEFT || button == InputConstants.MOUSE_BUTTON_RIGHT) {
+            boolean showUsages = button == InputConstants.MOUSE_BUTTON_RIGHT;
             for (Spot spot : spots) {
                 if (x >= spot.x() - 1 && x < spot.x() + 17 && y >= spot.y() - 1 && y < spot.y() + 17) {
                     if (!spot.ingredient().isCoins()) {
@@ -648,26 +649,26 @@ public final class RecipeScreen extends Screen {
             return true;
         }
         int key = event.key();
-        if (key == GLFW.GLFW_KEY_R || key == GLFW.GLFW_KEY_U) {
+        if (key == InputConstants.KEY_R || key == InputConstants.KEY_U) {
             RepoItem item = hoveredItem();
             if (item != null) {
-                openItem(item, key == GLFW.GLFW_KEY_U);
+                openItem(item, key == InputConstants.KEY_U);
                 return true;
             }
         }
-        if (key == GLFW.GLFW_KEY_BACKSPACE) {
+        if (key == InputConstants.KEY_BACKSPACE) {
             back();
             return true;
         }
-        if (key == GLFW.GLFW_KEY_LEFT && page > 0) {
+        if (key == InputConstants.KEY_LEFT && page > 0) {
             page--;
             return true;
         }
-        if (key == GLFW.GLFW_KEY_RIGHT && page < pageCount() - 1) {
+        if (key == InputConstants.KEY_RIGHT && page < pageCount() - 1) {
             page++;
             return true;
         }
-        if (key != GLFW.GLFW_KEY_ESCAPE && this.minecraft.options.keyInventory.matches(event)) {
+        if (key != InputConstants.KEY_ESCAPE && this.minecraft.options.keyInventory.matches(event)) {
             onClose();
             return true;
         }
@@ -684,7 +685,7 @@ public final class RecipeScreen extends Screen {
         HISTORY.clear();
         overlay.closed();
         if (backToInventory && this.minecraft.player != null) {
-            this.minecraft.setScreen(new InventoryScreen(this.minecraft.player));
+            Mc.setScreen(new InventoryScreen(this.minecraft.player));
         } else {
             super.onClose();
         }

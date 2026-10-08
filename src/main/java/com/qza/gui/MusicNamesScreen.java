@@ -1,5 +1,7 @@
 package com.qza.gui;
 
+import com.qza.compat.Mc;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.config.ConfigManager;
 import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;
@@ -264,7 +266,7 @@ public class MusicNamesScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         MouseButtonEvent local = toLogical(event);
 
-        if (local.button() == 0) {
+        if (local.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             int top = listY - (int) Math.round(scroll);
             for (int i = 0; i < entries.size(); i++) {
                 int y = top + COLUMNS_H + (i * ROW_H);
@@ -273,7 +275,7 @@ public class MusicNamesScreen extends Screen {
                 }
                 if (inside(local.x(), local.y(), gearRect(y))) {
                     save();
-                    this.minecraft.setScreen(new SongTrimScreen(entries.get(i).file));
+                    Mc.setScreen(new SongTrimScreen(entries.get(i).file));
                     return true;
                 }
             }
@@ -318,7 +320,7 @@ public class MusicNamesScreen extends Screen {
     @Override
     public void onClose() {
         save();
-        Minecraft.getInstance().setScreen(new QZAScreen());
+        Mc.setScreen(new QZAScreen());
     }
 
     @Override

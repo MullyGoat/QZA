@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.qza.cheat.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "RenderPipelinesAccessor",
+    "RenderTypeInvoker"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

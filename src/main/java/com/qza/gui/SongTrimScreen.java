@@ -1,5 +1,6 @@
 package com.qza.gui;
 
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;
@@ -258,7 +259,7 @@ public class SongTrimScreen extends Screen {
             MusicTrims.set(file, from, to);
             ConfigManager.save();
         }
-        Minecraft.getInstance().setScreen(new MusicNamesScreen());
+        Mc.setScreen(new MusicNamesScreen());
     }
 
     @Override

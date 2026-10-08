@@ -1,6 +1,7 @@
 package com.qza.cheat;
 
 import com.mojang.blaze3d.platform.Window;
+import com.qza.cheat.compat.CursorWarp;
 import com.qza.cheat.mixin.ContainerPosAccessor;
 import com.qza.cheat.mixin.MouseHandlerAccessor;
 import net.minecraft.client.Minecraft;
@@ -11,7 +12,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -116,7 +116,7 @@ public final class MelodyAim {
 
         double x = spot.x() * window.getScreenWidth() / guiWidth;
         double y = spot.y() * window.getScreenHeight() / guiHeight;
-        GLFW.glfwSetCursorPos(window.handle(), x, y);
+        CursorWarp.to(window, x, y);
         if (client.mouseHandler instanceof MouseHandlerAccessor mouse) {
             mouse.qzaSetXpos(x);
             mouse.qzaSetYpos(y);

@@ -1,9 +1,9 @@
 package com.qza.chat;
 
+import com.qza.compat.Mc;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
-import org.lwjgl.glfw.GLFW;
 
 public final class ChatKeybind {
     public static final int NONE = -1;
@@ -34,7 +34,7 @@ public final class ChatKeybind {
         if (!cfg.qzaChatEnabled) {
             return NONE;
         }
-        return cfg.openChatWithT ? GLFW.GLFW_KEY_T : cfg.chatKeyCode;
+        return cfg.openChatWithT ? InputConstants.KEY_T : cfg.chatKeyCode;
     }
 
     public static boolean capturing() {
@@ -51,11 +51,11 @@ public final class ChatKeybind {
 
     public static void capture(int keyCode) {
         capturing = false;
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+        if (keyCode == InputConstants.KEY_ESCAPE) {
             return;
         }
         QZAConfig cfg = ConfigManager.get();
-        cfg.chatKeyCode = keyCode == GLFW.GLFW_KEY_DELETE ? NONE : keyCode;
+        cfg.chatKeyCode = keyCode == InputConstants.KEY_DELETE ? NONE : keyCode;
         ConfigManager.save();
     }
 
@@ -66,7 +66,7 @@ public final class ChatKeybind {
 
     public static String nameOf(int keyCode) {
         try {
-            return InputConstants.Type.KEYSYM.getOrCreate(keyCode).getDisplayName().getString();
+            return Mc.keyName(keyCode);
         } catch (Exception e) {
             return "Key " + keyCode;
         }
