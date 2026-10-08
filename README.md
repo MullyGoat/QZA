@@ -23,8 +23,8 @@ and drop it into your `mods` folder alongside Fabric API and the Hypixel Mod API
 Every release has two jars for each Minecraft version. Pick the ones ending in your
 version (`26.1.2`, `26.2` or `26.3`) and install one of them, not both:
 
-- `qza-<version>-<minecraft>.jar` is QZA.
-- `qza-<version>-<minecraft>-cheats.jar` is QZA Cheats: Normal QZA with extra cheat features
+- `QZA-<version>-<minecraft>-legit.jar` is QZA.
+- `QZA-<version>-<minecraft>-cheats.jar` is QZA Cheats: Normal QZA with extra cheat features
 
 ## Building
 

@@ -50,7 +50,7 @@ processResources {
 }
 
 jar {
-    archiveFileName = "${project.archives_base_name}-${project.version}-${project.minecraft_version}.jar"
+    archiveFileName = "${project.archives_base_name}-${project.version}-${project.minecraft_version}-legit.jar"
 }
 
 sourceSets {
@@ -88,7 +88,7 @@ def cheatMeta = tasks.register("cheatMeta", Copy) {
 
 def cheatJar = tasks.register("cheatJar", Jar) {
     dependsOn tasks.jar, cheatMeta
-    archiveFileName = "qza-${project.version}-${project.minecraft_version}-cheats.jar"
+    archiveFileName = "${project.archives_base_name}-${project.version}-${project.minecraft_version}-cheats.jar"
     destinationDirectory = tasks.jar.destinationDirectory
     from(zipTree(tasks.jar.archiveFile)) {
         exclude "fabric.mod.json", "META-INF/MANIFEST.MF"
