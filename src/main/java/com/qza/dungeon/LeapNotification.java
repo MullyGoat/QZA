@@ -7,6 +7,7 @@ import com.qza.notify.NotificationBox;
 import com.qza.util.DungeonState;
 import com.qza.util.IgnUtil;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.User;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -24,8 +25,13 @@ public final class LeapNotification {
     private static final String SUFFIX = " Leaped to You!";
 
     private static final Pattern PARTY = Pattern.compile("^Party > [^:]*?(\\w{1,16}): (.+)$");
+    private static final Pattern ALL_CHAT = Pattern.compile(
+            "^\\[\\d+] (?:[^\\w\\[\\s]+ )?(?:\\[[^]]*] )?(\\w{1,16}): (.+)$");
     private static final Pattern LEAP = Pattern.compile(
             "^(?:\\[[^]]*] )?(?:i )?(?:leaped|leapt|leaping) to +(\\w{1,16})!?$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern RUN_START = Pattern.compile(
+            "^\\[NPC] Mort: (Here, I found this map when I first entered the dungeon\\."
+                    + "|Right-click the Orb for spells, and Left-click \\(or Drop\\) to use your Ultimate!)$");
     private static final Pattern TAB_CLASS = Pattern.compile(
             "^\\[\\d+] (\\w{1,16})(?: [^(]*)? \\((Archer|Berserk|Healer|Mage|Tank)\\b");
     private static final Pattern[] BOSS_ENTRY = {
@@ -40,9 +46,12 @@ public final class LeapNotification {
                     + "Now you wish to defy me\\? Sadan\\?!$"),
             Pattern.compile("^\\[BOSS] Maxor: WELL! WELL! WELL! LOOK WHO'S HERE!$")};
 
+    private static boolean inRun;
     private static boolean inBoss;
     private static String shown;
     private static long shownAt;
+    private static String mentionName;
+    private static Pattern mention;
 
     private LeapNotification() {
     }
@@ -52,6 +61,10 @@ public final class LeapNotification {
             return;
         }
         String message = IgnUtil.stripCodes(raw).trim();
+        if (RUN_START.matcher(message).matches()) {
+            inRun = true;
+            return;
+        }
         for (Pattern entry : BOSS_ENTRY) {
             if (entry.matcher(message).matches()) {
                 inBoss = true;
@@ -63,13 +76,23 @@ public final class LeapNotification {
         if (!cfg.leapNotifyEnabled) {
             return;
         }
-        Matcher party = PARTY.matcher(message);
-        if (!party.matches()) {
+        Matcher chat = PARTY.matcher(message);
+        boolean party = chat.matches();
+        if (!party) {
+            chat = ALL_CHAT.matcher(message);
+            if (!chat.matches()) {
+                return;
+            }
+        }
+        String leaper = chat.group(1);
+        String said = chat.group(2).trim();
+        if (ChatFocus.isSelf(leaper)) {
             return;
         }
-        String leaper = party.group(1);
-        Matcher leap = LEAP.matcher(party.group(2).trim());
-        if (!leap.matches() || !ChatFocus.isSelf(leap.group(1)) || ChatFocus.isSelf(leaper)) {
+        Matcher leap = LEAP.matcher(said);
+        boolean leapedToSelf = party && leap.matches() && ChatFocus.isSelf(leap.group(1));
+        boolean named = (inRun || inBoss) && mentionsSelf(said);
+        if (!leapedToSelf && !named) {
             return;
         }
         if (!DungeonState.inDungeon() || (cfg.leapNotifyBossOnly && !inBoss)) {
@@ -78,6 +101,20 @@ public final class LeapNotification {
 
         shown = text(leaper, cfg.leapNotifyClass ? classOf(leaper) : null);
         shownAt = System.currentTimeMillis();
+    }
+
+    private static boolean mentionsSelf(String said) {
+        User user = Minecraft.getInstance().getUser();
+        String name = user == null ? null : user.getName();
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+        if (!name.equals(mentionName)) {
+            mentionName = name;
+            mention = Pattern.compile("(?<![A-Za-z0-9_])" + Pattern.quote(name) + "(?![A-Za-z0-9_])",
+                    Pattern.CASE_INSENSITIVE);
+        }
+        return mention.matcher(said).find();
     }
 
     private static String text(String leaper, String dungeonClass) {
@@ -142,6 +179,7 @@ public final class LeapNotification {
     }
 
     public static void reset() {
+        inRun = false;
         inBoss = false;
         shown = null;
     }

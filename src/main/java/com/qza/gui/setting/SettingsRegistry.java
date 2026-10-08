@@ -629,7 +629,8 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.partyInviteNotifyEnabled));
 
         settings.add(new ToggleSetting(notify, "Leap Notifications", "Leap Notifications",
-                Component.literal("Shows <ign> Leaped to You! on screen when someone leaps to you. Drag it in ")
+                Component.literal("Shows <ign> Leaped to You! on screen when someone leaps to you, or says "
+                                + "your name in chat during a run. Drag it in ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE))
                         .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
