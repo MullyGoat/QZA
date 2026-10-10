@@ -17,6 +17,7 @@ import com.qza.music.MusicManager;
 import com.qza.shitter.ShitterList;
 import com.qza.stats.AutoInvite;
 import com.qza.util.ChatUtil;
+import com.qza.util.Scheduler;
 import com.qza.waypoint.Waypoint;
 import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
@@ -25,7 +26,6 @@ import com.qza.waypoint.WaypointList;
 import com.qza.waypoint.WaypointSize;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -185,27 +185,19 @@ public final class QZACommand {
     }
 
     private static void openSettings() {
-        Minecraft client = Minecraft.getInstance();
-
-        client.execute(() -> Mc.setScreen(new QZAScreen()));
+        Scheduler.schedule(1, () -> Mc.setScreen(new QZAScreen()));
     }
 
     private static void openEditor() {
-        Minecraft client = Minecraft.getInstance();
-
-        client.execute(() -> Mc.setScreen(new GuiEditScreen(false)));
+        Scheduler.schedule(1, () -> Mc.setScreen(new GuiEditScreen(false)));
     }
 
     private static void openChat() {
-        Minecraft client = Minecraft.getInstance();
-
-        client.execute(() -> Mc.setScreen(new QZAChatScreen()));
+        Scheduler.schedule(1, () -> Mc.setScreen(new QZAChatScreen()));
     }
 
     private static void openWaypoints() {
-        Minecraft client = Minecraft.getInstance();
-
-        client.execute(() -> Mc.setScreen(new WaypointScreen()));
+        Scheduler.schedule(1, () -> Mc.setScreen(new WaypointScreen()));
     }
 
     private static int addWaypoint(
