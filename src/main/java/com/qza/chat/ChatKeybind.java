@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import net.minecraft.client.input.KeyEvent;
 
 public final class ChatKeybind {
     public static final int NONE = -1;
@@ -12,21 +13,29 @@ public final class ChatKeybind {
 
     private static boolean capturing;
     private static long swallowUntil;
+    private static int swallowChar;
 
     private ChatKeybind() {
     }
 
-    public static void swallowNextChar() {
+    public static void swallowNextChar(KeyEvent event) {
+        String typed = InputConstants.getKey(event).getDisplayName().getString();
+        if (typed.codePointCount(0, typed.length()) != 1) {
+            swallowUntil = 0;
+            return;
+        }
+        swallowChar = Character.toLowerCase(typed.codePointAt(0));
         swallowUntil = System.currentTimeMillis() + SWALLOW_WINDOW_MS;
     }
 
-    public static boolean consumeSwallow() {
+    public static boolean consumeSwallow(int codepoint) {
         if (swallowUntil == 0) {
             return false;
         }
-        boolean fresh = System.currentTimeMillis() <= swallowUntil;
+        boolean opener = System.currentTimeMillis() <= swallowUntil
+                && Character.toLowerCase(codepoint) == swallowChar;
         swallowUntil = 0;
-        return fresh;
+        return opener;
     }
 
     public static int key() {

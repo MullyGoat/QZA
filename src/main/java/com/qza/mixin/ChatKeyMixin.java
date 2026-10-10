@@ -36,7 +36,7 @@ public class ChatKeyMixin {
         int bind = ChatKeybind.key();
         if (bind != ChatKeybind.NONE && event.key() == bind) {
             Mc.setScreen(new QZAChatScreen());
-            ChatKeybind.swallowNextChar();
+            ChatKeybind.swallowNextChar(event);
             ci.cancel();
             return;
         }
@@ -46,7 +46,7 @@ public class ChatKeyMixin {
                 && client.options != null
                 && client.options.keyCommand.matches(event)) {
             Mc.setScreen(new QZAChatScreen(ChannelHistory.EVERYTHING, "/"));
-            ChatKeybind.swallowNextChar();
+            ChatKeybind.swallowNextChar(event);
             ci.cancel();
         }
     }
@@ -54,7 +54,7 @@ public class ChatKeyMixin {
     @Inject(method = "charTyped(JLnet/minecraft/client/input/CharacterEvent;)V",
             at = @At("HEAD"), cancellable = true)
     private void qzaSwallowChar(long window, CharacterEvent event, CallbackInfo ci) {
-        if (ChatKeybind.consumeSwallow()) {
+        if (ChatKeybind.consumeSwallow(event.codepoint())) {
             ci.cancel();
         }
     }

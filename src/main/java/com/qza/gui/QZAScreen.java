@@ -1332,7 +1332,7 @@ public class QZAScreen extends Screen {
     public boolean keyPressed(KeyEvent event) {
         if (ChatKeybind.capturing()) {
             ChatKeybind.capture(event.key());
-            ChatKeybind.swallowNextChar();
+            ChatKeybind.swallowNextChar(event);
             return true;
         }
 
