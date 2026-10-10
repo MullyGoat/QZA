@@ -25,6 +25,7 @@ import com.qza.party.PartyState;
 import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
+import com.qza.timer.NecronDebugTimer;
 import com.qza.timer.NecronTimer;
 import com.qza.timer.ServerTickClock;
 import com.qza.util.DungeonState;
@@ -66,7 +67,6 @@ public class QZA implements ClientModInitializer {
         WaypointEditor.init();
         ItemList.init();
         Equipment.init();
-        CrystalTimer.init();
         MarketSearch.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
@@ -88,6 +88,7 @@ public class QZA implements ClientModInitializer {
             ShitterAutoKick.onChatMessage(plain);
             MusicManager.get().onChatMessage(plain);
             NecronTimer.onChatMessage(plain);
+            NecronDebugTimer.onChatMessage(plain);
             NecronLeap.onChatMessage(plain);
             CrystalTimer.onChatMessage(plain);
             WitherKey.onChatMessage(plain);
@@ -106,6 +107,7 @@ public class QZA implements ClientModInitializer {
             Scheduler.tick();
             WitherKey.tick();
             NecronTimer.tick();
+            NecronDebugTimer.tick();
             NecronLeap.tick();
             CrystalTimer.tick();
 
@@ -114,6 +116,7 @@ public class QZA implements ClientModInitializer {
                 lastLevel = level;
                 MusicManager.get().stopNow();
                 NecronTimer.reset();
+                NecronDebugTimer.reset();
                 NecronLeap.reset();
                 CrystalTimer.reset();
                 WitherKey.reset();
@@ -128,6 +131,7 @@ public class QZA implements ClientModInitializer {
             Scheduler.clear();
             ShitterAutoKick.reset();
             NecronTimer.reset();
+            NecronDebugTimer.reset();
             NecronLeap.reset();
             CrystalTimer.reset();
             WitherKey.reset();

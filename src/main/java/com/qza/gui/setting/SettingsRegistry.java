@@ -30,7 +30,9 @@ import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.timer.ClockDisplay;
+import com.qza.timer.NecronDebugTimer;
 import com.qza.tweaks.CommandShortcuts;
+import com.qza.tweaks.ItemStars;
 import com.qza.tweaks.PlayerSize;
 import com.qza.tweaks.TooltipScale;
 import com.qza.util.ChatUtil;
@@ -55,23 +57,24 @@ public final class SettingsRegistry {
     public static final List<String> CATEGORIES = withAddons(List.of(
             "Shitter List",
             "F7 / M7",
-            "Music",
             "Chat",
             "Auto Check Stats",
             "Notifications",
             "Miscellaneous"));
 
-    private static final Map<String, String> CARDS = Map.of(
-            "F7 / M7/Track Selection", "Terminal Music",
-            "Chat/Open Chat", "QZA Chat",
-            "Chat/History", "QZA Chat",
-            "Auto Check Stats/Stats", "Auto Check Stats",
-            "Auto Check Stats/Requirements", "Auto Check Stats",
-            "Notifications/Dungeon Runs", "Dungeon Only Notifications",
-            "Notifications/Party", "Party Invite Alert",
-            "Notifications/QZA Chat", "Message Alert",
-            "Notifications/Discord", "Party Full Alert",
-            "Miscellaneous/Interface", "GUI Scale");
+    private static final Map<String, String> CARDS = Map.ofEntries(
+            Map.entry("F7 / M7/Track Selection", "Terminal Music"),
+            Map.entry("F7 / M7/Music Library", "Terminal Music"),
+            Map.entry("F7 / M7/Music Playback", "Terminal Music"),
+            Map.entry("Chat/Open Chat", "QZA Chat"),
+            Map.entry("Chat/History", "QZA Chat"),
+            Map.entry("Auto Check Stats/Stats", "Auto Check Stats"),
+            Map.entry("Auto Check Stats/Requirements", "Auto Check Stats"),
+            Map.entry("Notifications/Dungeon Runs", "Dungeon Only Notifications"),
+            Map.entry("Notifications/Party", "Party Invite Alert"),
+            Map.entry("Notifications/QZA Chat", "Message Alert"),
+            Map.entry("Notifications/Discord", "Party Full Alert"),
+            Map.entry("Miscellaneous/Interface", "GUI Scale"));
 
     private SettingsRegistry() {
     }
@@ -158,6 +161,59 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.terminalMusicEnabled && !cfg.shuffleMode));
 
+        settings.add(new ActionSetting(f7, "Music Library", "Add Music",
+                Component.literal("Opens QZA's music folder - Only drag and drop ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(".mp3").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(", ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(".ogg").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" or ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(".wav").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" files to play").withStyle(ChatFormatting.GRAY)),
+                "Open Folder",
+                MusicLibrary::openFolder)
+                .visibleWhen(() -> cfg.terminalMusicEnabled));
+
+        settings.add(new ActionSetting(f7, "Music Library", "Reload Playlist",
+                Component.literal("Re-scan the folder after adding files.").withStyle(ChatFormatting.GRAY),
+                "Refresh",
+                () -> {
+                    int found = MusicLibrary.reload().size();
+                    ChatUtil.success("Found " + found + " track" + (found == 1 ? "" : "s") + ".");
+                })
+                .visibleWhen(() -> cfg.terminalMusicEnabled));
+
+        settings.add(new ActionSetting(f7, "Music Library", "Test Playback",
+                Component.literal("Tests the output of a song in the folder")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> MusicManager.get().isPlaying() ? "Stop" : "Play",
+                () -> MusicManager.get().toggleTestPlayback())
+                .visibleWhen(() -> cfg.terminalMusicEnabled));
+
+        settings.add(new SliderSetting(f7, "Music Playback", "Volume",
+                Component.literal("Independent of Minecraft's own music slider.")
+                        .withStyle(ChatFormatting.GRAY),
+                0, 100, 1, "%",
+                () -> cfg.musicVolume,
+                v -> {
+                    cfg.musicVolume = v;
+                    MusicManager.get().applySettings();
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalMusicEnabled));
+
+        settings.add(new SliderSetting(f7, "Music Playback", "Fade Length",
+                Component.literal("The fade in and fade out duration of songs")
+                        .withStyle(ChatFormatting.GRAY),
+                0, 5000, 100, "ms",
+                () -> cfg.fadeMillis,
+                v -> {
+                    cfg.fadeMillis = v;
+                    MusicManager.get().applySettings();
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalMusicEnabled));
+
         settings.add(new ToggleSetting(f7, "Necron Timer", "Necron Kill Time",
                 Component.literal("Announces how long it took to kill Necron before phase is over")
                         .withStyle(ChatFormatting.GRAY),
@@ -181,6 +237,22 @@ public final class SettingsRegistry {
                 "(none)",
                 170)
                 .visibleWhen(() -> cfg.necronTimerEnabled));
+
+        settings.add(new ToggleSetting(f7, "Necron Timer", "Debug Timer",
+                Component.literal("Tells only you, in tick time, when Necron's health bar hits ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("5%").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" and ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("0").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(", and when the Wither King's bar fills to ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("100").withStyle(ChatFormatting.WHITE)),
+                () -> cfg.necronDebugTimer,
+                v -> {
+                    cfg.necronDebugTimer = v;
+                    NecronDebugTimer.reset();
+                    ConfigManager.save();
+                }));
 
         settings.add(new ToggleSetting(f7, "Waypoints", "Waypoints",
                 Component.literal("Easily highlight blocks around Skyblock")
@@ -322,11 +394,11 @@ public final class SettingsRegistry {
                 Component.literal("Shows ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Crystal Spawned").withStyle(ChatFormatting.LIGHT_PURPLE))
-                        .append(Component.literal(" when Maxor starts. Once you place your crystal it counts down ")
+                        .append(Component.literal(" when Maxor starts. Once the Energy Laser charges up it shows ")
                                 .withStyle(ChatFormatting.GRAY))
                         .append(Component.literal("Crystal Spawning in").withStyle(ChatFormatting.RED))
-                        .append(Component.literal(" in tick time to the second crystal, 8 seconds into Maxor. "
-                                        + "Drag it in ")
+                        .append(Component.literal(", counting down in tick time from the laser hitting Maxor to "
+                                        + "the second crystals. Drag it in ")
                                 .withStyle(ChatFormatting.GRAY))
                         .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE))
                         .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
@@ -397,56 +469,6 @@ public final class SettingsRegistry {
         settings.add(colourSetting(f7, "Starred Mobs", "Fel Colour", "Colour of the box around Fels",
                 () -> cfg.starredMobsFelColour, v -> cfg.starredMobsFelColour = v)
                 .visibleWhen(() -> cfg.starredMobsEnabled && cfg.starredMobsFels));
-
-        String music = "Music";
-
-        settings.add(new ActionSetting(music, "Library", "Add Music",
-                Component.literal("Opens QZA's music folder - Only drag and drop ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal(".mp3").withStyle(ChatFormatting.GREEN))
-                        .append(Component.literal(", ").withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal(".ogg").withStyle(ChatFormatting.GREEN))
-                        .append(Component.literal(" or ").withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal(".wav").withStyle(ChatFormatting.GREEN))
-                        .append(Component.literal(" files to play").withStyle(ChatFormatting.GRAY)),
-                "Open Folder",
-                MusicLibrary::openFolder));
-
-        settings.add(new ActionSetting(music, "Library", "Reload Playlist",
-                Component.literal("Re-scan the folder after adding files.").withStyle(ChatFormatting.GRAY),
-                "Refresh",
-                () -> {
-                    int found = MusicLibrary.reload().size();
-                    ChatUtil.success("Found " + found + " track" + (found == 1 ? "" : "s") + ".");
-                }));
-
-        settings.add(new ActionSetting(music, "Library", "Test Playback",
-                Component.literal("Tests the output of a song in the folder")
-                        .withStyle(ChatFormatting.GRAY),
-                () -> MusicManager.get().isPlaying() ? "Stop" : "Play",
-                () -> MusicManager.get().toggleTestPlayback()));
-
-        settings.add(new SliderSetting(music, "Playback", "Volume",
-                Component.literal("Independent of Minecraft's own music slider.")
-                        .withStyle(ChatFormatting.GRAY),
-                0, 100, 1, "%",
-                () -> cfg.musicVolume,
-                v -> {
-                    cfg.musicVolume = v;
-                    MusicManager.get().applySettings();
-                    ConfigManager.save();
-                }));
-
-        settings.add(new SliderSetting(music, "Playback", "Fade Length",
-                Component.literal("The fade in and fade out duration of songs")
-                        .withStyle(ChatFormatting.GRAY),
-                0, 5000, 100, "ms",
-                () -> cfg.fadeMillis,
-                v -> {
-                    cfg.fadeMillis = v;
-                    MusicManager.get().applySettings();
-                    ConfigManager.save();
-                }));
 
         String chat = "Chat";
 
@@ -1054,6 +1076,19 @@ public final class SettingsRegistry {
 
         settings.add(colourSetting(misc, "Item Star Count", "Star Count Colour", "Colour of the star number",
                 () -> cfg.itemStarColour, v -> cfg.itemStarColour = v)
+                .visibleWhen(() -> cfg.itemStarCount));
+
+        settings.add(new SliderSetting(misc, "Item Star Count", "Star Count Size",
+                Component.literal("Size of the star number (")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("100%").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" is default)").withStyle(ChatFormatting.GRAY)),
+                ItemStars.MIN_SCALE, ItemStars.MAX_SCALE, 5, "%",
+                () -> cfg.itemStarScale,
+                v -> {
+                    cfg.itemStarScale = v;
+                    ConfigManager.save();
+                })
                 .visibleWhen(() -> cfg.itemStarCount));
 
         settings.add(new ToggleSetting(misc, "Command Shortcuts", "Command Shortcuts",

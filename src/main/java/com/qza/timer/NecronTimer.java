@@ -7,7 +7,6 @@ import com.qza.mixin.BossOverlayAccessor;
 import com.qza.util.ChatUtil;
 import com.qza.util.IgnUtil;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.LerpingBossEvent;
 import net.minecraft.network.chat.Component;
 
@@ -70,12 +69,15 @@ public final class NecronTimer {
     }
 
     public static Float necronProgress() {
-        Minecraft client = Minecraft.getInstance();
+        return bossProgress("Necron");
+    }
+
+    public static Float bossProgress(String name) {
         if (!(Mc.bossOverlay() instanceof BossOverlayAccessor overlay)) {
             return null;
         }
         for (LerpingBossEvent event : overlay.qzaEvents().values()) {
-            if (IgnUtil.stripCodes(event.getName().getString()).contains("Necron")) {
+            if (IgnUtil.stripCodes(event.getName().getString()).contains(name)) {
                 return event instanceof BossEventAccessor target ? target.qzaTargetPercent() : event.getProgress();
             }
         }

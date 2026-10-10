@@ -9,6 +9,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
 public final class ItemStars {
+    public static final double MIN_SCALE = 50.0;
+    public static final double MAX_SCALE = 150.0;
+
     private static final char STAR = '✪';
     private static final char FIRST_MASTER = '➊';
     private static final char LAST_MASTER = '➎';
@@ -25,8 +28,13 @@ public final class ItemStars {
             return;
         }
         String text = String.valueOf(stars);
-        graphics.text(font, text, x + 19 - 2 - font.width(text), y + 6 + 3,
+        float scale = (float) (Math.max(MIN_SCALE, Math.min(MAX_SCALE, ConfigManager.get().itemStarScale)) / 100.0);
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x + 17, y + 17);
+        graphics.pose().scale(scale, scale);
+        graphics.text(font, text, -font.width(text), -8,
                 WaypointColour.argb(ConfigManager.get().itemStarColour), true);
+        graphics.pose().popMatrix();
     }
 
     public static int count(ItemStack stack) {

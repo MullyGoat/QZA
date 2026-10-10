@@ -34,6 +34,8 @@ public class QZAConfig {
 
     public String necronAnnounceMode = "party";
 
+    public boolean necronDebugTimer = false;
+
     public boolean waypointsEnabled = false;
 
     public boolean waypointsDungeonOnly = true;
@@ -233,6 +235,8 @@ public class QZAConfig {
     public boolean itemStarCount = false;
 
     public String itemStarColour = "magenta";
+
+    public double itemStarScale = 100.0;
 
     @SerializedName(value = "commandShortcutsEnabled", alternate = "dungeonWarpShortcut")
     public boolean commandShortcutsEnabled = false;
