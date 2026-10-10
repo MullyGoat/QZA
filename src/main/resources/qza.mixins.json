@@ -12,12 +12,15 @@
     "ChatCaptureMixin",
     "ChatHideMixin",
     "ChatKeyMixin",
+    "CommandKeyMixin",
     "ContainerScreenAccessor",
     "EntityDataMixin",
     "ItemListCharMixin",
     "ItemListRecipeBookMixin",
     "ItemListRenderMixin",
-    "TooltipHighlightMixin"
+    "MouseInputMixin",
+    "TooltipHighlightMixin",
+    "TooltipScaleMixin"
   ],
   "injectors": {
     "defaultRequire": 0

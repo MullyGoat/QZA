@@ -1,6 +1,8 @@
 package com.qza.config;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class QZAConfig {
@@ -177,4 +179,18 @@ public class QZAConfig {
     public boolean itemListShown = true;
 
     public boolean itemListInventory = true;
+
+    public boolean hotbarScrollLock = false;
+
+    public boolean tooltipScaleEnabled = false;
+
+    public String tooltipScaleMode = "dynamic";
+
+    public double tooltipScale = 1.0;
+
+    public boolean commandKeybindsEnabled = false;
+
+    public boolean commandKeybindsInMenus = false;
+
+    public List<com.qza.keybind.CommandBind> commandBinds = new ArrayList<>();
 }

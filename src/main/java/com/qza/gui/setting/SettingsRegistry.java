@@ -12,6 +12,7 @@ import com.qza.discord.DiscordAlert;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.WitherKey;
+import com.qza.gui.CommandKeybindScreen;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.WaypointScreen;
@@ -25,6 +26,7 @@ import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.timer.ClockDisplay;
+import com.qza.tweaks.TooltipScale;
 import com.qza.util.ChatUtil;
 import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
@@ -838,6 +840,79 @@ public final class SettingsRegistry {
                 "(none)",
                 170)
                 .visibleWhen(() -> cfg.clockEnabled));
+
+        settings.add(new ToggleSetting(misc, "Hotbar Scroll Lock", "Hotbar Scroll Lock",
+                Component.literal("Stops the hotbar jumping from the first slot to the last when you "
+                        + "scroll past it, and back").withStyle(ChatFormatting.GRAY),
+                () -> cfg.hotbarScrollLock,
+                v -> {
+                    cfg.hotbarScrollLock = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "Tooltip Scale", "Tooltip Scale",
+                Component.literal("Changes the size of item tooltips").withStyle(ChatFormatting.GRAY),
+                () -> cfg.tooltipScaleEnabled,
+                v -> {
+                    cfg.tooltipScaleEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new DropdownSetting(misc, "Tooltip Scale", "Scale Mode",
+                Component.literal("Dynamic shrinks tooltips that are too big so they always fit on "
+                        + "screen. Custom scales every tooltip by Custom Scale.").withStyle(ChatFormatting.GRAY),
+                () -> TooltipScale.MODES,
+                () -> cfg.tooltipScaleMode,
+                v -> {
+                    cfg.tooltipScaleMode = v;
+                    ConfigManager.save();
+                },
+                TooltipScale::label,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.tooltipScaleEnabled));
+
+        settings.add(new SliderSetting(misc, "Tooltip Scale", "Custom Scale",
+                Component.literal("How big tooltips are in Custom mode (")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("1.00x").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" is normal)").withStyle(ChatFormatting.GRAY)),
+                TooltipScale.MIN_SCALE, TooltipScale.MAX_SCALE, 0.05, "x",
+                () -> cfg.tooltipScale,
+                v -> {
+                    cfg.tooltipScale = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.tooltipScaleEnabled && TooltipScale.CUSTOM.equals(cfg.tooltipScaleMode)));
+
+        settings.add(new ToggleSetting(misc, "Command Keybinds", "Command Keybinds",
+                Component.literal("Keybinds that run a command or send a chat message when you press them")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.commandKeybindsEnabled,
+                v -> {
+                    cfg.commandKeybindsEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ActionSetting(misc, "Command Keybinds", "Edit Keybinds",
+                Component.literal("Add, change or remove your command keybinds").withStyle(ChatFormatting.GRAY),
+                () -> {
+                    int count = cfg.commandBinds.size();
+                    return count > 0 ? "Edit (" + count + ")" : "Edit";
+                },
+                () -> Mc.setScreen(new CommandKeybindScreen()))
+                .visibleWhen(() -> cfg.commandKeybindsEnabled));
+
+        settings.add(new ToggleSetting(misc, "Command Keybinds", "Work In All Menus",
+                Component.literal("Lets every keybind work while a menu like your inventory or a chest is "
+                        + "open, not just the ones with Menus ticked").withStyle(ChatFormatting.GRAY),
+                () -> cfg.commandKeybindsInMenus,
+                v -> {
+                    cfg.commandKeybindsInMenus = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.commandKeybindsEnabled));
 
         boolean[] confirmReset = {false};
         settings.add(new ActionSetting(misc, "Config", "Reset Settings",
