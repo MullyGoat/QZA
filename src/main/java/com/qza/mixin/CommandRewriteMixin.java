@@ -1,16 +1,17 @@
 package com.qza.mixin;
 
-import com.qza.tweaks.DungeonWarp;
-import net.minecraft.client.multiplayer.ClientPacketListener;
+import com.qza.tweaks.CommandShortcuts;
+import net.minecraft.client.gui.screens.ChatScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyVariable;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 
-@Mixin(ClientPacketListener.class)
+@Mixin(ChatScreen.class)
 public class CommandRewriteMixin {
 
-    @ModifyVariable(method = "sendCommand(Ljava/lang/String;)V", at = @At("HEAD"), argsOnly = true)
-    private String qzaDungeonWarp(String command) {
-        return DungeonWarp.rewrite(command);
+    @ModifyArg(method = "handleChatInput", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/multiplayer/ClientPacketListener;sendCommand(Ljava/lang/String;)V"))
+    private String qzaCommandShortcut(String command) {
+        return CommandShortcuts.rewrite(command);
     }
 }

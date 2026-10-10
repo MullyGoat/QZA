@@ -15,6 +15,7 @@
     "CommandKeyMixin",
     "CommandRewriteMixin",
     "ContainerScreenAccessor",
+    "CraftingHideMixin",
     "EntityDataMixin",
     "EquipmentRenderMixin",
     "ItemListCharMixin",

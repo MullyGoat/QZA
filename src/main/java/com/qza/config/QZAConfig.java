@@ -1,5 +1,7 @@
 package com.qza.config;
 
+import com.google.gson.annotations.SerializedName;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -222,13 +224,21 @@ public class QZAConfig {
 
     public boolean equipmentInInventory = false;
 
+    public boolean equipmentRarity = true;
+
     public boolean hideShieldSlot = false;
+
+    public boolean hideCrafting = false;
 
     public boolean itemStarCount = false;
 
     public String itemStarColour = "magenta";
 
-    public boolean dungeonWarpShortcut = false;
+    @SerializedName(value = "commandShortcutsEnabled", alternate = "dungeonWarpShortcut")
+    public boolean commandShortcutsEnabled = false;
+
+    public List<com.qza.tweaks.CommandShortcut> commandShortcuts =
+            new ArrayList<>(List.of(new com.qza.tweaks.CommandShortcut("d", "warp dungeons")));
 
     public boolean marketSearchCommands = false;
 

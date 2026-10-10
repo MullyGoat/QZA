@@ -15,6 +15,7 @@ import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.WitherKey;
 import com.qza.gui.CommandKeybindScreen;
+import com.qza.gui.CommandShortcutScreen;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.WaypointScreen;
@@ -29,6 +30,7 @@ import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.timer.ClockDisplay;
+import com.qza.tweaks.CommandShortcuts;
 import com.qza.tweaks.PlayerSize;
 import com.qza.tweaks.TooltipScale;
 import com.qza.util.ChatUtil;
@@ -1007,12 +1009,34 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        settings.add(new ToggleSetting(misc, "Equipment in Inventory", "Rarity Backgrounds",
+                Component.literal("Colours the square behind each piece of equipment by its rarity, like ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Legendary").withStyle(ChatFormatting.GOLD))
+                        .append(Component.literal(" or ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Mythic").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                () -> cfg.equipmentRarity,
+                v -> {
+                    cfg.equipmentRarity = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.equipmentInInventory));
+
         settings.add(new ToggleSetting(misc, "Hide Shield Slot", "Hide Shield Slot",
                 Component.literal("Removes the shield slot from your inventory on SkyBlock, where it does nothing")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.hideShieldSlot,
                 v -> {
                     cfg.hideShieldSlot = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "Hide Crafting", "Hide Crafting",
+                Component.literal("Removes the crafting grid, its arrow, the output slot and the Crafting text "
+                        + "from your inventory on SkyBlock").withStyle(ChatFormatting.GRAY),
+                () -> cfg.hideCrafting,
+                v -> {
+                    cfg.hideCrafting = v;
                     ConfigManager.save();
                 }));
 
@@ -1032,17 +1056,28 @@ public final class SettingsRegistry {
                 () -> cfg.itemStarColour, v -> cfg.itemStarColour = v)
                 .visibleWhen(() -> cfg.itemStarCount));
 
-        settings.add(new ToggleSetting(misc, "/d Shortcut", "/d Shortcut",
-                Component.literal("Typing ")
+        settings.add(new ToggleSetting(misc, "Command Shortcuts", "Command Shortcuts",
+                Component.literal("Your own short commands that run longer ones, like ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("/d").withStyle(ChatFormatting.LIGHT_PURPLE))
-                        .append(Component.literal(" runs ").withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal("/warp dungeons").withStyle(ChatFormatting.LIGHT_PURPLE)),
-                () -> cfg.dungeonWarpShortcut,
+                        .append(Component.literal(" for ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("/warp dungeons").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(". Anything typed after a shortcut is kept")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.commandShortcutsEnabled,
                 v -> {
-                    cfg.dungeonWarpShortcut = v;
+                    cfg.commandShortcutsEnabled = v;
                     ConfigManager.save();
                 }));
+
+        settings.add(new ActionSetting(misc, "Command Shortcuts", "Edit Shortcuts",
+                Component.literal("Add, change or remove your command shortcuts").withStyle(ChatFormatting.GRAY),
+                () -> {
+                    int count = CommandShortcuts.shortcuts().size();
+                    return count > 0 ? "Edit (" + count + ")" : "Edit";
+                },
+                () -> Mc.setScreen(new CommandShortcutScreen()))
+                .visibleWhen(() -> cfg.commandShortcutsEnabled));
 
         settings.add(new ToggleSetting(misc, "AH / Bazaar Search", "AH / Bazaar Search",
                 Component.literal("")

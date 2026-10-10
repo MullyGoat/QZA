@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import com.qza.QZA;
@@ -28,14 +29,17 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemLore;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,20 +50,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class Equipment {
     private static final int SLOTS = 4;
-    private static final int X = 77;
+    private static final int COLUMN_X = 76;
     private static final int Y = 8;
-    private static final int SHIELD_X = 76;
     private static final int SHIELD_Y = 61;
-    private static final int PANEL = 0xFFC6C6C6;
+    private static final int BLANK_U = 95;
+    private static final int RARITY_ALPHA = 0x4D000000;
     private static final int SCAN_TICKS = 5;
+    private static final int[] PANEL_ROWS = {10, 30, 50, 70};
     private static final String[] NAMES = {"Necklace", "Cloak", "Belt", "Gloves"};
     private static final String DEFAULT_PROFILE = "default";
-    private static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
+    private static final Pattern RARITY = Pattern.compile(
+            "^(?:a )?(VERY SPECIAL|SPECIAL|ULTIMATE|ADMIN|DIVINE|MYTHIC|LEGENDARY|EPIC|RARE|UNCOMMON|COMMON)\\b");
     private static final Pattern PROFILE = Pattern.compile("^Profile ID: ([0-9a-fA-F-]{32,36})$");
     private static final Pattern STATS_MENU = Pattern.compile(
             "^(?:Your )?(?:Stats & Equipment|Equipment and Stats)$|^(?:\\(\\d+/\\d+\\) )?Loadouts$");
@@ -70,6 +77,8 @@ public final class Equipment {
     private static String profile = DEFAULT_PROFILE;
     private static boolean loaded;
     private static int scanIn;
+    private static Object layoutSource;
+    private static boolean panelLayout;
 
     private Equipment() {
     }
@@ -77,6 +86,7 @@ public final class Equipment {
     public static void init() {
         ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
             if (screen instanceof InventoryScreen) {
+                checkLayout(client);
                 ScreenMouseEvents.allowMouseClick(screen).register((current, event) -> !mouseClicked(current, event));
             }
         });
@@ -271,6 +281,78 @@ public final class Equipment {
         }
     }
 
+    private static void checkLayout(Minecraft client) {
+        Optional<Resource> resource = client.getResourceManager().getResource(AbstractContainerScreen.INVENTORY_LOCATION);
+        if (resource.isEmpty()) {
+            layoutSource = null;
+            panelLayout = false;
+            return;
+        }
+        Object source = resource.get().source();
+        if (source == layoutSource) {
+            return;
+        }
+        layoutSource = source;
+        panelLayout = false;
+        try (InputStream in = resource.get().open(); NativeImage image = NativeImage.read(in)) {
+            int scale = Math.max(1, image.getWidth() / 256);
+            if (image.getHeight() < 80 * scale) {
+                return;
+            }
+            boolean panel = true;
+            for (int row : PANEL_ROWS) {
+                if (image.getPixel(5 * scale, row * scale) == image.getPixel(6 * scale, row * scale)) {
+                    panel = false;
+                    break;
+                }
+            }
+            panelLayout = panel;
+        } catch (IOException | RuntimeException e) {
+            QZA.LOGGER.warn("Could not read the inventory texture", e);
+        }
+    }
+
+    private static int itemX() {
+        return COLUMN_X + (panelLayout ? 2 : 1);
+    }
+
+    private static void drawColumn(GuiGraphicsExtractor graphics, int left, int top) {
+        if (panelLayout) {
+            graphics.blit(RenderPipelines.GUI_TEXTURED, AbstractContainerScreen.INVENTORY_LOCATION,
+                    left + COLUMN_X, top + 6, 6f, 6f, 20, 74, 256, 256);
+        } else {
+            graphics.blit(RenderPipelines.GUI_TEXTURED, AbstractContainerScreen.INVENTORY_LOCATION,
+                    left + COLUMN_X, top + 7, 7f, 7f, 18, 72, 256, 256);
+        }
+    }
+
+    public static int rarityColour(ItemStack stack) {
+        ItemLore lore = stack.get(DataComponents.LORE);
+        if (lore == null) {
+            return 0;
+        }
+        List<Component> lines = lore.lines();
+        for (int i = lines.size() - 1; i >= 0; i--) {
+            Matcher matcher = RARITY.matcher(IgnUtil.stripCodes(lines.get(i).getString()).trim());
+            if (!matcher.find()) {
+                continue;
+            }
+            int colour = switch (matcher.group(1)) {
+                case "COMMON" -> 0xFFFFFF;
+                case "UNCOMMON" -> 0x55FF55;
+                case "RARE" -> 0x5555FF;
+                case "EPIC" -> 0xAA00AA;
+                case "LEGENDARY" -> 0xFFAA00;
+                case "MYTHIC" -> 0xFF55FF;
+                case "DIVINE" -> 0x55FFFF;
+                case "SPECIAL", "VERY SPECIAL" -> 0xFF5555;
+                default -> 0xAA0000;
+            };
+            return colour | RARITY_ALPHA;
+        }
+        return 0;
+    }
+
     public static void render(AbstractContainerScreen<?> screen, GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (!(screen instanceof InventoryScreen) || !SkyBlockArea.onSkyBlock()) {
             return;
@@ -280,22 +362,27 @@ public final class Equipment {
         int left = accessor.qzaGuiLeft();
         int top = accessor.qzaGuiTop();
         if (!cfg.equipmentInInventory) {
-            if (cfg.hideShieldSlot) {
-                graphics.fill(left + SHIELD_X, top + SHIELD_Y, left + SHIELD_X + 18, top + SHIELD_Y + 18, PANEL);
+            if (cfg.hideShieldSlot && !panelLayout) {
+                graphics.blit(RenderPipelines.GUI_TEXTURED, AbstractContainerScreen.INVENTORY_LOCATION,
+                        left + COLUMN_X, top + SHIELD_Y, BLANK_U, SHIELD_Y, 18, 18, 1, 18, 256, 256);
             }
             return;
         }
 
+        drawColumn(graphics, left, top);
         ItemStack[] items = current();
         boolean seen = byProfile.containsKey(profile);
         Font font = Minecraft.getInstance().font;
         boolean carrying = !screen.getMenu().getCarried().isEmpty();
+        int x = left + itemX();
         for (int i = 0; i < SLOTS; i++) {
-            int x = left + X;
             int y = top + Y + (i * 18);
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_SPRITE, x - 1, y - 1, 18, 18);
             ItemStack stack = items[i];
             if (!stack.isEmpty()) {
+                int rarity = cfg.equipmentRarity ? rarityColour(stack) : 0;
+                if (rarity != 0) {
+                    graphics.fill(x, y, x + 16, y + 16, rarity);
+                }
                 graphics.item(stack, x, y);
                 graphics.itemDecorations(font, stack, x, y);
             }
@@ -322,7 +409,7 @@ public final class Equipment {
             return false;
         }
         ContainerScreenAccessor accessor = (ContainerScreenAccessor) inventory;
-        int x = accessor.qzaGuiLeft() + X;
+        int x = accessor.qzaGuiLeft() + itemX();
         for (int i = 0; i < SLOTS; i++) {
             int y = accessor.qzaGuiTop() + Y + (i * 18);
             if (event.x() >= x && event.x() < x + 16 && event.y() >= y && event.y() < y + 16) {
