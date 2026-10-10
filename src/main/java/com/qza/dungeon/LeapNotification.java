@@ -130,7 +130,7 @@ public final class LeapNotification {
         } + "§f" + SUFFIX;
     }
 
-    private static String classOf(String ign) {
+    static String classOf(String ign) {
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
         if (connection == null) {
             return null;

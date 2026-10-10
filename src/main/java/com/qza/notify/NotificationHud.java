@@ -2,7 +2,9 @@ package com.qza.notify;
 
 import com.qza.chat.ChatNotification;
 import com.qza.compat.Mc;
+import com.qza.dungeon.CrystalTimer;
 import com.qza.dungeon.LeapNotification;
+import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.WitherKey;
@@ -26,6 +28,8 @@ public final class NotificationHud implements HudElement {
         SplitTimers.renderHud(graphics, client.font);
         LeapNotification.renderHud(graphics, client.font);
         PYTimer.renderHud(graphics, client.font);
+        CrystalTimer.renderHud(graphics, client.font);
+        NecronLeap.renderHud(graphics, client.font);
         ClockDisplay.renderHud(graphics, client.font);
     }
 }

@@ -84,6 +84,22 @@ public class QZAConfig {
 
     public double pyTimerScale = 1.5;
 
+    public boolean necronLeapEnabled = false;
+
+    public double necronLeapX = 0.5;
+
+    public double necronLeapY = 0.66;
+
+    public double necronLeapScale = 2.0;
+
+    public boolean crystalTimerEnabled = false;
+
+    public double crystalTimerX = 0.5;
+
+    public double crystalTimerY = 0.48;
+
+    public double crystalTimerScale = 1.0;
+
     public boolean starredMobsEnabled = false;
 
     public String starredMobColour = "yellow";
@@ -210,5 +226,13 @@ public class QZAConfig {
 
     public boolean itemStarCount = false;
 
+    public String itemStarColour = "magenta";
+
     public boolean dungeonWarpShortcut = false;
+
+    public boolean marketSearchCommands = false;
+
+    public List<String> auctionSearchHistory = new ArrayList<>();
+
+    public List<String> bazaarSearchHistory = new ArrayList<>();
 }

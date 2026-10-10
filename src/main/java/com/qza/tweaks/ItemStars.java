@@ -1,6 +1,7 @@
 package com.qza.tweaks;
 
 import com.qza.config.ConfigManager;
+import com.qza.waypoint.WaypointColour;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.component.DataComponents;
@@ -11,7 +12,6 @@ public final class ItemStars {
     private static final char STAR = '✪';
     private static final char FIRST_MASTER = '➊';
     private static final char LAST_MASTER = '➎';
-    private static final int COLOUR = 0xFFFF55FF;
 
     private ItemStars() {
     }
@@ -25,7 +25,8 @@ public final class ItemStars {
             return;
         }
         String text = String.valueOf(stars);
-        graphics.text(font, text, x + 19 - 2 - font.width(text), y + 6 + 3, COLOUR, true);
+        graphics.text(font, text, x + 19 - 2 - font.width(text), y + 6 + 3,
+                WaypointColour.argb(ConfigManager.get().itemStarColour), true);
     }
 
     public static int count(ItemStack stack) {

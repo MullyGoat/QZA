@@ -9,7 +9,9 @@ import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.discord.DiscordAlert;
+import com.qza.dungeon.CrystalTimer;
 import com.qza.dungeon.LeapNotification;
+import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.WitherKey;
 import com.qza.gui.CommandKeybindScreen;
@@ -23,6 +25,7 @@ import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationGate;
 import com.qza.party.PartyNotification;
+import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.timer.ClockDisplay;
@@ -310,6 +313,46 @@ public final class SettingsRegistry {
                 v -> {
                     cfg.pyTimerEnabled = v;
                     PYTimer.reset();
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(f7, "Crystal Spawn Timer", "Crystal Spawn Timer",
+                Component.literal("Shows ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Crystal Spawned").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" when Maxor starts. Once you place your crystal it counts down ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Crystal Spawning in").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" in tick time to the second crystal, 8 seconds into Maxor. "
+                                        + "Drag it in ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.crystalTimerEnabled,
+                v -> {
+                    cfg.crystalTimerEnabled = v;
+                    CrystalTimer.reset();
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(f7, "Necron Leap Notifier", "Necron Leap Notifier",
+                Component.literal("On M7, tells you when to leap down to P5 for your class. ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Berserk").withStyle(ChatFormatting.DARK_RED))
+                        .append(Component.literal(", ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Archer").withStyle(ChatFormatting.GOLD))
+                        .append(Component.literal(" and ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Tank").withStyle(ChatFormatting.DARK_GREEN))
+                        .append(Component.literal(" leap when Necron is at 70M HP, ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Mage").withStyle(ChatFormatting.AQUA))
+                        .append(Component.literal(" when he dies. Healers get no notification. Drag it in ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.necronLeapEnabled,
+                v -> {
+                    cfg.necronLeapEnabled = v;
+                    NecronLeap.reset();
                     ConfigManager.save();
                 }));
 
@@ -985,6 +1028,10 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        settings.add(colourSetting(misc, "Item Star Count", "Star Count Colour", "Colour of the star number",
+                () -> cfg.itemStarColour, v -> cfg.itemStarColour = v)
+                .visibleWhen(() -> cfg.itemStarCount));
+
         settings.add(new ToggleSetting(misc, "/d Shortcut", "/d Shortcut",
                 Component.literal("Typing ")
                         .withStyle(ChatFormatting.GRAY)
@@ -994,6 +1041,21 @@ public final class SettingsRegistry {
                 () -> cfg.dungeonWarpShortcut,
                 v -> {
                     cfg.dungeonWarpShortcut = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "AH / Bazaar Search", "AH / Bazaar Search",
+                Component.literal("")
+                        .append(Component.literal("/ahs").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" and ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("/bzs").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" open a search box that suggests item names as you type, then "
+                                        + "searches the auction house or bazaar for it")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.marketSearchCommands,
+                v -> {
+                    cfg.marketSearchCommands = v;
+                    MarketSearch.preload();
                     ConfigManager.save();
                 }));
 

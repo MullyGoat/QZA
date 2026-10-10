@@ -5,7 +5,9 @@ import com.qza.chat.ChatNotification;
 import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.dungeon.CrystalTimer;
 import com.qza.dungeon.LeapNotification;
+import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.WitherKey;
@@ -54,6 +56,8 @@ public class GuiEditScreen extends Screen {
         SplitTimers.resetPlacement();
         LeapNotification.resetPlacement();
         PYTimer.resetPlacement();
+        CrystalTimer.resetPlacement();
+        NecronLeap.resetPlacement();
         ClockDisplay.resetPlacement();
         ConfigManager.save();
     }
@@ -128,6 +132,30 @@ public class GuiEditScreen extends Screen {
                     cfg.pyTimerY = y;
                 },
                 s -> cfg.pyTimerScale = s));
+
+        targets.add(new Target(
+                true,
+                CrystalTimer.SPAWNED_TEXT,
+                CrystalTimer.SPAWNED_COLOUR,
+                () -> cfg.crystalTimerEnabled,
+                () -> cfg.crystalTimerX, () -> cfg.crystalTimerY, () -> cfg.crystalTimerScale,
+                (x, y) -> {
+                    cfg.crystalTimerX = x;
+                    cfg.crystalTimerY = y;
+                },
+                s -> cfg.crystalTimerScale = s));
+
+        targets.add(new Target(
+                true,
+                NecronLeap.TEXT,
+                NecronLeap.TEXT_COLOUR,
+                () -> cfg.necronLeapEnabled,
+                () -> cfg.necronLeapX, () -> cfg.necronLeapY, () -> cfg.necronLeapScale,
+                (x, y) -> {
+                    cfg.necronLeapX = x;
+                    cfg.necronLeapY = y;
+                },
+                s -> cfg.necronLeapScale = s));
 
         targets.add(new Target(
                 true,

@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,8 +72,9 @@ public final class ItemRepo {
     private static volatile Data data = Data.EMPTY;
 
     record Data(List<RepoItem> items, Map<String, RepoItem> byId,
-                Map<String, List<Recipe>> recipes, Map<String, List<Recipe>> usages) {
-        static final Data EMPTY = new Data(List.of(), Map.of(), Map.of(), Map.of());
+                Map<String, List<Recipe>> recipes, Map<String, List<Recipe>> usages,
+                Map<String, String> bazaarStocks, Set<String> starable) {
+        static final Data EMPTY = new Data(List.of(), Map.of(), Map.of(), Map.of(), Map.of(), Set.of());
     }
 
     private ItemRepo() {
@@ -235,6 +237,8 @@ public final class ItemRepo {
         List<String> files = new ArrayList<>();
         JsonObject petNumbers = new JsonObject();
         JsonObject pets = new JsonObject();
+        Map<String, String> bazaarStocks = new HashMap<>();
+        Set<String> starable = new HashSet<>();
         try (ZipFile file = new ZipFile(zip.toFile())) {
             Enumeration<? extends ZipEntry> entries = file.entries();
             while (entries.hasMoreElements()) {
@@ -250,6 +254,28 @@ public final class ItemRepo {
                                 petNumbers = json.getAsJsonObject();
                             } else {
                                 pets = json.getAsJsonObject();
+                            }
+                        }
+                    } catch (Exception e) {
+                        QZA.LOGGER.debug("Skipping {}: {}", path, e.toString());
+                    }
+                    continue;
+                }
+                if (path.equals("constants/bazaarstocks.json") || path.equals("constants/essencecosts.json")) {
+                    try (Reader reader = new InputStreamReader(file.getInputStream(entry), StandardCharsets.UTF_8)) {
+                        JsonElement json = JsonParser.parseReader(reader);
+                        if (path.endsWith("essencecosts.json") && json.isJsonObject()) {
+                            starable.addAll(json.getAsJsonObject().keySet());
+                        } else if (json.isJsonArray()) {
+                            for (JsonElement stock : json.getAsJsonArray()) {
+                                if (stock.isJsonObject()) {
+                                    JsonObject pair = stock.getAsJsonObject();
+                                    String from = string(pair, "stock", "");
+                                    String to = string(pair, "id", "");
+                                    if (!from.isEmpty() && !to.isEmpty()) {
+                                        bazaarStocks.put(from, to);
+                                    }
+                                }
                             }
                         }
                     } catch (Exception e) {
@@ -307,7 +333,7 @@ public final class ItemRepo {
         }
 
         return new Data(Collections.unmodifiableList(items), Collections.unmodifiableMap(byId),
-                freeze(recipes), freeze(usages));
+                freeze(recipes), freeze(usages), Map.copyOf(bazaarStocks), Set.copyOf(starable));
     }
 
     private static Map<String, List<Recipe>> freeze(Map<String, List<Recipe>> map) {
@@ -325,7 +351,7 @@ public final class ItemRepo {
         return name.startsWith("lvl ") ? name.replaceFirst("^lvl [^ ]+ ", "") : name;
     }
 
-    private static boolean isBook(RepoItem item) {
+    static boolean isBook(RepoItem item) {
         return BOOK.equals(item.itemId) && item.plainName.contains("Book");
     }
 

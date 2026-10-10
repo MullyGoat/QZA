@@ -7,7 +7,9 @@ import com.qza.command.QZACommand;
 import com.qza.command.ShitterCommand;
 import com.qza.config.ConfigManager;
 import com.qza.discord.PartyFullAlert;
+import com.qza.dungeon.CrystalTimer;
 import com.qza.dungeon.LeapNotification;
+import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.StarredMobs;
@@ -20,6 +22,7 @@ import com.qza.notify.NotificationHud;
 import com.qza.party.PartyNotification;
 import com.qza.party.PartyFinderQueue;
 import com.qza.party.PartyState;
+import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
 import com.qza.timer.NecronTimer;
@@ -63,6 +66,8 @@ public class QZA implements ClientModInitializer {
         WaypointEditor.init();
         ItemList.init();
         Equipment.init();
+        CrystalTimer.init();
+        MarketSearch.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
                 new NotificationHud());
@@ -72,6 +77,7 @@ public class QZA implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> {
             QZACommand.register(dispatcher);
             ShitterCommand.register(dispatcher);
+            MarketSearch.register(dispatcher);
         });
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
@@ -82,6 +88,8 @@ public class QZA implements ClientModInitializer {
             ShitterAutoKick.onChatMessage(plain);
             MusicManager.get().onChatMessage(plain);
             NecronTimer.onChatMessage(plain);
+            NecronLeap.onChatMessage(plain);
+            CrystalTimer.onChatMessage(plain);
             WitherKey.onChatMessage(plain);
             SplitTimers.onChatMessage(plain);
             LeapNotification.onChatMessage(plain);
@@ -98,12 +106,16 @@ public class QZA implements ClientModInitializer {
             Scheduler.tick();
             WitherKey.tick();
             NecronTimer.tick();
+            NecronLeap.tick();
+            CrystalTimer.tick();
 
             Object level = client.level;
             if (level != lastLevel) {
                 lastLevel = level;
                 MusicManager.get().stopNow();
                 NecronTimer.reset();
+                NecronLeap.reset();
+                CrystalTimer.reset();
                 WitherKey.reset();
                 SplitTimers.reset();
                 LeapNotification.reset();
@@ -116,6 +128,8 @@ public class QZA implements ClientModInitializer {
             Scheduler.clear();
             ShitterAutoKick.reset();
             NecronTimer.reset();
+            NecronLeap.reset();
+            CrystalTimer.reset();
             WitherKey.reset();
             SplitTimers.reset();
             LeapNotification.reset();

@@ -69,7 +69,7 @@ public final class NecronTimer {
         }
     }
 
-    private static Float necronProgress() {
+    public static Float necronProgress() {
         Minecraft client = Minecraft.getInstance();
         if (!(Mc.bossOverlay() instanceof BossOverlayAccessor overlay)) {
             return null;
