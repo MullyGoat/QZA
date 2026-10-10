@@ -3,10 +3,10 @@ package com.qza.itemlist;
 import com.qza.config.ConfigManager;
 import com.qza.mixin.ContainerScreenAccessor;
 import com.qza.util.IgnUtil;
+import com.qza.util.SkyBlockArea;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -19,10 +19,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.scores.DisplaySlot;
-import net.minecraft.world.scores.Objective;
-
-import java.util.Locale;
 
 public final class ItemList {
     private static final String[] TERMINALS = {
@@ -89,7 +85,7 @@ public final class ItemList {
     }
 
     private static boolean shouldShow(AbstractContainerScreen<?> screen) {
-        if (!enabled() || !onSkyBlock()) {
+        if (!enabled() || !SkyBlockArea.onSkyBlock()) {
             return false;
         }
         if (screen instanceof InventoryScreen && !ConfigManager.get().itemListInventory) {
@@ -102,19 +98,6 @@ public final class ItemList {
             }
         }
         return true;
-    }
-
-    private static boolean onSkyBlock() {
-        Minecraft client = Minecraft.getInstance();
-        if (client.level == null) {
-            return false;
-        }
-        Objective objective = client.level.getScoreboard().getDisplayObjective(DisplaySlot.SIDEBAR);
-        if (objective == null) {
-            return false;
-        }
-        return IgnUtil.stripCodes(objective.getDisplayName().getString())
-                .toUpperCase(Locale.ROOT).contains("SKYBLOCK");
     }
 
     private static int containerRight(AbstractContainerScreen<?> screen) {

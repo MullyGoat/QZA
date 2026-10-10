@@ -11,6 +11,9 @@ public interface ContainerScreenAccessor {
     @Accessor("leftPos")
     int qzaGuiLeft();
 
+    @Accessor("topPos")
+    int qzaGuiTop();
+
     @Accessor("imageWidth")
     int qzaGuiWidth();
 

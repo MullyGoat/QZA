@@ -4,7 +4,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
 
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,8 +17,33 @@ public final class SkyBlockArea {
 
     private static String area = "";
     private static long checkedAt;
+    private static boolean onSkyBlock;
+    private static long skyBlockCheckedAt;
 
     private SkyBlockArea() {
+    }
+
+    public static boolean onSkyBlock() {
+        long now = System.currentTimeMillis();
+        if (skyBlockCheckedAt != 0 && now - skyBlockCheckedAt < CACHE_MS) {
+            return onSkyBlock;
+        }
+        skyBlockCheckedAt = now;
+        onSkyBlock = readSkyBlock();
+        return onSkyBlock;
+    }
+
+    private static boolean readSkyBlock() {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null) {
+            return false;
+        }
+        Objective objective = client.level.getScoreboard().getDisplayObjective(DisplaySlot.SIDEBAR);
+        if (objective == null) {
+            return false;
+        }
+        return IgnUtil.stripCodes(objective.getDisplayName().getString())
+                .toUpperCase(Locale.ROOT).contains("SKYBLOCK");
     }
 
     public static String current() {

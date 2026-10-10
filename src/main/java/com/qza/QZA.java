@@ -12,6 +12,7 @@ import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.StarredMobs;
 import com.qza.dungeon.WitherKey;
+import com.qza.inventory.Equipment;
 import com.qza.itemlist.ItemList;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
@@ -61,6 +62,7 @@ public class QZA implements ClientModInitializer {
         StarredMobs.init();
         WaypointEditor.init();
         ItemList.init();
+        Equipment.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
                 new NotificationHud());
@@ -87,6 +89,7 @@ public class QZA implements ClientModInitializer {
             PartyNotification.onChatMessage(plain);
             PartyFullAlert.onChatMessage(plain);
             PartyFinderQueue.onChatMessage(plain);
+            Equipment.onChatMessage(plain);
             ChatHistory.onChatMessage(message, plain);
             ChannelHistory.onChatMessage(message, plain);
         });

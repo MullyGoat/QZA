@@ -195,4 +195,20 @@ public class QZAConfig {
     public boolean commandKeybindsInMenus = false;
 
     public List<com.qza.keybind.CommandBind> commandBinds = new ArrayList<>();
+
+    public boolean playerSizeEnabled = false;
+
+    public double playerSizeX = 1.0;
+
+    public double playerSizeY = 1.0;
+
+    public double playerSizeZ = 1.0;
+
+    public boolean equipmentInInventory = false;
+
+    public boolean hideShieldSlot = false;
+
+    public boolean itemStarCount = false;
+
+    public boolean dungeonWarpShortcut = false;
 }

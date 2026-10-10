@@ -26,6 +26,7 @@ import com.qza.party.PartyNotification;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.timer.ClockDisplay;
+import com.qza.tweaks.PlayerSize;
 import com.qza.tweaks.TooltipScale;
 import com.qza.util.ChatUtil;
 import com.qza.waypoint.WaypointColour;
@@ -39,6 +40,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 public final class SettingsRegistry {
@@ -927,6 +930,73 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.commandKeybindsEnabled));
 
+        settings.add(new ToggleSetting(misc, "Player Size", "Player Size",
+                Component.literal("Changes the size of your own player. A negative Y flips you upside down")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.playerSizeEnabled,
+                v -> {
+                    cfg.playerSizeEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(playerSizeSetting(misc, "Size X", "How wide you are",
+                () -> cfg.playerSizeX, v -> cfg.playerSizeX = v)
+                .visibleWhen(() -> cfg.playerSizeEnabled));
+
+        settings.add(playerSizeSetting(misc, "Size Y", "How tall you are",
+                () -> cfg.playerSizeY, v -> cfg.playerSizeY = v)
+                .visibleWhen(() -> cfg.playerSizeEnabled));
+
+        settings.add(playerSizeSetting(misc, "Size Z", "How thick you are",
+                () -> cfg.playerSizeZ, v -> cfg.playerSizeZ = v)
+                .visibleWhen(() -> cfg.playerSizeEnabled));
+
+        settings.add(new ToggleSetting(misc, "Equipment in Inventory", "Equipment in Inventory",
+                Component.literal("Shows your necklace, cloak, belt and gloves to the right of your player in your "
+                                + "inventory, where the shield slot was. Open ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("/equipment").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" once so QZA can see them, and click one to open it")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.equipmentInInventory,
+                v -> {
+                    cfg.equipmentInInventory = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "Hide Shield Slot", "Hide Shield Slot",
+                Component.literal("Removes the shield slot from your inventory on SkyBlock, where it does nothing")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.hideShieldSlot,
+                v -> {
+                    cfg.hideShieldSlot = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "Item Star Count", "Item Star Count",
+                Component.literal("Shows how many stars an item has in the bottom right of it. ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("10").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" means 5 stars and the 5th master star")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.itemStarCount,
+                v -> {
+                    cfg.itemStarCount = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "/d Shortcut", "/d Shortcut",
+                Component.literal("Typing ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("/d").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" runs ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("/warp dungeons").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                () -> cfg.dungeonWarpShortcut,
+                v -> {
+                    cfg.dungeonWarpShortcut = v;
+                    ConfigManager.save();
+                }));
+
         boolean[] confirmReset = {false};
         settings.add(new ActionSetting(misc, "Config", "Reset Settings",
                 Component.literal("Restores all settings to default. ")
@@ -990,6 +1060,21 @@ public final class SettingsRegistry {
 
     private static String announceModeLabel(String raw) {
         return "client".equals(raw) ? "Client Notification" : "Announce to Party";
+    }
+
+    private static SliderSetting playerSizeSetting(String category, String title, String description,
+                                                   DoubleSupplier getter,
+                                                   DoubleConsumer setter) {
+        return new SliderSetting(category, "Player Size", title,
+                Component.literal(description + " (").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("1.00").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" is normal)").withStyle(ChatFormatting.GRAY)),
+                PlayerSize.MIN, PlayerSize.MAX, 0.05, "",
+                getter,
+                v -> {
+                    setter.accept(v);
+                    ConfigManager.save();
+                });
     }
 
     private static DropdownSetting colourSetting(String category, String section, String title,
