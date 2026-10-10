@@ -25,8 +25,6 @@ import com.qza.party.PartyState;
 import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
-import com.qza.timer.NecronDebugTimer;
-import com.qza.timer.NecronTimer;
 import com.qza.timer.ServerTickClock;
 import com.qza.util.DungeonState;
 import com.qza.util.PlayerFaces;
@@ -87,8 +85,6 @@ public class QZA implements ClientModInitializer {
 
             ShitterAutoKick.onChatMessage(plain);
             MusicManager.get().onChatMessage(plain);
-            NecronTimer.onChatMessage(plain);
-            NecronDebugTimer.onChatMessage(plain);
             NecronLeap.onChatMessage(plain);
             CrystalTimer.onChatMessage(plain);
             WitherKey.onChatMessage(plain);
@@ -106,8 +102,6 @@ public class QZA implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             Scheduler.tick();
             WitherKey.tick();
-            NecronTimer.tick();
-            NecronDebugTimer.tick();
             NecronLeap.tick();
             CrystalTimer.tick();
 
@@ -115,8 +109,6 @@ public class QZA implements ClientModInitializer {
             if (level != lastLevel) {
                 lastLevel = level;
                 MusicManager.get().stopNow();
-                NecronTimer.reset();
-                NecronDebugTimer.reset();
                 NecronLeap.reset();
                 CrystalTimer.reset();
                 WitherKey.reset();
@@ -130,8 +122,6 @@ public class QZA implements ClientModInitializer {
             MusicManager.get().stopNow();
             Scheduler.clear();
             ShitterAutoKick.reset();
-            NecronTimer.reset();
-            NecronDebugTimer.reset();
             NecronLeap.reset();
             CrystalTimer.reset();
             WitherKey.reset();

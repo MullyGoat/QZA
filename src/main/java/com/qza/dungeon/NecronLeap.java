@@ -3,7 +3,7 @@ package com.qza.dungeon;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.notify.NotificationBox;
-import com.qza.timer.NecronTimer;
+import com.qza.util.BossBars;
 import com.qza.util.DungeonState;
 import com.qza.util.IgnUtil;
 import net.minecraft.client.Minecraft;
@@ -69,7 +69,7 @@ public final class NecronLeap {
             dungeonClass = ownClass();
         }
 
-        Float progress = NecronTimer.necronProgress();
+        Float progress = BossBars.progress("Necron");
         if (progress != null) {
             goneFor = 0;
             if (progress >= ARMED_PROGRESS) {

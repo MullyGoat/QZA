@@ -30,7 +30,6 @@ import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.timer.ClockDisplay;
-import com.qza.timer.NecronDebugTimer;
 import com.qza.tweaks.CommandShortcuts;
 import com.qza.tweaks.ItemStars;
 import com.qza.tweaks.PlayerSize;
@@ -214,46 +213,6 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.terminalMusicEnabled));
 
-        settings.add(new ToggleSetting(f7, "Necron Timer", "Necron Kill Time",
-                Component.literal("Announces how long it took to kill Necron before phase is over")
-                        .withStyle(ChatFormatting.GRAY),
-                () -> cfg.necronTimerEnabled,
-                v -> {
-                    cfg.necronTimerEnabled = v;
-                    ConfigManager.save();
-                }));
-
-        settings.add(new DropdownSetting(f7, "Necron Timer", "Announce Mode",
-                Component.literal("Send the kill time to the whole party, or only to yourself.")
-                        .withStyle(ChatFormatting.GRAY),
-                () -> List.of("party", "client"),
-                () -> cfg.necronAnnounceMode,
-                v -> {
-                    cfg.necronAnnounceMode = v;
-                    ConfigManager.save();
-                },
-                SettingsRegistry::announceModeLabel,
-                null,
-                "(none)",
-                170)
-                .visibleWhen(() -> cfg.necronTimerEnabled));
-
-        settings.add(new ToggleSetting(f7, "Necron Timer", "Debug Timer",
-                Component.literal("Tells only you, in tick time, when Necron's health bar hits ")
-                        .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("5%").withStyle(ChatFormatting.WHITE))
-                        .append(Component.literal(" and ").withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal("0").withStyle(ChatFormatting.WHITE))
-                        .append(Component.literal(", and when the Wither King's bar fills to ")
-                                .withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal("100").withStyle(ChatFormatting.WHITE)),
-                () -> cfg.necronDebugTimer,
-                v -> {
-                    cfg.necronDebugTimer = v;
-                    NecronDebugTimer.reset();
-                    ConfigManager.save();
-                }));
-
         settings.add(new ToggleSetting(f7, "Waypoints", "Waypoints",
                 Component.literal("Easily highlight blocks around Skyblock")
                         .withStyle(ChatFormatting.GRAY),
@@ -393,12 +352,12 @@ public final class SettingsRegistry {
         settings.add(new ToggleSetting(f7, "Crystal Spawn Timer", "Crystal Spawn Timer",
                 Component.literal("Shows ")
                         .withStyle(ChatFormatting.GRAY)
-                        .append(Component.literal("Crystal Spawned").withStyle(ChatFormatting.LIGHT_PURPLE))
-                        .append(Component.literal(" when Maxor starts. Once the Energy Laser charges up it shows ")
+                        .append(Component.literal("Crystals Spawned").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" when Maxor starts. Once both crystals are placed it shows ")
                                 .withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal("Crystal Spawning in").withStyle(ChatFormatting.RED))
-                        .append(Component.literal(", counting down in tick time from the laser hitting Maxor to "
-                                        + "the second crystals. Drag it in ")
+                        .append(Component.literal("Crystals Spawning in").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(", counting down in tick time to the second crystals, 8 seconds "
+                                        + "into Maxor. Drag it in ")
                                 .withStyle(ChatFormatting.GRAY))
                         .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE))
                         .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),

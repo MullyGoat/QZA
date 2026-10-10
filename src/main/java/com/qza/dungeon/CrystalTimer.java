@@ -13,32 +13,29 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 public final class CrystalTimer {
-    public static final String SPAWNED_TEXT = "Crystal Spawned";
+    public static final String SPAWNED_TEXT = "Crystals Spawned";
     public static final int SPAWNED_COLOUR = 0xFFFF55FF;
     public static final int SPAWNING_COLOUR = 0xFFFF5555;
 
-    public static final long SPAWN_TICKS = 34L;
+    public static final long SPAWN_TICKS = 160L;
 
     private static final double SECONDS_PER_TICK = 0.05;
     private static final double MILLIS_PER_TICK = 50.0;
+    private static final int PAIR = 2;
 
     private static final Pattern MAXOR_START =
             Pattern.compile("^\\[BOSS] Maxor: WELL! WELL! WELL! LOOK WHO'S HERE!$");
     private static final Pattern STORM_START =
             Pattern.compile("^\\[BOSS] Storm: Pathetic Maxor, just like expected\\.$");
+    private static final Pattern CRYSTAL_ACTIVE = Pattern.compile("^\\d+/2 Energy Crystals are now active!$");
     private static final Pattern LASER_CHARGING = Pattern.compile("^The Energy Laser is charging up!$");
-    private static final Pattern MAXOR_HIT =
-            Pattern.compile("^\\[BOSS] Maxor: (?:THAT BEAM! IT HURTS! IT HURTS!!|YOU TRICKED ME!)$");
 
-    private static final int HIDDEN = 0;
-    private static final int SPAWNED = 1;
-    private static final int CHARGING = 2;
-    private static final int SPAWNING = 3;
-
-    private static int state = HIDDEN;
-    private static boolean charged;
-    private static long hitTicks = -1L;
-    private static long hitMillis = -1L;
+    private static boolean active;
+    private static long startTicks = -1L;
+    private static long startMillis = -1L;
+    private static int pairs;
+    private static int placedInPair;
+    private static boolean pairCounted;
 
     private CrystalTimer() {
     }
@@ -51,68 +48,69 @@ public final class CrystalTimer {
 
         if (MAXOR_START.matcher(message).matches()) {
             reset();
-            state = SPAWNED;
+            active = true;
+            startTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticks() : -1L;
+            startMillis = System.currentTimeMillis();
             return;
         }
-        if (state == HIDDEN) {
+        if (!active) {
             return;
         }
         if (STORM_START.matcher(message).matches()) {
             reset();
             return;
         }
-        if (LASER_CHARGING.matcher(message).matches()) {
-            if (charged) {
-                state = HIDDEN;
-                return;
-            }
-            charged = true;
-            if (state == SPAWNED && hitMillis < 0L) {
-                state = CHARGING;
+        if (CRYSTAL_ACTIVE.matcher(message).matches()) {
+            placedInPair++;
+            if (placedInPair >= PAIR && !pairCounted) {
+                pairCounted = true;
+                pairPlaced();
             }
             return;
         }
-        if (MAXOR_HIT.matcher(message).matches() && hitMillis < 0L) {
-            state = SPAWNING;
-            hitTicks = ServerTickClock.isAvailable() ? ServerTickClock.ticks() : -1L;
-            hitMillis = System.currentTimeMillis();
+        if (LASER_CHARGING.matcher(message).matches()) {
+            if (!pairCounted) {
+                pairPlaced();
+            }
+            placedInPair = 0;
+            pairCounted = false;
+        }
+    }
+
+    private static void pairPlaced() {
+        pairs++;
+        if (pairs >= 2) {
+            reset();
         }
     }
 
     public static void tick() {
-        if (state == HIDDEN) {
-            return;
-        }
-        if (!ConfigManager.get().crystalTimerEnabled) {
+        if (active && !ConfigManager.get().crystalTimerEnabled) {
             reset();
-            return;
-        }
-        if (state == SPAWNING && sinceHit() >= SPAWN_TICKS) {
-            state = SPAWNED;
         }
     }
 
-    private static long sinceHit() {
-        if (hitMillis < 0L) {
+    private static long elapsedTicks() {
+        if (startMillis < 0L) {
             return 0L;
         }
-        if (hitTicks >= 0L && ServerTickClock.isAvailable()) {
-            return ServerTickClock.ticks() - hitTicks;
+        if (startTicks >= 0L && ServerTickClock.isAvailable()) {
+            return ServerTickClock.ticks() - startTicks;
         }
-        return Math.round((System.currentTimeMillis() - hitMillis) / MILLIS_PER_TICK);
+        return Math.round((System.currentTimeMillis() - startMillis) / MILLIS_PER_TICK);
     }
 
     public static String spawningText(double seconds) {
-        return "Crystal Spawning in: " + String.format(Locale.ROOT, "%.2f", seconds) + "s";
+        return "Crystals Spawning in: " + String.format(Locale.ROOT, "%.2f", seconds) + "s";
     }
 
     public static void renderHud(GuiGraphicsExtractor graphics, Font font) {
         QZAConfig cfg = ConfigManager.get();
-        if (!cfg.crystalTimerEnabled || state == HIDDEN || !DungeonState.inDungeon()) {
+        if (!cfg.crystalTimerEnabled || !active || !DungeonState.inDungeon()) {
             return;
         }
-        boolean counting = state == CHARGING || state == SPAWNING;
-        long left = state == SPAWNING ? Math.max(0L, SPAWN_TICKS - sinceHit()) : SPAWN_TICKS;
+        long left = SPAWN_TICKS - elapsedTicks();
+        boolean counting = pairs >= 1 && left > 0L;
         String text = counting ? spawningText(left * SECONDS_PER_TICK) : SPAWNED_TEXT;
 
         float scale = NotificationBox.clampScale(cfg.crystalTimerScale);
@@ -133,9 +131,11 @@ public final class CrystalTimer {
     }
 
     public static void reset() {
-        state = HIDDEN;
-        charged = false;
-        hitTicks = -1L;
-        hitMillis = -1L;
+        active = false;
+        startTicks = -1L;
+        startMillis = -1L;
+        pairs = 0;
+        placedInPair = 0;
+        pairCounted = false;
     }
 }

@@ -30,12 +30,6 @@ public class QZAConfig {
 
     public double fadeMillis = 1500.0;
 
-    public boolean necronTimerEnabled = true;
-
-    public String necronAnnounceMode = "party";
-
-    public boolean necronDebugTimer = false;
-
     public boolean waypointsEnabled = false;
 
     public boolean waypointsDungeonOnly = true;
