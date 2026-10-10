@@ -180,6 +180,8 @@ public class QZAConfig {
 
     public boolean itemListInventory = true;
 
+    public boolean newGui = true;
+
     public boolean hotbarScrollLock = false;
 
     public boolean tooltipScaleEnabled = false;

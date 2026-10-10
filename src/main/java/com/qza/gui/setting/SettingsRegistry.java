@@ -37,6 +37,7 @@ import net.minecraft.network.chat.Component;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -51,6 +52,18 @@ public final class SettingsRegistry {
             "Auto Check Stats",
             "Notifications",
             "Miscellaneous"));
+
+    private static final Map<String, String> CARDS = Map.of(
+            "F7 / M7/Track Selection", "Terminal Music",
+            "Chat/Open Chat", "QZA Chat",
+            "Chat/History", "QZA Chat",
+            "Auto Check Stats/Stats", "Auto Check Stats",
+            "Auto Check Stats/Requirements", "Auto Check Stats",
+            "Notifications/Dungeon Runs", "Dungeon Only Notifications",
+            "Notifications/Party", "Party Invite Alert",
+            "Notifications/QZA Chat", "Message Alert",
+            "Notifications/Discord", "Party Full Alert",
+            "Miscellaneous/Interface", "GUI Scale");
 
     private SettingsRegistry() {
     }
@@ -934,6 +947,12 @@ public final class SettingsRegistry {
                     Mc.setScreen(null);
                 }));
 
+        for (Setting setting : settings) {
+            String card = CARDS.get(setting.category + "/" + setting.section);
+            if (card != null) {
+                setting.card(card);
+            }
+        }
         return settings;
     }
 

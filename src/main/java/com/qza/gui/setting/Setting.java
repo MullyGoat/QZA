@@ -13,6 +13,7 @@ public abstract class Setting {
 
     private final String searchIndex;
     private BooleanSupplier visible = () -> true;
+    private String card;
 
     protected Setting(String category, String section, String title, Component description) {
         this.category = category;
@@ -34,5 +35,18 @@ public abstract class Setting {
 
     public boolean isVisible() {
         return visible.getAsBoolean();
+    }
+
+    public Setting card(String name) {
+        this.card = name;
+        return this;
+    }
+
+    public String card() {
+        return card == null ? section : card;
+    }
+
+    public boolean namesCard() {
+        return card != null;
     }
 }

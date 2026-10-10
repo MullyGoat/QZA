@@ -22,7 +22,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class QZAScreen extends Screen {
     private static final int PANEL_BG = 0x55000000;
@@ -33,9 +38,20 @@ public class QZAScreen extends Screen {
     private static final int DIVIDER = 0xFFC8D4DC;
     private static final int TEXT = 0xFFFFFFFF;
     private static final int TEXT_DIM = 0xFFAAAAAA;
+    private static final int TEXT_FAINT = 0xFF8A8A8A;
     private static final int ACCENT = 0xFF55FFFF;
     private static final int RAIL_LINE = 0xFF9AA5AC;
     private static final int PINK = 0xFFFF55FF;
+    private static final int PINK_FILL = 0x99FF55FF;
+
+    private static final int CARD_BG = 0x66000000;
+    private static final int CARD_BG_HOVER = 0x88181C22;
+    private static final int CARD_BODY = 0x40000000;
+    private static final int CARD_BORDER = 0x33FFFFFF;
+    private static final int CARD_BORDER_HOVER = 0x99FFFFFF;
+    private static final int CARD_ON = 0x66FF55FF;
+    private static final int CARD_ON_HOVER = 0x88FF55FF;
+    private static final int SUB_HOVER = 0x1FFFFFFF;
 
     private static final int HEADER_H = 56;
     private static final int RAIL_W = 200;
@@ -50,14 +66,35 @@ public class QZAScreen extends Screen {
     private static final int BUTTON_H = 18;
     private static final int PENCIL_W = 18;
 
+    private static final int CARD_H = 26;
+    private static final int CARD_GAP = 6;
+    private static final int CARD_MIN_W = 170;
+    private static final int CARD_PAD = 10;
+    private static final int SUB_H = 22;
+    private static final int SUB_TALL_H = 36;
+    private static final int SUB_PAD = 4;
+    private static final int CHECK = 9;
+    private static final int GROUP_H = 16;
+    private static final int TIP_W = 220;
+    private static final int MODE_W = 76;
+    private static final int MODE_H = 16;
+
     private static final float TITLE_SCALE = 1.5f;
 
     private static String selectedCategory = SettingsRegistry.CATEGORIES.get(0);
     private static double scroll;
+    private static final Set<String> expanded = new HashSet<>();
 
     private List<Setting> allSettings = List.of();
     private final List<Row> rows = new ArrayList<>();
+    private final List<Card> cards = new ArrayList<>();
+    private final List<Group> groups = new ArrayList<>();
+    private final Set<String> searchOpen = new HashSet<>();
+    private String searchOpenQuery = "";
+    private int cardsHeight;
     private EditBox search;
+    private List<FormattedCharSequence> hoverTip;
+    private int widthCap = Integer.MAX_VALUE;
 
     private NumberSetting numberFocus;
     private int numberBox = -1;
@@ -100,6 +137,10 @@ public class QZAScreen extends Screen {
         }
     }
 
+    private static boolean modern() {
+        return ConfigManager.get().newGui;
+    }
+
     private static float scale() {
         double pct = ConfigManager.get().guiScale;
         return (float) Math.max(0.5, Math.min(1.5, pct / 100.0));
@@ -120,7 +161,7 @@ public class QZAScreen extends Screen {
 
         int searchW = Math.min(240, panelW / 4);
         search = new EditBox(this.font,
-                panelX + panelW - searchW - 16, panelY + 18, searchW, 14, Component.empty());
+                modeRect()[0] - searchW - 14, panelY + 18, searchW, 14, Component.empty());
         search.setBordered(false);
         search.setMaxLength(64);
         search.setHint(Component.literal("Search...").withStyle(ChatFormatting.GRAY));
@@ -142,10 +183,23 @@ public class QZAScreen extends Screen {
         contentH = Math.max(40, (panelY + panelH - 10) - contentY);
     }
 
+    private String query() {
+        return search == null ? "" : search.getValue().trim();
+    }
+
     private void rebuildRows() {
         openDropdown = null;
+        if (modern()) {
+            rebuildCards();
+        } else {
+            rebuildList();
+        }
+        clampScroll();
+    }
+
+    private void rebuildList() {
         rows.clear();
-        String query = search == null ? "" : search.getValue().trim();
+        String query = query();
         boolean searching = !query.isEmpty();
 
         String currentSection = null;
@@ -174,7 +228,113 @@ public class QZAScreen extends Screen {
             row.y = y;
             y += row.height + ROW_GAP;
         }
-        clampScroll();
+    }
+
+    private void rebuildCards() {
+        cards.clear();
+        groups.clear();
+        String query = query();
+        boolean searching = !query.isEmpty();
+        boolean freshSearch = searching && !query.equals(searchOpenQuery);
+        if (freshSearch) {
+            searchOpen.clear();
+        }
+        searchOpenQuery = query;
+
+        Map<String, List<Setting>> grouped = new LinkedHashMap<>();
+        for (Setting setting : allSettings) {
+            if (!searching && !setting.category.equals(selectedCategory)) {
+                continue;
+            }
+            grouped.computeIfAbsent(setting.category + "/" + setting.card(), k -> new ArrayList<>()).add(setting);
+        }
+
+        for (Map.Entry<String, List<Setting>> entry : grouped.entrySet()) {
+            Card card = Card.of(entry.getKey(), entry.getValue());
+            if (!card.visible()) {
+                continue;
+            }
+            if (searching) {
+                boolean match = false;
+                boolean subMatch = false;
+                for (Setting setting : card.all) {
+                    if (setting.isVisible() && setting.matchesSearch(query)) {
+                        match = true;
+                        subMatch |= setting != card.main;
+                    }
+                }
+                if (!match) {
+                    continue;
+                }
+                if (freshSearch && subMatch) {
+                    searchOpen.add(card.key);
+                }
+            }
+            card.open = card.expandable() && (searching ? searchOpen : expanded).contains(card.key);
+            cards.add(card);
+        }
+
+        layoutCards(searching);
+    }
+
+    private void layoutCards(boolean searching) {
+        int columns = contentW >= (CARD_MIN_W * 2) + CARD_GAP ? 2 : 1;
+        int cardW = (contentW - ((columns - 1) * CARD_GAP)) / columns;
+        int[] columnY = new int[columns];
+        int index = 0;
+        String category = null;
+
+        for (Card card : cards) {
+            if (searching && !card.category.equals(category)) {
+                category = card.category;
+                int top = tallest(columnY);
+                groups.add(new Group(category, top));
+                Arrays.fill(columnY, top + GROUP_H + 4);
+                index = 0;
+            }
+            int column = index % columns;
+            index++;
+            card.x = contentX + (column * (cardW + CARD_GAP));
+            card.w = cardW;
+            card.y = columnY[column];
+            measureCard(card);
+            columnY[column] += card.h + CARD_GAP;
+        }
+        cardsHeight = cards.isEmpty() ? 0 : tallest(columnY) - CARD_GAP;
+    }
+
+    private static int tallest(int[] values) {
+        int max = 0;
+        for (int value : values) {
+            max = Math.max(max, value);
+        }
+        return max;
+    }
+
+    private void measureCard(Card card) {
+        card.subs.clear();
+        card.h = CARD_H;
+        if (!card.open) {
+            return;
+        }
+        int inner = card.w - (CARD_PAD * 2);
+        widthCap = inner;
+        int y = CARD_H + SUB_PAD;
+        for (Setting setting : card.all) {
+            if (setting == card.main || !setting.isVisible()) {
+                continue;
+            }
+            int controlW = setting instanceof ToggleSetting ? CHECK : controlWidth(setting);
+            boolean tall = this.font.width(setting.title) + 12 + controlW > inner;
+            int h = tall ? SUB_TALL_H : SUB_H;
+            card.subs.add(new Sub(setting, y, h, tall));
+            y += h;
+        }
+        widthCap = Integer.MAX_VALUE;
+        if (card.subs.isEmpty()) {
+            y += SUB_H;
+        }
+        card.h = y + SUB_PAD;
     }
 
     private int measure(Setting setting) {
@@ -191,7 +351,7 @@ public class QZAScreen extends Screen {
             return SLIDER_W + sliderLabelReserve(slider);
         }
         if (setting instanceof DropdownSetting dropdown) {
-            return dropdown.width + (dropdown.hasEdit() ? PENCIL_W + 4 : 0);
+            return dropdownWidth(dropdown) + (dropdown.hasEdit() ? PENCIL_W + 4 : 0);
         }
         if (setting instanceof NumberSetting number) {
             return numberWidth(number);
@@ -200,6 +360,11 @@ public class QZAScreen extends Screen {
             return action.buttonWidth;
         }
         return BUTTON_W;
+    }
+
+    private int dropdownWidth(DropdownSetting dropdown) {
+        int pencil = dropdown.hasEdit() ? PENCIL_W + 4 : 0;
+        return Math.max(40, Math.min(dropdown.width, widthCap - pencil));
     }
 
     private int numberWidth(NumberSetting number) {
@@ -218,15 +383,15 @@ public class QZAScreen extends Screen {
         return width;
     }
 
-    private int[] numberBoxRect(NumberSetting number, Row row, int y, int index) {
-        int x = contentX + contentW - CONTROL_PAD - numberWidth(number);
+    private int[] numberBoxRect(NumberSetting number, int right, int y, int h, int index) {
+        int x = right - numberWidth(number);
         for (int i = 0; i < number.fields.size(); i++) {
             if (i > 0) {
                 x += number.separator.isEmpty()
                         ? 6 : this.font.width(number.separator) + 6;
             }
             if (i == index) {
-                return new int[]{x, y + ((row.height - NumberSetting.BOX_H) / 2),
+                return new int[]{x, y + ((h - NumberSetting.BOX_H) / 2),
                         NumberSetting.BOX_W, NumberSetting.BOX_H};
             }
             x += NumberSetting.BOX_W;
@@ -263,9 +428,9 @@ public class QZAScreen extends Screen {
     }
 
     private void drawNumberBoxes(GuiGraphicsExtractor graphics, NumberSetting number,
-                                 Row row, int y, int mouseX, int mouseY) {
+                                 int right, int y, int h, int mouseX, int mouseY) {
         for (int i = 0; i < number.fields.size(); i++) {
-            int[] r = numberBoxRect(number, row, y, i);
+            int[] r = numberBoxRect(number, right, y, h, i);
             String text = numberTextFor(number, i);
             boolean focused = numberFocus == number && numberBox == i;
             boolean bad = !number.validFor(i, text);
@@ -300,6 +465,9 @@ public class QZAScreen extends Screen {
     }
 
     private int totalHeight() {
+        if (modern()) {
+            return cardsHeight;
+        }
         if (rows.isEmpty()) {
             return 0;
         }
@@ -327,6 +495,7 @@ public class QZAScreen extends Screen {
         float s = scale();
         int mx = Math.round((mouseX - offsetX()) / s);
         int my = Math.round((mouseY - offsetY()) / s);
+        hoverTip = null;
 
         graphics.pose().pushMatrix();
         graphics.pose().translate(offsetX(), offsetY());
@@ -340,12 +509,21 @@ public class QZAScreen extends Screen {
 
         drawHeader(graphics);
         drawEditGui(graphics, mx, my);
+        drawModeToggle(graphics, mx, my);
         drawRail(graphics, mx, my);
-        drawContent(graphics, mx, my);
+        if (modern()) {
+            drawCards(graphics, mx, my);
+        } else {
+            drawContent(graphics, mx, my);
+        }
 
         drawOpenDropdown(graphics, mx, my);
 
         graphics.pose().popMatrix();
+
+        if (hoverTip != null && openDropdown == null && draggingSlider == null) {
+            graphics.setTooltipForNextFrame(this.font, hoverTip, mouseX, mouseY);
+        }
     }
 
     private void scissorLogical(GuiGraphicsExtractor graphics, int x0, int y0, int x1, int y1) {
@@ -359,6 +537,23 @@ public class QZAScreen extends Screen {
         graphics.fill(x + w - 1, y + 1, x + w, y + h - 1, colour);
     }
 
+    private static void softFill(GuiGraphicsExtractor graphics, int x, int y, int w, int h, int colour) {
+        graphics.fill(x + 1, y, x + w - 1, y + h, colour);
+        graphics.fill(x, y + 1, x + 1, y + h - 1, colour);
+        graphics.fill(x + w - 1, y + 1, x + w, y + h - 1, colour);
+    }
+
+    private static void softOutline(GuiGraphicsExtractor graphics, int x, int y, int w, int h, int colour) {
+        graphics.fill(x + 2, y, x + w - 2, y + 1, colour);
+        graphics.fill(x + 2, y + h - 1, x + w - 2, y + h, colour);
+        graphics.fill(x, y + 2, x + 1, y + h - 2, colour);
+        graphics.fill(x + w - 1, y + 2, x + w, y + h - 2, colour);
+        graphics.fill(x + 1, y + 1, x + 2, y + 2, colour);
+        graphics.fill(x + w - 2, y + 1, x + w - 1, y + 2, colour);
+        graphics.fill(x + 1, y + h - 2, x + 2, y + h - 1, colour);
+        graphics.fill(x + w - 2, y + h - 2, x + w - 1, y + h - 1, colour);
+    }
+
     private int[] editGuiRect() {
         return new int[]{panelX + 16, panelY + 14, 66, 16};
     }
@@ -370,6 +565,34 @@ public class QZAScreen extends Screen {
         outline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFAFD4EC : 0xFF6A8CA8);
         graphics.centeredText(this.font, Component.literal("Edit GUI"),
                 r[0] + (r[2] / 2), r[1] + 4, TEXT);
+    }
+
+    private int[] modeRect() {
+        return new int[]{panelX + panelW - MODE_W - 16, panelY + 15, MODE_W, MODE_H};
+    }
+
+    private void drawModeToggle(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        int[] r = modeRect();
+        int half = r[2] / 2;
+        boolean hovered = inside(mouseX, mouseY, r);
+        boolean modern = modern();
+
+        softFill(graphics, r[0], r[1], r[2], r[3], 0x66000000);
+        if (modern) {
+            softFill(graphics, r[0] + half, r[1], r[2] - half, r[3], PINK_FILL);
+        } else {
+            softFill(graphics, r[0], r[1], half, r[3], PINK_FILL);
+        }
+        softOutline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFDDDDDD : 0x80FFFFFF);
+
+        graphics.centeredText(this.font, Component.literal("OG"), r[0] + (half / 2), r[1] + 4,
+                modern ? TEXT_DIM : TEXT);
+        graphics.centeredText(this.font, Component.literal("New"), r[0] + half + ((r[2] - half) / 2), r[1] + 4,
+                modern ? TEXT : TEXT_DIM);
+
+        if (hovered) {
+            hoverTip = this.font.split(Component.literal("Switch between the OG QZA menu and the new one"), TIP_W);
+        }
     }
 
     private void drawHeader(GuiGraphicsExtractor graphics) {
@@ -407,15 +630,24 @@ public class QZAScreen extends Screen {
         }
     }
 
+    private boolean inContent(double mouseX, double mouseY) {
+        return mouseX >= contentX - 4 && mouseX <= contentX + contentW + 4
+                && mouseY >= contentY && mouseY <= contentY + contentH;
+    }
+
+    private void drawEmpty(GuiGraphicsExtractor graphics) {
+        String message = lastQuery.isEmpty()
+                ? "No settings in this category yet."
+                : "Nothing matches \"" + lastQuery + "\".";
+        graphics.centeredText(this.font, Component.literal(message),
+                contentX + (contentW / 2), contentY + 16, TEXT_DIM);
+    }
+
     private void drawContent(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         scissorLogical(graphics, contentX - 4, contentY, contentX + contentW + 4, contentY + contentH);
 
         if (rows.isEmpty()) {
-            String message = lastQuery.isEmpty()
-                    ? "No settings in this category yet."
-                    : "Nothing matches \"" + lastQuery + "\".";
-            graphics.centeredText(this.font, Component.literal(message),
-                    contentX + (contentW / 2), contentY + 16, TEXT_DIM);
+            drawEmpty(graphics);
             graphics.disableScissor();
             return;
         }
@@ -443,6 +675,10 @@ public class QZAScreen extends Screen {
                 contentX + (contentW / 2), y + 5, TEXT);
     }
 
+    private int rowRight() {
+        return contentX + contentW - CONTROL_PAD;
+    }
+
     private void drawSettingRow(GuiGraphicsExtractor graphics, Row row, int y, int mouseX, int mouseY) {
         Setting setting = row.setting;
         graphics.fill(contentX, y, contentX + contentW, y + row.height, BOX_BG);
@@ -458,29 +694,189 @@ public class QZAScreen extends Screen {
             lineY += 10;
         }
 
+        drawControl(graphics, setting, rowRight(), y, row.height, mouseX, mouseY);
+    }
+
+    private void drawControl(GuiGraphicsExtractor graphics, Setting setting, int right, int y, int h,
+                             int mouseX, int mouseY) {
         if (setting instanceof ToggleSetting toggle) {
-            int[] r = toggleRect(row, y);
+            int[] r = toggleRect(right, y, h);
             drawToggle(graphics, r[0], r[1], toggle.value(), inside(mouseX, mouseY, r));
         } else if (setting instanceof SliderSetting slider) {
-            int[] r = sliderRect(row, y);
+            int[] r = sliderRect(right, y, h);
             String label = slider.label();
             graphics.text(this.font, Component.literal(label),
                     r[0] - this.font.width(label) - 6, r[1] + 1, TEXT);
             drawSlider(graphics, r[0], r[1], slider.fraction());
         } else if (setting instanceof DropdownSetting dropdown) {
-            int[] r = dropdownRect(row, y);
+            int[] r = dropdownRect(setting, right, y, h);
             drawDropdownButton(graphics, r[0], r[1], r[2],
                     dropdown.currentLabel(), inside(mouseX, mouseY, r));
             if (dropdown.hasEdit()) {
-                int[] p = pencilRect(row, y);
+                int[] p = pencilRect(setting, right, y, h);
                 drawPencil(graphics, p, inside(mouseX, mouseY, p));
             }
         } else if (setting instanceof NumberSetting number) {
-            drawNumberBoxes(graphics, number, row, y, mouseX, mouseY);
+            drawNumberBoxes(graphics, number, right, y, h, mouseX, mouseY);
         } else if (setting instanceof ActionSetting action) {
-            int[] r = buttonRect(row, y);
+            int[] r = buttonRect(setting, right, y, h);
             drawButton(graphics, r[0], r[1], r[2], action.buttonLabel(), inside(mouseX, mouseY, r));
         }
+    }
+
+    private void drawCards(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        scissorLogical(graphics, contentX - 4, contentY, contentX + contentW + 4, contentY + contentH);
+
+        if (cards.isEmpty()) {
+            drawEmpty(graphics);
+            graphics.disableScissor();
+            return;
+        }
+
+        boolean pointer = inContent(mouseX, mouseY) && openDropdown == null;
+        int offset = contentY - (int) Math.round(scroll);
+
+        for (Group group : groups) {
+            int y = offset + group.y;
+            if (y + GROUP_H < contentY || y > contentY + contentH) {
+                continue;
+            }
+            graphics.text(this.font, Component.literal(group.category), contentX + 2, y + 4, PINK);
+            int lineX = contentX + this.font.width(group.category) + 10;
+            graphics.fill(lineX, y + 8, contentX + contentW, y + 9, 0x33FFFFFF);
+        }
+
+        for (Card card : cards) {
+            int y = offset + card.y;
+            if (y + card.h < contentY - 4 || y > contentY + contentH + 4) {
+                continue;
+            }
+            widthCap = card.w - (CARD_PAD * 2);
+            drawCard(graphics, card, y, pointer ? mouseX : -1, pointer ? mouseY : -1);
+            widthCap = Integer.MAX_VALUE;
+        }
+
+        graphics.disableScissor();
+        drawScrollbar(graphics);
+    }
+
+    private void drawCard(GuiGraphicsExtractor graphics, Card card, int y, int mouseX, int mouseY) {
+        int x = card.x;
+        int w = card.w;
+        boolean on = card.kind == Kind.TOGGLE && ((ToggleSetting) card.main).value();
+        boolean overHeader = inside(mouseX, mouseY, new int[]{x, y, w, CARD_H});
+        boolean overCard = inside(mouseX, mouseY, new int[]{x, y, w, card.h});
+
+        softFill(graphics, x, y, w, card.h, CARD_BG);
+        if (card.open) {
+            graphics.fill(x + 1, y + CARD_H, x + w - 1, y + card.h - 1, CARD_BODY);
+        }
+        int head = on ? (overHeader ? CARD_ON_HOVER : CARD_ON) : (overHeader ? CARD_BG_HOVER : 0);
+        if (head != 0) {
+            softFill(graphics, x, y, w, card.open ? CARD_H : card.h, head);
+        }
+        if (card.open) {
+            graphics.fill(x + 1, y + CARD_H, x + w - 1, y + CARD_H + 1, on ? 0x66FF55FF : 0x22FFFFFF);
+        }
+        int border = on ? PINK : (overCard ? CARD_BORDER_HOVER : CARD_BORDER);
+        softOutline(graphics, x, y, w, card.h, border);
+
+        int textY = y + ((CARD_H - 8) / 2);
+        int rightEdge = x + w - CARD_PAD;
+        if (card.kind == Kind.ACTION) {
+            String label = ((ActionSetting) card.main).buttonLabel();
+            int labelW = this.font.width(label);
+            graphics.text(this.font, Component.literal(label), rightEdge - labelW, textY,
+                    overHeader ? PINK : TEXT_DIM);
+            rightEdge -= labelW + 8;
+        } else if (card.expandable()) {
+            drawChevron(graphics, rightEdge - 7, y + (CARD_H / 2) - 2, card.open,
+                    on ? TEXT : (overHeader ? TEXT : TEXT_DIM));
+            rightEdge -= 15;
+        }
+        graphics.text(this.font, Component.literal(trim(card.title, rightEdge - x - CARD_PAD)),
+                x + CARD_PAD, textY, on || overHeader ? TEXT : 0xFFE2E2E2);
+
+        if (overHeader) {
+            hoverTip = cardTip(card);
+        }
+
+        if (!card.open) {
+            return;
+        }
+
+        int inner = x + CARD_PAD;
+        int right = x + w - CARD_PAD;
+        if (card.subs.isEmpty()) {
+            String message = card.kind == Kind.TOGGLE && !on
+                    ? "Turn it on to see its settings" : "Nothing else to change here";
+            graphics.text(this.font, Component.literal(message), inner + 2,
+                    y + CARD_H + SUB_PAD + ((SUB_H - 8) / 2), TEXT_FAINT);
+            return;
+        }
+
+        for (Sub sub : card.subs) {
+            int rowY = y + sub.y;
+            int[] rowRect = {x + 1, rowY, w - 2, sub.h};
+            boolean overRow = inside(mouseX, mouseY, rowRect);
+            Setting setting = sub.setting;
+
+            if (setting instanceof ToggleSetting toggle) {
+                boolean value = toggle.value();
+                if (overRow) {
+                    graphics.fill(rowRect[0], rowRect[1], rowRect[0] + rowRect[2], rowRect[1] + rowRect[3], SUB_HOVER);
+                }
+                int labelY = rowY + ((sub.h - 8) / 2);
+                graphics.text(this.font, Component.literal(trim(setting.title, right - inner - CHECK - 8)),
+                        inner + 2, labelY, value ? PINK : (overRow ? TEXT : 0xFFCCCCCC));
+                drawCheck(graphics, right - CHECK, rowY + ((sub.h - CHECK) / 2), value, overRow);
+                if (overRow) {
+                    hoverTip = this.font.split(setting.description, TIP_W);
+                }
+                continue;
+            }
+
+            int labelY = sub.tall ? rowY + 4 : rowY + ((sub.h - 8) / 2);
+            graphics.text(this.font, Component.literal(trim(setting.title, right - inner)),
+                    inner + 2, labelY, 0xFFCCCCCC);
+            int controlY = sub.tall ? rowY + 13 : rowY;
+            int controlH = sub.tall ? sub.h - 13 : sub.h;
+            drawControl(graphics, setting, right, controlY, controlH, mouseX, mouseY);
+
+            int labelW = this.font.width(setting.title);
+            if (inside(mouseX, mouseY, new int[]{inner, labelY - 2, labelW + 4, 12})) {
+                hoverTip = this.font.split(setting.description, TIP_W);
+            }
+        }
+    }
+
+    private List<FormattedCharSequence> cardTip(Card card) {
+        if (card.main == null) {
+            return null;
+        }
+        List<FormattedCharSequence> lines = new ArrayList<>(this.font.split(card.main.description, TIP_W));
+        if (card.kind == Kind.TOGGLE && card.expandable()) {
+            lines.addAll(this.font.split(Component.literal(card.open
+                    ? "Right click to hide its settings" : "Right click for its settings")
+                    .withStyle(ChatFormatting.DARK_GRAY), TIP_W));
+        }
+        return lines;
+    }
+
+    private static void drawChevron(GuiGraphicsExtractor graphics, int x, int y, boolean up, int colour) {
+        for (int i = 0; i < 4; i++) {
+            int row = up ? y + 3 - i : y + i;
+            graphics.fill(x + i, row, x + 7 - i, row + 1, colour);
+        }
+    }
+
+    private static void drawCheck(GuiGraphicsExtractor graphics, int x, int y, boolean on, boolean hovered) {
+        if (on) {
+            softFill(graphics, x, y, CHECK, CHECK, PINK);
+            return;
+        }
+        softFill(graphics, x, y, CHECK, CHECK, 0x66000000);
+        softOutline(graphics, x, y, CHECK, CHECK, hovered ? 0xFFDDDDDD : 0x80FFFFFF);
     }
 
     private void drawToggle(GuiGraphicsExtractor graphics, int x, int y, boolean on, boolean hovered) {
@@ -498,7 +894,7 @@ public class QZAScreen extends Screen {
         int midY = y + (SLIDER_H / 2);
         graphics.fill(x, midY - 1, x + SLIDER_W, midY + 1, 0xFF474747);
         int handleX = x + (int) Math.round((SLIDER_W - 6) * fraction);
-        graphics.fill(x, midY - 1, handleX + 3, midY + 1, ACCENT);
+        graphics.fill(x, midY - 1, handleX + 3, midY + 1, modern() ? PINK : ACCENT);
         graphics.fill(handleX, y, handleX + 6, y + SLIDER_H, 0xFFE8E8E8);
     }
 
@@ -598,7 +994,7 @@ public class QZAScreen extends Screen {
             if (hovered) {
                 graphics.fill(ddX + 1, rowY, ddX + ddW - 1, rowY + DD_ROW_H, 0x663C5A70);
             }
-            int colour = selected ? ACCENT : (hovered ? 0xFFFFFFFF : 0xFFCCCCCC);
+            int colour = selected ? (modern() ? PINK : ACCENT) : (hovered ? 0xFFFFFFFF : 0xFFCCCCCC);
             graphics.text(this.font,
                     Component.literal(trim(openDropdown.display(option), textRoom)),
                     ddX + 5, rowY + 2, colour);
@@ -629,32 +1025,29 @@ public class QZAScreen extends Screen {
         graphics.fill(trackX, barY, trackX + 3, barY + barH, 0x99FFFFFF);
     }
 
-    private int[] toggleRect(Row row, int y) {
-        int x = contentX + contentW - CONTROL_PAD - TOGGLE_W;
-        return new int[]{x, y + ((row.height - TOGGLE_H) / 2), TOGGLE_W, TOGGLE_H};
+    private int[] toggleRect(int right, int y, int h) {
+        return new int[]{right - TOGGLE_W, y + ((h - TOGGLE_H) / 2), TOGGLE_W, TOGGLE_H};
     }
 
-    private int[] sliderRect(Row row, int y) {
-        int x = contentX + contentW - CONTROL_PAD - SLIDER_W;
-        return new int[]{x, y + ((row.height - SLIDER_H) / 2), SLIDER_W, SLIDER_H};
+    private int[] sliderRect(int right, int y, int h) {
+        return new int[]{right - SLIDER_W, y + ((h - SLIDER_H) / 2), SLIDER_W, SLIDER_H};
     }
 
-    private int[] buttonRect(Row row, int y) {
-        int w = controlWidth(row.setting);
-        int x = contentX + contentW - CONTROL_PAD - w;
-        return new int[]{x, y + ((row.height - BUTTON_H) / 2), w, BUTTON_H};
+    private int[] buttonRect(Setting setting, int right, int y, int h) {
+        int w = controlWidth(setting);
+        return new int[]{right - w, y + ((h - BUTTON_H) / 2), w, BUTTON_H};
     }
 
-    private int[] dropdownRect(Row row, int y) {
-        int[] r = buttonRect(row, y);
-        if (row.setting instanceof DropdownSetting dropdown && dropdown.hasEdit()) {
-            return new int[]{r[0] + PENCIL_W + 4, r[1], dropdown.width, r[3]};
+    private int[] dropdownRect(Setting setting, int right, int y, int h) {
+        int[] r = buttonRect(setting, right, y, h);
+        if (setting instanceof DropdownSetting dropdown && dropdown.hasEdit()) {
+            return new int[]{r[0] + PENCIL_W + 4, r[1], dropdownWidth(dropdown), r[3]};
         }
         return r;
     }
 
-    private int[] pencilRect(Row row, int y) {
-        int[] r = buttonRect(row, y);
+    private int[] pencilRect(Setting setting, int right, int y, int h) {
+        int[] r = buttonRect(setting, right, y, h);
         return new int[]{r[0], r[1], PENCIL_W, r[3]};
     }
 
@@ -697,6 +1090,7 @@ public class QZAScreen extends Screen {
                 int index = (int) ((local.y() - (ddY + 1) + ddScroll) / DD_ROW_H);
                 if (index >= 0 && index < ddOptions.size()) {
                     openDropdown.select(ddOptions.get(index));
+                    rebuildRows();
                 }
             }
             openDropdown = null;
@@ -706,37 +1100,61 @@ public class QZAScreen extends Screen {
         if (super.mouseClicked(local, doubleClick)) {
             return true;
         }
-        if (local.button() != InputConstants.MOUSE_BUTTON_LEFT) {
+        boolean left = local.button() == InputConstants.MOUSE_BUTTON_LEFT;
+        boolean right = local.button() == InputConstants.MOUSE_BUTTON_RIGHT;
+        if (!left && !(right && modern())) {
             return false;
         }
 
         double mouseX = local.x();
         double mouseY = local.y();
 
-        if (inside(mouseX, mouseY, editGuiRect())) {
+        if (left && inside(mouseX, mouseY, modeRect())) {
+            int[] r = modeRect();
+            boolean pickNew = mouseX >= r[0] + (r[2] / 2);
+            if (pickNew != modern()) {
+                commitNumber();
+                ConfigManager.get().newGui = pickNew;
+                ConfigManager.save();
+                scroll = 0;
+                rebuildRows();
+            }
+            return true;
+        }
+
+        if (left && inside(mouseX, mouseY, editGuiRect())) {
             ConfigManager.save();
             Mc.setScreen(new GuiEditScreen());
             return true;
         }
 
-        int railY = panelY + HEADER_H + 14;
-        for (String category : SettingsRegistry.CATEGORIES) {
-            int x = panelX + 24;
-            int lineWidth = Math.max(this.font.width(category) + 16, 108);
-            if (mouseX >= x - 4 && mouseX <= x - 4 + lineWidth
-                    && mouseY >= railY - 3 && mouseY <= railY + 12) {
-                selectedCategory = category;
-                search.setValue("");
-                lastQuery = "";
-                scroll = 0;
-                rebuildRows();
-                return true;
+        if (left) {
+            int railY = panelY + HEADER_H + 14;
+            for (String category : SettingsRegistry.CATEGORIES) {
+                int x = panelX + 24;
+                int lineWidth = Math.max(this.font.width(category) + 16, 108);
+                if (mouseX >= x - 4 && mouseX <= x - 4 + lineWidth
+                        && mouseY >= railY - 3 && mouseY <= railY + 12) {
+                    selectedCategory = category;
+                    search.setValue("");
+                    lastQuery = "";
+                    scroll = 0;
+                    rebuildRows();
+                    return true;
+                }
+                railY += 32;
             }
-            railY += 32;
         }
 
-        if (mouseX < contentX - 4 || mouseX > contentX + contentW + 4
-                || mouseY < contentY || mouseY > contentY + contentH) {
+        if (!inContent(mouseX, mouseY)) {
+            return false;
+        }
+
+        if (modern()) {
+            if (clickCards(mouseX, mouseY, left)) {
+                return true;
+            }
+            commitNumber();
             return false;
         }
 
@@ -749,56 +1167,121 @@ public class QZAScreen extends Screen {
             if (mouseY < y || mouseY > y + row.height) {
                 continue;
             }
-
-            if (row.setting instanceof ToggleSetting toggle) {
-                if (inside(mouseX, mouseY, toggleRect(row, y))) {
-                    toggle.toggle();
-
-                    rebuildRows();
-                    return true;
-                }
-            } else if (row.setting instanceof SliderSetting slider) {
-                int[] r = sliderRect(row, y);
-
-                if (mouseX >= r[0] - 2 && mouseX <= r[0] + r[2] + 2
-                        && mouseY >= r[1] - 5 && mouseY <= r[1] + r[3] + 5) {
-                    draggingSlider = slider;
-
-                    dragScale = scale();
-                    dragOffsetX = offsetX();
-                    dragTrackX = r[0];
-                    dragTrackW = r[2];
-                    slider.setFromFraction((mouseX - r[0]) / (double) r[2]);
-                    return true;
-                }
-            } else if (row.setting instanceof DropdownSetting dropdown) {
-                if (dropdown.hasEdit() && inside(mouseX, mouseY, pencilRect(row, y))) {
-                    dropdown.edit();
-                    return true;
-                }
-                int[] r = dropdownRect(row, y);
-                if (inside(mouseX, mouseY, r)) {
-                    openDropdownAt(dropdown, r);
-                    return true;
-                }
-            } else if (row.setting instanceof NumberSetting number) {
-                for (int i = 0; i < number.fields.size(); i++) {
-                    if (inside(mouseX, mouseY, numberBoxRect(number, row, y, i))) {
-                        focusNumber(number, i);
-                        return true;
-                    }
-                }
-            } else if (row.setting instanceof ActionSetting action) {
-                if (inside(mouseX, mouseY, buttonRect(row, y))) {
-                    action.run();
-                    return true;
-                }
+            if (clickControl(row.setting, rowRight(), y, row.height, mouseX, mouseY)) {
+                return true;
             }
             break;
         }
 
         commitNumber();
         return false;
+    }
+
+    private boolean clickControl(Setting setting, int right, int y, int h, double mouseX, double mouseY) {
+        if (setting instanceof ToggleSetting toggle) {
+            if (inside(mouseX, mouseY, toggleRect(right, y, h))) {
+                toggle.toggle();
+                rebuildRows();
+                return true;
+            }
+        } else if (setting instanceof SliderSetting slider) {
+            int[] r = sliderRect(right, y, h);
+            if (mouseX >= r[0] - 2 && mouseX <= r[0] + r[2] + 2
+                    && mouseY >= r[1] - 5 && mouseY <= r[1] + r[3] + 5) {
+                draggingSlider = slider;
+                dragScale = scale();
+                dragOffsetX = offsetX();
+                dragTrackX = r[0];
+                dragTrackW = r[2];
+                slider.setFromFraction((mouseX - r[0]) / (double) r[2]);
+                return true;
+            }
+        } else if (setting instanceof DropdownSetting dropdown) {
+            if (dropdown.hasEdit() && inside(mouseX, mouseY, pencilRect(setting, right, y, h))) {
+                dropdown.edit();
+                return true;
+            }
+            int[] r = dropdownRect(setting, right, y, h);
+            if (inside(mouseX, mouseY, r)) {
+                openDropdownAt(dropdown, r);
+                return true;
+            }
+        } else if (setting instanceof NumberSetting number) {
+            for (int i = 0; i < number.fields.size(); i++) {
+                if (inside(mouseX, mouseY, numberBoxRect(number, right, y, h, i))) {
+                    focusNumber(number, i);
+                    return true;
+                }
+            }
+        } else if (setting instanceof ActionSetting action) {
+            if (inside(mouseX, mouseY, buttonRect(setting, right, y, h))) {
+                action.run();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean clickCards(double mouseX, double mouseY, boolean left) {
+        int offset = contentY - (int) Math.round(scroll);
+        for (Card card : cards) {
+            int y = offset + card.y;
+            if (!inside(mouseX, mouseY, new int[]{card.x, y, card.w, card.h})) {
+                continue;
+            }
+
+            if (mouseY <= y + CARD_H) {
+                commitNumber();
+                if (!left || card.kind == Kind.GROUP) {
+                    if (card.expandable()) {
+                        toggleOpen(card);
+                    }
+                } else if (card.kind == Kind.TOGGLE) {
+                    ((ToggleSetting) card.main).toggle();
+                    rebuildRows();
+                } else {
+                    ((ActionSetting) card.main).run();
+                }
+                return true;
+            }
+
+            if (!left) {
+                return true;
+            }
+            int right = card.x + card.w - CARD_PAD;
+            for (Sub sub : card.subs) {
+                int rowY = y + sub.y;
+                if (mouseY < rowY || mouseY > rowY + sub.h) {
+                    continue;
+                }
+                if (sub.setting instanceof ToggleSetting toggle) {
+                    commitNumber();
+                    toggle.toggle();
+                    rebuildRows();
+                    return true;
+                }
+                int controlY = sub.tall ? rowY + 13 : rowY;
+                int controlH = sub.tall ? sub.h - 13 : sub.h;
+                widthCap = card.w - (CARD_PAD * 2);
+                boolean handled = clickControl(sub.setting, right, controlY, controlH, mouseX, mouseY);
+                widthCap = Integer.MAX_VALUE;
+                if (handled) {
+                    return true;
+                }
+                break;
+            }
+            commitNumber();
+            return true;
+        }
+        return false;
+    }
+
+    private void toggleOpen(Card card) {
+        Set<String> open = query().isEmpty() ? expanded : searchOpen;
+        if (!open.remove(card.key)) {
+            open.add(card.key);
+        }
+        rebuildRows();
     }
 
     @Override
@@ -913,6 +1396,72 @@ public class QZAScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    private enum Kind {
+        TOGGLE,
+        ACTION,
+        GROUP
+    }
+
+    private record Sub(Setting setting, int y, int h, boolean tall) {
+    }
+
+    private record Group(String category, int y) {
+    }
+
+    private static final class Card {
+        final String key;
+        final String category;
+        final String title;
+        final Kind kind;
+        final Setting main;
+        final List<Setting> all;
+        final List<Sub> subs = new ArrayList<>();
+        boolean open;
+        int x;
+        int y;
+        int w;
+        int h;
+
+        private Card(String key, String category, String title, Kind kind, Setting main, List<Setting> all) {
+            this.key = key;
+            this.category = category;
+            this.title = title;
+            this.kind = kind;
+            this.main = main;
+            this.all = all;
+        }
+
+        static Card of(String key, List<Setting> all) {
+            Setting first = all.get(0);
+            Kind kind;
+            if (first instanceof ToggleSetting) {
+                kind = Kind.TOGGLE;
+            } else if (all.size() == 1 && first instanceof ActionSetting) {
+                kind = Kind.ACTION;
+            } else {
+                kind = Kind.GROUP;
+            }
+            String title = kind == Kind.ACTION && !first.namesCard() ? first.title : first.card();
+            return new Card(key, first.category, title, kind, kind == Kind.GROUP ? null : first, all);
+        }
+
+        boolean visible() {
+            if (main != null) {
+                return main.isVisible();
+            }
+            for (Setting setting : all) {
+                if (setting.isVisible()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        boolean expandable() {
+            return all.size() > (main == null ? 0 : 1);
+        }
     }
 
     private static final class Row {
