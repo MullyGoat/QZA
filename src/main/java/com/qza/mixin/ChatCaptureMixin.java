@@ -24,6 +24,6 @@ public class ChatCaptureMixin {
         if (message == null) {
             return;
         }
-        ChannelHistory.onAnyChatLine(message, message.getString());
+        ChannelHistory.onAnyChatLine(message, message.getString(), source == GuiMessageSource.SYSTEM_CLIENT);
     }
 }

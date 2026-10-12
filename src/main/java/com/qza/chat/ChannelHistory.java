@@ -34,6 +34,8 @@ public final class ChannelHistory {
 
     private static final int MAX_STATS_ROWS = 16;
 
+    private static final int MAX_CLIENT_STATS_ROWS = 30;
+
     private static Component pendingDivider;
 
     private static String pendingDividerText;
@@ -41,6 +43,8 @@ public final class ChannelHistory {
     private static int blockKind = NO_BLOCK;
 
     private static int blockRows = -1;
+
+    private static int clientStatsRows = -1;
 
     private ChannelHistory() {
     }
@@ -131,12 +135,42 @@ public final class ChannelHistory {
         pendingDividerText = null;
     }
 
-    public static void onAnyChatLine(Component rich, String plain) {
-        if (!ConfigManager.get().qzaChatEnabled || plain == null || plain.isBlank()) {
+    public static void onAnyChatLine(Component rich, String plain, boolean clientSide) {
+        if (!ConfigManager.get().qzaChatEnabled || plain == null) {
+            return;
+        }
+        if (clientSide) {
+            captureClientStats(rich, plain);
+        }
+        if (plain.isBlank()) {
             return;
         }
         String speaker = ChannelParser.speakerAnywhere(plain);
         record(EVERYTHING, rich, plain, speaker, isOwn(plain, speaker));
+    }
+
+    private static void captureClientStats(Component rich, String plain) {
+        String message = IgnUtil.stripCodes(plain).trim();
+        if (ChannelParser.isStatsHeader(message)) {
+            note(PARTY, rich, plain);
+            clientStatsRows = 0;
+            return;
+        }
+        if (clientStatsRows < 0) {
+            return;
+        }
+        if (ChannelParser.isDivider(message)) {
+            note(PARTY, rich, plain);
+            clientStatsRows = -1;
+            return;
+        }
+        if (++clientStatsRows > MAX_CLIENT_STATS_ROWS) {
+            clientStatsRows = -1;
+            return;
+        }
+        if (!message.isEmpty()) {
+            note(PARTY, rich, plain);
+        }
     }
 
     public static boolean isOwn(String plain, String speaker) {
@@ -185,6 +219,7 @@ public final class ChannelHistory {
         logs.clear();
         endBlock();
         forgetDivider();
+        clientStatsRows = -1;
     }
 
     public static String inviteCommand(String channel) {
