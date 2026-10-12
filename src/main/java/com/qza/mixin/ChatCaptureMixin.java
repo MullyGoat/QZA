@@ -1,29 +1,34 @@
 package com.qza.mixin;
 
-import com.qza.chat.ChannelHistory;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.qza.QZA;
+import com.qza.chat.ChatCleaner;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.multiplayer.chat.GuiMessageSource;
 import net.minecraft.client.multiplayer.chat.GuiMessageTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MessageSignature;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ChatComponent.class)
 public class ChatCaptureMixin {
 
-    @Inject(method = "addMessage(Lnet/minecraft/network/chat/Component;"
+    @WrapMethod(method = "addMessage(Lnet/minecraft/network/chat/Component;"
             + "Lnet/minecraft/network/chat/MessageSignature;"
             + "Lnet/minecraft/client/multiplayer/chat/GuiMessageSource;"
-            + "Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V",
-            at = @At("HEAD"))
-    private void qzaCaptureChatLine(Component message, MessageSignature signature,
-                                    GuiMessageSource source, GuiMessageTag tag, CallbackInfo ci) {
-        if (message == null) {
+            + "Lnet/minecraft/client/multiplayer/chat/GuiMessageTag;)V")
+    private void qzaCleanChatLine(Component message, MessageSignature signature, GuiMessageSource source,
+                                  GuiMessageTag tag, Operation<Void> original) {
+        if (message == null || ChatCleaner.emitting()) {
+            original.call(message, signature, source, tag);
             return;
         }
-        ChannelHistory.onAnyChatLine(message, message.getString(), source == GuiMessageSource.SYSTEM_CLIENT);
+        try {
+            ChatCleaner.add((ChatComponent) (Object) this, message, signature, source, tag);
+        } catch (RuntimeException e) {
+            QZA.LOGGER.error("QZA could not clean a chat line", e);
+            original.call(message, signature, source, tag);
+        }
     }
 }

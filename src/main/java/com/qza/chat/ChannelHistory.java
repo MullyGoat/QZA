@@ -88,7 +88,9 @@ public final class ChannelHistory {
 
         if (opened != NO_BLOCK) {
             if (pendingDividerText != null) {
-                note(PARTY, pendingDivider, pendingDividerText);
+                if (!ChatCleaner.hidesSeparators()) {
+                    note(PARTY, pendingDivider, pendingDividerText);
+                }
                 forgetDivider();
             }
             note(PARTY, rich, plain);
@@ -99,7 +101,9 @@ public final class ChannelHistory {
 
         if (blockRows >= 0) {
             if (ChannelParser.isDivider(message)) {
-                note(PARTY, rich, plain);
+                if (!ChatCleaner.hidesSeparators()) {
+                    note(PARTY, rich, plain);
+                }
                 endBlock();
                 return true;
             }
@@ -136,20 +140,35 @@ public final class ChannelHistory {
     }
 
     public static void onAnyChatLine(Component rich, String plain, boolean clientSide) {
+        onAnyChatLine(rich, plain, clientSide, null, null);
+    }
+
+    public static void onAnyChatLine(Component rich, String plain, boolean clientSide,
+                                     List<Component> rows, boolean[] centred) {
         if (!ConfigManager.get().qzaChatEnabled || plain == null) {
             return;
         }
         if (clientSide) {
             captureClientStats(rich, plain);
         }
-        if (plain.isBlank()) {
+        if (IgnUtil.stripCodes(plain).isBlank()) {
             return;
         }
         String speaker = ChannelParser.speakerAnywhere(plain);
-        record(EVERYTHING, rich, plain, speaker, isOwn(plain, speaker));
+        ChatMessage message = record(EVERYTHING, rich, plain, speaker, isOwn(plain, speaker));
+        message.rows = rows;
+        message.centred = centred;
     }
 
     private static void captureClientStats(Component rich, String plain) {
+        int lineEnd = plain.indexOf('\n');
+        if (lineEnd >= 0) {
+            if (ChannelParser.isStatsHeader(IgnUtil.stripCodes(plain.substring(0, lineEnd)).trim())) {
+                note(PARTY, rich, plain);
+                clientStatsRows = -1;
+            }
+            return;
+        }
         String message = IgnUtil.stripCodes(plain).trim();
         if (ChannelParser.isStatsHeader(message)) {
             note(PARTY, rich, plain);
@@ -160,7 +179,9 @@ public final class ChannelHistory {
             return;
         }
         if (ChannelParser.isDivider(message)) {
-            note(PARTY, rich, plain);
+            if (!ChatCleaner.hidesSeparators()) {
+                note(PARTY, rich, plain);
+            }
             clientStatsRows = -1;
             return;
         }
@@ -184,16 +205,18 @@ public final class ChannelHistory {
         return ChatFocus.isSelf(speaker);
     }
 
-    public static void record(String channel, Component rich, String text,
-                              String speaker, boolean outgoing) {
+    public static ChatMessage record(String channel, Component rich, String text,
+                                     String speaker, boolean outgoing) {
         List<ChatMessage> log = logs.computeIfAbsent(channel, key -> new ArrayList<>());
-        log.add(new ChatMessage(rich, text, System.currentTimeMillis(), speaker, outgoing));
+        ChatMessage message = new ChatMessage(rich, text, System.currentTimeMillis(), speaker, outgoing);
+        log.add(message);
         revisions.merge(channel, 1, Integer::sum);
 
         int cap = cap();
         if (log.size() > cap) {
             log.subList(0, log.size() - cap).clear();
         }
+        return message;
     }
 
     private static int cap() {

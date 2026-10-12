@@ -22,6 +22,7 @@ import com.qza.gui.WaypointScreen;
 import com.qza.inventory.StoragePreview;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.itemlist.ItemRepo;
+import com.qza.media.MusicOverlay;
 import com.qza.music.MusicAliases;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
@@ -341,6 +342,18 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.lagTimerEnabled));
 
+        settings.add(new ToggleSetting(f7, "Terminal Tracker", "Terminal Tracker",
+                Component.literal("Shows how many terminals, levers and devices are done in the current terminal "
+                                + "section, starting at 0/7. A device done by the Berserk during Section 1 is the "
+                                + "Section 4 device, so it counts for Section 4 instead. Move it in ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                () -> cfg.terminalTrackerEnabled,
+                v -> {
+                    cfg.terminalTrackerEnabled = v;
+                    ConfigManager.save();
+                }));
+
         settings.add(new ToggleSetting(f7, "PY Timer", "PY Timer",
                 Component.literal("Updated Timer for PY in Storm Phase")
                         .withStyle(ChatFormatting.GRAY),
@@ -461,6 +474,17 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
+        settings.add(new SliderSetting(chat, "QZA Chat", "Bottom Left Text Size",
+                Component.literal("Size of the message text while QZA Chat is in the bottom left")
+                        .withStyle(ChatFormatting.GRAY),
+                50, 100, 5, "%",
+                () -> cfg.chatDockTextScale,
+                v -> {
+                    cfg.chatDockTextScale = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.qzaChatEnabled && cfg.chatBottomLeft));
+
         settings.add(new ToggleSetting(chat, "QZA Chat", "QZA Style Chat",
                 Component.literal("Gives Minecraft's chat the background and text style of QZA Chat")
                         .withStyle(ChatFormatting.GRAY),
@@ -484,6 +508,25 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.qzaChatEnabled && !cfg.chatBottomLeft));
+
+        settings.add(new ToggleSetting(chat, "Clean Up", "Hide Useless Messages",
+                Component.literal("Hides Hypixel spam like lobby joins, Warping..., profile info, Watchdog, "
+                                + "ability cooldowns, heal and damage lines and essence pickups")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.chatHideUseless,
+                v -> {
+                    cfg.chatHideUseless = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(chat, "Clean Up", "Hide Separator Lines",
+                Component.literal("Hides the - - - - - and ▬▬▬ lines Hypixel puts around /fl, /pl and run results")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.chatHideSeparators,
+                v -> {
+                    cfg.chatHideSeparators = v;
+                    ConfigManager.save();
+                }));
 
         settings.add(new DropdownSetting(chat, "Open Chat", "Default Tab",
                 Component.literal("Select which tab QZA Chat goes to when opened")
@@ -1094,6 +1137,19 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(StoragePreview::available));
+
+        settings.add(new ToggleSetting(misc, "Music Player Overlay", "Music Player Overlay",
+                Component.literal("Shows the song playing in Spotify, Apple Music, YouTube Music or your browser, "
+                                + "with its cover, title, artist, where you are in it and its length. It reads the "
+                                + "Windows media controls. Move it in ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                () -> cfg.musicOverlayEnabled,
+                v -> {
+                    cfg.musicOverlayEnabled = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(MusicOverlay::available));
 
         settings.add(new ToggleSetting(misc, "Hide Shield Slot", "Hide Shield Slot",
                 Component.literal("Removes the shield slot from your inventory on SkyBlock, where it does nothing")

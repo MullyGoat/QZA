@@ -56,6 +56,14 @@ public class QZAConfig {
 
     public double splitTimersScale = 1.0;
 
+    public boolean terminalTrackerEnabled = true;
+
+    public double terminalTrackerX = 0.9;
+
+    public double terminalTrackerY = 0.82;
+
+    public double terminalTrackerScale = 1.0;
+
     public boolean lagTimerEnabled = false;
 
     public String lagAnnounceMode = "party";
@@ -150,6 +158,12 @@ public class QZAConfig {
 
     public boolean chatQzaStyle = true;
 
+    public double chatDockTextScale = 85.0;
+
+    public boolean chatHideUseless = true;
+
+    public boolean chatHideSeparators = true;
+
     public boolean openChatWithT = false;
 
     public int chatKeyCode = -1;
@@ -243,6 +257,14 @@ public class QZAConfig {
     public boolean equipmentRarity = true;
 
     public boolean storagePreview = true;
+
+    public boolean musicOverlayEnabled = false;
+
+    public double musicOverlayX = 0.86;
+
+    public double musicOverlayY = 0.08;
+
+    public double musicOverlayScale = 1.0;
 
     public boolean hideShieldSlot = false;
 

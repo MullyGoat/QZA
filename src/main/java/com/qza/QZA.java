@@ -1,6 +1,7 @@
 package com.qza;
 
 import com.qza.chat.ChannelHistory;
+import com.qza.chat.ChatCleaner;
 import com.qza.chat.ChatHistory;
 import com.qza.chat.ChatNotification;
 import com.qza.command.QZACommand;
@@ -14,10 +15,12 @@ import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.StarredMobs;
+import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
 import com.qza.inventory.Equipment;
 import com.qza.inventory.StoragePreview;
 import com.qza.itemlist.ItemList;
+import com.qza.media.MusicOverlay;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationHud;
@@ -69,6 +72,7 @@ public class QZA implements ClientModInitializer {
         Equipment.init();
         StoragePreview.init();
         MarketSearch.init();
+        MusicOverlay.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
                 new NotificationHud());
@@ -93,6 +97,7 @@ public class QZA implements ClientModInitializer {
             WitherKey.onChatMessage(plain);
             SplitTimers.onChatMessage(plain);
             DungeonScore.onChatMessage(plain);
+            TerminalTracker.onChatMessage(plain);
             LeapNotification.onChatMessage(plain);
             PYTimer.onChatMessage(plain);
             PartyNotification.onChatMessage(plain);
@@ -111,6 +116,8 @@ public class QZA implements ClientModInitializer {
             CrystalTimer.tick();
             SplitTimers.tick();
             DungeonScore.tick(client);
+            TerminalTracker.tick(client);
+            ChatCleaner.tick();
 
             Object level = client.level;
             if (level != lastLevel) {
@@ -121,6 +128,7 @@ public class QZA implements ClientModInitializer {
                 WitherKey.reset();
                 SplitTimers.reset();
                 DungeonScore.reset();
+                TerminalTracker.reset();
                 LeapNotification.reset();
                 PYTimer.reset();
             }
@@ -135,9 +143,11 @@ public class QZA implements ClientModInitializer {
             WitherKey.reset();
             SplitTimers.reset();
             DungeonScore.reset();
+            TerminalTracker.reset();
             LeapNotification.reset();
             PYTimer.reset();
             ServerTickClock.reset();
+            ChatCleaner.reset();
             PartyNotification.clear();
             PartyFullAlert.reset();
             PartyFinderQueue.reset();

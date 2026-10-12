@@ -2,6 +2,8 @@ package com.qza.chat;
 
 import net.minecraft.network.chat.Component;
 
+import java.util.List;
+
 public class ChatMessage {
     public boolean outgoing;
     public String text = "";
@@ -11,6 +13,10 @@ public class ChatMessage {
     public boolean system;
 
     public transient Component rich;
+
+    public transient List<Component> rows;
+
+    public transient boolean[] centred;
 
     public ChatMessage() {
     }

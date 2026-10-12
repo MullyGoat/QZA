@@ -11,11 +11,14 @@ import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.SplitTimers;
+import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
+import com.qza.media.MusicOverlay;
 import com.qza.notify.NotificationBox;
 import com.qza.party.PartyNotification;
 import com.qza.timer.ClockDisplay;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -56,6 +59,8 @@ public class GuiEditScreen extends Screen {
         WitherKey.resetPlacement();
         SplitTimers.resetPlacement();
         DungeonScore.resetPlacement();
+        TerminalTracker.resetPlacement();
+        MusicOverlay.resetPlacement();
         LeapNotification.resetPlacement();
         PYTimer.resetPlacement();
         CrystalTimer.resetPlacement();
@@ -124,6 +129,16 @@ public class GuiEditScreen extends Screen {
                 s -> cfg.splitTimersScale = s));
 
         targets.add(new Target(
+                TerminalTracker::preview,
+                () -> cfg.terminalTrackerEnabled,
+                () -> cfg.terminalTrackerX, () -> cfg.terminalTrackerY, () -> cfg.terminalTrackerScale,
+                (x, y) -> {
+                    cfg.terminalTrackerX = x;
+                    cfg.terminalTrackerY = y;
+                },
+                s -> cfg.terminalTrackerScale = s));
+
+        targets.add(new Target(
                 DungeonScore::preview,
                 () -> cfg.scoreHudEnabled,
                 () -> cfg.scoreHudX, () -> cfg.scoreHudY, () -> cfg.scoreHudScale,
@@ -170,6 +185,26 @@ public class GuiEditScreen extends Screen {
                 s -> cfg.necronLeapScale = s));
 
         targets.add(new Target(
+                new Panel() {
+                    @Override
+                    public int[] box(Font font, int screenW, int screenH) {
+                        return MusicOverlay.previewBox(font, screenW, screenH);
+                    }
+
+                    @Override
+                    public void draw(GuiGraphicsExtractor graphics, Font font, int x, int y) {
+                        MusicOverlay.drawPreview(graphics, font, x, y);
+                    }
+                },
+                () -> cfg.musicOverlayEnabled && MusicOverlay.available(),
+                () -> cfg.musicOverlayX, () -> cfg.musicOverlayY, () -> cfg.musicOverlayScale,
+                (x, y) -> {
+                    cfg.musicOverlayX = x;
+                    cfg.musicOverlayY = y;
+                },
+                s -> cfg.musicOverlayScale = s));
+
+        targets.add(new Target(
                 true,
                 ClockDisplay.text(),
                 ClockDisplay.TEXT_COLOUR,
@@ -197,7 +232,9 @@ public class GuiEditScreen extends Screen {
                 continue;
             }
             int[] box = rect(target);
-            if (target.lines != null) {
+            if (target.panel != null) {
+                target.panel.draw(graphics, this.font, box[0], box[1]);
+            } else if (target.lines != null) {
                 SplitTimers.draw(graphics, this.font, target.lines.get(), target.getX.getAsDouble(),
                         target.getY.getAsDouble(), target.getScale.getAsDouble());
             } else if (target.plain) {
@@ -245,6 +282,9 @@ public class GuiEditScreen extends Screen {
     }
 
     private int[] rect(Target target) {
+        if (target.panel != null) {
+            return target.panel.box(this.font, this.width, this.height);
+        }
         float scale = scale(target);
         if (target.lines != null) {
             int[] size = SplitTimers.size(this.font, target.lines.get(), scale);
@@ -357,9 +397,16 @@ public class GuiEditScreen extends Screen {
         void accept(double scale);
     }
 
+    private interface Panel {
+        int[] box(Font font, int screenW, int screenH);
+
+        void draw(GuiGraphicsExtractor graphics, Font font, int x, int y);
+    }
+
     private static final class Target {
         final boolean plain;
         final Supplier<List<String>> lines;
+        final Panel panel;
         final String preview;
         final int colour;
         final BooleanSupplier enabled;
@@ -375,23 +422,30 @@ public class GuiEditScreen extends Screen {
             this(false, preview, colour, enabled, getX, getY, getScale, setPosition, setScale);
         }
 
+        Target(Panel panel, BooleanSupplier enabled,
+               DoubleSupplier getX, DoubleSupplier getY, DoubleSupplier getScale,
+               PositionWriter setPosition, ScaleWriter setScale) {
+            this(true, null, panel, "", 0xFFFFFFFF, enabled, getX, getY, getScale, setPosition, setScale);
+        }
+
         Target(Supplier<List<String>> lines, BooleanSupplier enabled,
                DoubleSupplier getX, DoubleSupplier getY, DoubleSupplier getScale,
                PositionWriter setPosition, ScaleWriter setScale) {
-            this(true, lines, "", 0xFFFFFFFF, enabled, getX, getY, getScale, setPosition, setScale);
+            this(true, lines, null, "", 0xFFFFFFFF, enabled, getX, getY, getScale, setPosition, setScale);
         }
 
         Target(boolean plain, String preview, int colour, BooleanSupplier enabled,
                DoubleSupplier getX, DoubleSupplier getY, DoubleSupplier getScale,
                PositionWriter setPosition, ScaleWriter setScale) {
-            this(plain, null, preview, colour, enabled, getX, getY, getScale, setPosition, setScale);
+            this(plain, null, null, preview, colour, enabled, getX, getY, getScale, setPosition, setScale);
         }
 
-        Target(boolean plain, Supplier<List<String>> lines, String preview, int colour,
+        Target(boolean plain, Supplier<List<String>> lines, Panel panel, String preview, int colour,
                BooleanSupplier enabled, DoubleSupplier getX, DoubleSupplier getY,
                DoubleSupplier getScale, PositionWriter setPosition, ScaleWriter setScale) {
             this.plain = plain;
             this.lines = lines;
+            this.panel = panel;
             this.preview = preview;
             this.colour = colour;
             this.enabled = enabled;
