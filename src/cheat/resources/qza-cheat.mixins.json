@@ -7,7 +7,14 @@
     "CarriedItemInvoker",
     "ContainerPosAccessor",
     "DeathBowReleaseMixin",
-    "MouseHandlerAccessor"
+    "KeybindFreezeMixin",
+    "KeyMappingAccessor",
+    "MinecraftAccessor",
+    "MouseHandlerAccessor",
+    "MouseTurnMixin",
+    "PlayerFreezeMixin",
+    "RecordKeyMixin",
+    "TeleportMixin"
   ],
   "injectors": {
     "defaultRequire": 0
