@@ -1,5 +1,6 @@
 package com.qza.cheat.movement;
 
+import com.qza.waypoint.WaypointColour;
 import net.minecraft.core.BlockPos;
 
 import java.nio.file.Path;
@@ -16,6 +17,8 @@ public final class Recording {
     public static final String START_TELEPORT = "teleport";
     public static final String START_WALK = "walk";
 
+    public static final String DEFAULT_COLOUR = "magenta";
+
     private static final double STILL_SQ = 0.003 * 0.003;
     private static final int SETTLE_AFTER_TELEPORT = 6;
     private static final int SETTLE_BEFORE_CLICK = 3;
@@ -28,6 +31,8 @@ public final class Recording {
     public int[] block;
     public String area = "";
     public String trigger = START_AUTO;
+    public String colour = DEFAULT_COLOUR;
+    public int recordedSpeed;
     public List<MoveFrame> frames = new ArrayList<>();
 
     transient Path file;
@@ -70,6 +75,43 @@ public final class Recording {
             return "Etherwarp onto it to play it.";
         }
         return "Before boss, etherwarp onto it. In boss, walk into the ring on it.";
+    }
+
+    public double speedAt(int index) {
+        if (recordedSpeed > 0) {
+            return recordedSpeed;
+        }
+        return index >= 0 && index < size() ? frames.get(index).moveSpeed : 0.0;
+    }
+
+    public int detectedSpeed() {
+        List<Float> seen = new ArrayList<>();
+        for (MoveFrame frame : frames) {
+            if (frame.moveSpeed > 0.0f) {
+                seen.add(frame.moveSpeed);
+            }
+        }
+        if (seen.isEmpty()) {
+            return 0;
+        }
+        seen.sort(null);
+        return Math.round(seen.get(seen.size() / 2));
+    }
+
+    public int shownSpeed() {
+        return recordedSpeed > 0 ? recordedSpeed : detectedSpeed();
+    }
+
+    public String colourName() {
+        return WaypointColour.tidy(colour == null || colour.isBlank() ? DEFAULT_COLOUR : colour);
+    }
+
+    public int argb() {
+        return WaypointColour.argb(colourName());
+    }
+
+    public void nextColour() {
+        colour = WaypointColour.next(colourName());
     }
 
     public int size() {

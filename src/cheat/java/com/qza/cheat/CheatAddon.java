@@ -194,6 +194,30 @@ public class CheatAddon implements QZAAddon {
                 })
                 .visibleWhen(() -> cfg.movementCopierEnabled));
 
+        settings.add(new ToggleSetting(CATEGORY, card, "Match Recorded Speed",
+                Component.literal("If you're faster than when you recorded, slows your walking on the ground to "
+                        + "the recorded speed so the route and its jumps land the same. It can't make you faster, so "
+                        + "record at the lowest speed you'll have").withStyle(ChatFormatting.GRAY),
+                () -> cfg.movementMatchSpeed,
+                v -> {
+                    cfg.movementMatchSpeed = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.movementCopierEnabled));
+
+        settings.add(new SliderSetting(CATEGORY, card, "Your Speed",
+                Component.literal("Your speed stat while playing a recording. Auto reads it every tick, so "
+                        + "blessings and speed boosts mid-route are matched too. A number you set stays fixed for the "
+                        + "whole route, so only set one if Auto shows the wrong speed").withStyle(ChatFormatting.GRAY),
+                0, 1000, 5, "",
+                () -> cfg.movementPlaySpeed,
+                v -> {
+                    cfg.movementPlaySpeed = v;
+                    CheatConfigManager.save();
+                },
+                v -> v <= 0 ? "Auto" : String.valueOf((int) Math.round(v)))
+                .visibleWhen(() -> cfg.movementCopierEnabled && cfg.movementMatchSpeed));
+
         settings.add(new ToggleSetting(CATEGORY, card, "Highlight Blocks",
                 Component.literal("Shows the blocks your recordings are placed on, with their names, and the "
                         + "ring you walk into in boss")
@@ -204,6 +228,17 @@ public class CheatAddon implements QZAAddon {
                     CheatConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.movementCopierEnabled));
+
+        settings.add(new ToggleSetting(CATEGORY, card, "Highlight Through Walls",
+                Component.literal("Shows the highlighted blocks, rings and names through walls. Change a "
+                        + "recording's colour in its Edit page")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.movementThroughWalls,
+                v -> {
+                    cfg.movementThroughWalls = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.movementCopierEnabled && cfg.movementHighlight));
 
         settings.add(new ToggleSetting(CATEGORY, card, "Debug Log",
                 Component.literal("Writes what every teleport and playback tick does to ").withStyle(ChatFormatting.GRAY)

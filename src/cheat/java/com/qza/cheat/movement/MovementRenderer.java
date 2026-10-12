@@ -3,26 +3,30 @@ package com.qza.cheat.movement;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.qza.cheat.CheatConfigManager;
+import com.qza.cheat.EspFill;
+import com.qza.cheat.EspLines;
 import com.qza.render.WorldDraw;
 import com.qza.util.SkyBlockArea;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Style;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public final class MovementRenderer {
     private static final int PINK = 0xFFFF55FF;
+    private static final int FILL_ALPHA = 0x40000000;
     private static final int GREEN = 0xFF55FF55;
     private static final int TRIMMED = 0xFF777777;
     private static final int BACKDROP = 0x60000000;
@@ -34,8 +38,6 @@ public final class MovementRenderer {
     private static final double PATH_LIFT = 0.05;
     private static final double RING_LIFT = 0.02;
     private static final int RING_SEGMENTS = 48;
-
-    private static final PoseStack IDENTITY = new PoseStack();
 
     private MovementRenderer() {
     }
@@ -70,17 +72,18 @@ public final class MovementRenderer {
                 for (Recording recording : shown) {
                     (recording.walkIn() ? rings : boxes).add(recording);
                 }
+                boolean walls = CheatConfigManager.get().movementThroughWalls;
                 if (!boxes.isEmpty()) {
-                    drawBlocks(collector, cam, boxes);
+                    drawBlocks(collector, cam, boxes, walls);
                 }
                 if (!rings.isEmpty()) {
-                    drawRings(collector, cam, client.level, rings);
+                    drawRings(collector, cam, client.level, rings, walls);
                 }
                 for (Recording recording : shown) {
                     double top = recording.walkIn()
                             ? MovementCopier.ringY(client.level, recording.blockPos()) + 0.5
                             : recording.blockPos().getY() + 1.4;
-                    label(collector, camera, recording, top);
+                    label(collector, camera, recording, top, walls);
                 }
             }
 
@@ -92,7 +95,11 @@ public final class MovementRenderer {
     }
 
     private static int colour(Recording recording) {
-        return MovementCopier.current() == recording ? GREEN : PINK;
+        return MovementCopier.current() == recording ? GREEN : recording.argb();
+    }
+
+    private static RenderType lines(boolean walls) {
+        return walls ? EspLines.get() : RenderTypes.lines();
     }
 
     private static AABB box(Recording recording, Vec3 cam) {
@@ -100,21 +107,22 @@ public final class MovementRenderer {
         return new AABB(pos).inflate(GROW).move(-cam.x, -cam.y, -cam.z);
     }
 
-    private static void drawBlocks(SubmitNodeCollector collector, Vec3 cam, List<Recording> shown) {
-        WorldDraw.submit(collector, RenderTypes.debugFilledBox(), (pose, buffer) -> {
+    private static void drawBlocks(SubmitNodeCollector collector, Vec3 cam, List<Recording> shown, boolean walls) {
+        WorldDraw.submit(collector, walls ? EspFill.get() : RenderTypes.debugFilledBox(), (pose, buffer) -> {
             for (Recording recording : shown) {
-                WorldDraw.fill(buffer, pose, box(recording, cam), (colour(recording) & 0x00FFFFFF) | 0x40000000);
+                WorldDraw.fill(buffer, pose, box(recording, cam), (colour(recording) & 0x00FFFFFF) | FILL_ALPHA);
             }
         });
-        WorldDraw.submit(collector, RenderTypes.lines(), (pose, buffer) -> {
+        WorldDraw.submit(collector, lines(walls), (pose, buffer) -> {
             for (Recording recording : shown) {
                 WorldDraw.outline(buffer, pose, box(recording, cam), colour(recording), LINE_WIDTH);
             }
         });
     }
 
-    private static void drawRings(SubmitNodeCollector collector, Vec3 cam, Level level, List<Recording> rings) {
-        WorldDraw.submit(collector, RenderTypes.lines(), (pose, buffer) -> {
+    private static void drawRings(SubmitNodeCollector collector, Vec3 cam, Level level, List<Recording> rings,
+                                  boolean walls) {
+        WorldDraw.submit(collector, lines(walls), (pose, buffer) -> {
             for (Recording recording : rings) {
                 BlockPos pos = recording.blockPos();
                 float y = (float) (MovementCopier.ringY(level, pos) + RING_LIFT - cam.y);
@@ -189,37 +197,23 @@ public final class MovementRenderer {
     }
 
     private static void label(SubmitNodeCollector collector, CameraRenderState camera, Recording recording,
-                              double top) {
+                              double top, boolean walls) {
         Font font = Minecraft.getInstance().font;
         if (font == null || camera.orientation == null) {
             return;
         }
         BlockPos pos = recording.blockPos();
         Vec3 cam = camera.pos;
-        Matrix4f matrix = new Matrix4f()
+        PoseStack stack = new PoseStack();
+        stack.last().pose()
                 .translate((float) (pos.getX() + 0.5 - cam.x), (float) (top - cam.y),
                         (float) (pos.getZ() + 0.5 - cam.z))
                 .rotate(camera.orientation)
                 .scale(TEXT_SCALE, -TEXT_SCALE, TEXT_SCALE);
 
         String name = recording.name;
-        Font.PreparedText prepared = font.prepareText(name, -font.width(name) / 2.0f, 0.0f, colour(recording),
-                false, BACKDROP);
-        prepared.visit(new Font.GlyphVisitor() {
-            @Override
-            public void acceptGlyph(TextRenderable.Styled glyph) {
-                submit(glyph);
-            }
-
-            @Override
-            public void acceptEffect(TextRenderable effect) {
-                submit(effect);
-            }
-
-            private void submit(TextRenderable renderable) {
-                collector.submitCustomGeometry(IDENTITY, renderable.renderType(Font.DisplayMode.NORMAL),
-                        (pose, consumer) -> renderable.render(matrix, consumer, LIGHT, false));
-            }
-        });
+        Font.DisplayMode mode = walls ? Font.DisplayMode.SEE_THROUGH : Font.DisplayMode.NORMAL;
+        collector.submitText(stack, -font.width(name) / 2.0f, 0.0f, FormattedCharSequence.forward(name, Style.EMPTY),
+                false, mode, LIGHT, colour(recording), BACKDROP, 0);
     }
 }

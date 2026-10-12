@@ -20,7 +20,10 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -56,6 +59,10 @@ public final class MovementCopier {
     private static final double MAX_DRIFT = 4.0;
     private static final double NEAR_BELOW = 0.3;
     private static final double SAME_START = 2.0;
+    private static final Identifier SPRINTING = Identifier.withDefaultNamespace("sprinting");
+    private static final double SPRINT_BOOST = 1.3;
+    private static final double SPEED_UNITS = 1000.0;
+    private static final double SPEED_SLACK = 0.5;
     public static final double RING_RADIUS = 0.25;
     private static final double RING_REACH = 3.0;
     private static final double RING_HEIGHT = 0.1;
@@ -483,6 +490,7 @@ public final class MovementCopier {
         frame.y = (float) player.getY();
         frame.z = (float) player.getZ();
         frame.ground = player.onGround();
+        frame.moveSpeed = (float) speedOf(player);
         frame.teleports = recordTeleports;
         frame.screen = Mc.screen() != null;
 
@@ -501,6 +509,70 @@ public final class MovementCopier {
             ChatUtil.info("Recordings can be up to 10 minutes long, so this one stopped there.");
             finishRecording(false);
         }
+    }
+
+    public static double speedOf(LocalPlayer player) {
+        AttributeInstance speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed == null) {
+            return 0.0;
+        }
+        double value = speed.getValue();
+        if (speed.getModifier(SPRINTING) != null) {
+            value /= SPRINT_BOOST;
+        }
+        return value * SPEED_UNITS;
+    }
+
+    public static double playerSpeed(LocalPlayer player) {
+        double typed = CheatConfigManager.get().movementPlaySpeed;
+        return typed > 0.0 ? typed : speedOf(player);
+    }
+
+    private static double recordedSpeed() {
+        if (playing == null) {
+            return 0.0;
+        }
+        int at = applied >= 0 ? applied : schedule.length > 0 ? schedule[0] : -1;
+        return playing.speedAt(at);
+    }
+
+    public static float inputScale(LocalPlayer player) {
+        if (state != State.PLAYING || lining || frozen || waiting != null || applied < 0 || playing == null
+                || !player.onGround() || !CheatConfigManager.get().movementMatchSpeed) {
+            return 1.0f;
+        }
+        double recorded = recordedSpeed();
+        double now = playerSpeed(player);
+        if (recorded <= 0.0 || now <= recorded) {
+            return 1.0f;
+        }
+        return (float) (recorded / now);
+    }
+
+    public static String speedNote(LocalPlayer player) {
+        if (state != State.PLAYING || lining || playing == null || !CheatConfigManager.get().movementMatchSpeed) {
+            return null;
+        }
+        double recorded = recordedSpeed();
+        double now = playerSpeed(player);
+        if (recorded <= 0.0 || now <= 0.0) {
+            return null;
+        }
+        if (now > recorded + SPEED_SLACK) {
+            return String.format(Locale.ROOT, "Speed %d, matched to the recorded %d", Math.round(now),
+                    Math.round(recorded));
+        }
+        if (now < recorded - SPEED_SLACK) {
+            return String.format(Locale.ROOT, "Speed %d, slower than the recorded %d", Math.round(now),
+                    Math.round(recorded));
+        }
+        return null;
+    }
+
+    public static boolean tooSlow(LocalPlayer player) {
+        double recorded = recordedSpeed();
+        return CheatConfigManager.get().movementMatchSpeed && recorded > 0.0
+                && playerSpeed(player) < recorded - SPEED_SLACK;
     }
 
     private static void startPlayback(Minecraft client, Recording target, String why, boolean walkedIn) {
@@ -578,8 +650,14 @@ public final class MovementCopier {
             offZ = dz;
         }
         MovementLog.line(String.format(Locale.ROOT, "lined up after %dms, %.2f blocks from the recorded start%s, "
-                        + "look %.1f/%.1f", now - liningSince, away,
-                away > SAME_START ? " so the route is moved to start here" : "", player.getYRot(), player.getXRot()));
+                        + "look %.1f/%.1f, speed %.0f (recorded %.0f)", now - liningSince, away,
+                away > SAME_START ? " so the route is moved to start here" : "", player.getYRot(), player.getXRot(),
+                playerSpeed(player), playing.speedAt(schedule[0])));
+        if (tooSlow(player)) {
+            ChatUtil.info(String.format(Locale.ROOT, "You have %d speed but %s was recorded at %d. QZA can only "
+                            + "slow you down to match, so the route may come up short.", Math.round(playerSpeed(player)),
+                    playing.name, Math.round(playing.speedAt(schedule[0]))));
+        }
         return true;
     }
 
@@ -627,10 +705,11 @@ public final class MovementCopier {
         boolean fixed = apply(client, player, next, drift);
         if (MovementLog.on()) {
             MovementLog.line(String.format(Locale.ROOT, "tick %d frame %d at %s want %s drift %.3f look %.1f/%.1f%s "
-                            + "keys %d%s tp %d/%d server %dms", played, schedule[step], MovementLog.pos(player),
-                    MovementLog.pos(next), drift, lookYaw, lookPitch, fixed ? " (aim fixed)" : "", next.keys,
-                    next.clicked() ? " click" : "", teleportsSeen, next.teleports - teleportBase,
-                    serverTick < 0L ? -1L : quietMillis()));
+                            + "keys %d%s tp %d/%d server %dms speed %.0f/%.0f", played, schedule[step],
+                    MovementLog.pos(player), MovementLog.pos(next), drift, lookYaw, lookPitch,
+                    fixed ? " (aim fixed)" : "", next.keys, next.clicked() ? " click" : "", teleportsSeen,
+                    next.teleports - teleportBase, serverTick < 0L ? -1L : quietMillis(), playerSpeed(player),
+                    playing.speedAt(schedule[step])));
         }
         applied = schedule[step];
         step++;

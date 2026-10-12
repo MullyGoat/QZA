@@ -14,7 +14,10 @@ import java.util.Locale;
 
 public class RecordingEditScreen extends CopierScreen {
     private static final int PANEL_W = 420;
-    private static final int PANEL_H = 258;
+    private static final int PANEL_H = 300;
+    private static final int SWATCH_W = 60;
+    private static final int SPEED_W = 44;
+    private static final int MAX_SPEED_TEXT = 4;
     private static final int BAR_H = 20;
     private static final int LABEL_W = 50;
     private static final int BUTTON_W = 90;
@@ -35,6 +38,7 @@ public class RecordingEditScreen extends CopierScreen {
     private final Recording recording;
     private final Screen parent;
     private EditBox nameBox;
+    private EditBox speedBox;
 
     private int panelX;
     private int panelY;
@@ -85,6 +89,24 @@ public class RecordingEditScreen extends CopierScreen {
         nameBox.setValue(typed);
         nameBox.moveCursorToEnd(false);
         addRenderableWidget(nameBox);
+
+        String speedTyped = speedBox == null
+                ? (recording.recordedSpeed > 0 ? String.valueOf(recording.recordedSpeed) : "")
+                : speedBox.getValue();
+        int detected = recording.detectedSpeed();
+        speedBox = new EditBox(this.font, bodyX + LABEL_W + 4, panelY + 234, SPEED_W - 8, 12, Component.empty());
+        speedBox.setBordered(false);
+        speedBox.setMaxLength(MAX_SPEED_TEXT);
+        speedBox.setResponder(text -> {
+            String digits = text.replaceAll("[^0-9]", "");
+            if (!digits.equals(text)) {
+                speedBox.setValue(digits);
+            }
+        });
+        speedBox.setHint(Component.literal(detected > 0 ? String.valueOf(detected) : "?")
+                .withStyle(ChatFormatting.DARK_GRAY));
+        speedBox.setValue(speedTyped);
+        addRenderableWidget(speedBox);
 
         buildColumns();
     }
@@ -155,6 +177,10 @@ public class RecordingEditScreen extends CopierScreen {
         return new int[]{bodyX + LABEL_W, panelY + 186, barW - LABEL_W, FIELD_H};
     }
 
+    private int[] colourRect() {
+        return new int[]{bodyX + LABEL_W, panelY + 208, SWATCH_W, FIELD_H};
+    }
+
     private int[] resetRect() {
         return new int[]{panelX + (panelW / 2) - BUTTON_W - 4, panelY + PANEL_H - BUTTON_H - 10, BUTTON_W, BUTTON_H};
     }
@@ -211,13 +237,40 @@ public class RecordingEditScreen extends CopierScreen {
         int[] startButton = startRect();
         button(graphics, startButton, trim(recording.triggerLabel(), startButton[2] - 8), mx, my);
 
+        graphics.text(this.font, "Colour", bodyX, panelY + 212, TEXT_DIM);
+        int[] swatch = colourRect();
+        boolean overSwatch = inside(mx, my, swatch);
+        int argb = recording.argb();
+        graphics.fill(swatch[0], swatch[1], swatch[0] + swatch[2], swatch[1] + swatch[3], argb);
+        outline(graphics, swatch[0], swatch[1], swatch[2], swatch[3], overSwatch ? 0xFFFFFFFF : 0x80FFFFFF);
+        graphics.centeredText(this.font, recording.colourName(), swatch[0] + (swatch[2] / 2), swatch[1] + 4,
+                light(argb) ? 0xFF101010 : 0xFFFFFFFF);
+        graphics.text(this.font, trim("Click to change the highlight colour", barW - LABEL_W - SWATCH_W - 8),
+                swatch[0] + SWATCH_W + 8, panelY + 212, TEXT_FAINT);
+
+        graphics.text(this.font, "Recorded", bodyX, panelY + 234, TEXT_DIM);
+        box(graphics, bodyX + LABEL_W, panelY + 230, SPEED_W, true);
+        int detected = recording.detectedSpeed();
+        String speedHint = detected > 0
+                ? "speed. Leave it empty to use the " + detected + " QZA measured"
+                : "speed. Type the speed you had when you recorded this";
+        graphics.text(this.font, trim(speedHint, barW - LABEL_W - SPEED_W - 8), bodyX + LABEL_W + SPEED_W + 8,
+                panelY + 234, TEXT_FAINT);
+
         String placed = recording.placed()
                 ? "On block " + recording.blockText()
                 : "Not placed yet. Look at a block and use /qza recorder place " + recording.name;
-        graphics.text(this.font, trim(placed, barW), bodyX, panelY + 210, recording.placed() ? TEXT_DIM : TEXT_FAINT);
+        graphics.text(this.font, trim(placed, barW), bodyX, panelY + 254, recording.placed() ? TEXT_DIM : TEXT_FAINT);
 
         button(graphics, resetRect(), "Reset", mx, my);
         button(graphics, doneRect(), "Done", mx, my);
+    }
+
+    private static boolean light(int argb) {
+        int r = (argb >> 16) & 0xFF;
+        int g = (argb >> 8) & 0xFF;
+        int b = argb & 0xFF;
+        return (r * 299) + (g * 587) + (b * 114) >= 128_000;
     }
 
     private void drawBar(GuiGraphicsExtractor graphics) {
@@ -283,6 +336,11 @@ public class RecordingEditScreen extends CopierScreen {
         if (inside(x, y, startRect())) {
             setFocused(null);
             recording.nextTrigger();
+            return true;
+        }
+        if (inside(x, y, colourRect())) {
+            setFocused(null);
+            recording.nextColour();
             return true;
         }
         if (y >= barY - 4 && y <= barY + BAR_H + 4 && x >= barX - GRAB && x <= barX + barW + GRAB) {
@@ -371,7 +429,7 @@ public class RecordingEditScreen extends CopierScreen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int key = event.key();
-        boolean typing = nameBox != null && nameBox.isFocused();
+        boolean typing = (nameBox != null && nameBox.isFocused()) || (speedBox != null && speedBox.isFocused());
         if (key == InputConstants.KEY_RETURN || key == InputConstants.KEY_NUMPADENTER) {
             onClose();
             return true;
@@ -384,11 +442,25 @@ public class RecordingEditScreen extends CopierScreen {
         return super.keyPressed(event);
     }
 
+    private void applySpeed() {
+        String text = speedBox == null ? "" : speedBox.getValue().trim();
+        if (text.isEmpty()) {
+            recording.recordedSpeed = 0;
+            return;
+        }
+        try {
+            recording.recordedSpeed = Math.max(0, Math.min(9999, Integer.parseInt(text)));
+        } catch (NumberFormatException e) {
+            recording.recordedSpeed = 0;
+        }
+    }
+
     @Override
     public void onClose() {
         if (!nameTaken()) {
             Recordings.rename(recording, typedName());
         }
+        applySpeed();
         Recordings.save(recording);
         editing = null;
         Mc.setScreen(parent);
@@ -398,6 +470,7 @@ public class RecordingEditScreen extends CopierScreen {
     public void removed() {
         if (editing == recording) {
             editing = null;
+            applySpeed();
             Recordings.save(recording);
         }
         super.removed();

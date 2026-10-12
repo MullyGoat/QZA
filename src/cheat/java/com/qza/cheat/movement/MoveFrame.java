@@ -33,6 +33,7 @@ public final class MoveFrame {
     public int teleports;
     public boolean screen;
     public float[] aim;
+    public float moveSpeed;
 
     public boolean held(int bit) {
         return (keys & bit) != 0;

@@ -14,6 +14,11 @@ public interface RenderPipelinesAccessor {
         throw new AssertionError();
     }
 
+    @Accessor("DEBUG_FILLED_SNIPPET")
+    static RenderPipeline.Snippet qzaDebugFilledSnippet() {
+        throw new AssertionError();
+    }
+
     @Invoker("register")
     static RenderPipeline qzaRegister(RenderPipeline pipeline) {
         throw new AssertionError();

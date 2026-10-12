@@ -27,7 +27,13 @@ public class CheatConfig {
 
     public boolean movementHighlight = true;
 
+    public boolean movementThroughWalls = true;
+
     public double movementWalkSpeed = 5.0;
+
+    public boolean movementMatchSpeed = true;
+
+    public double movementPlaySpeed = 0.0;
 
     public boolean movementDebug = false;
 }

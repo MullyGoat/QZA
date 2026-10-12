@@ -7,6 +7,7 @@ import com.mojang.renderpearl.api.pipeline.DepthStencilState;
 import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.qza.QZA;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.oit.OitPipelineSet;
 import net.minecraft.client.renderer.rendertype.LayeringTransform;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -27,8 +28,13 @@ public final class EspLines {
                             .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
                             .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                             .build());
+            OitPipelineSet oit = RenderPipelines.register(OitPipelineSet.builder("qza_lines_through_walls",
+                            RenderPipeline.builder(RenderPipelines.OIT_LINES_SNIPPET))
+                    .withoutDepthTest()
+                    .build());
             type = RenderType.create("qza_lines_through_walls",
                     RenderSetup.builder(pipeline)
+                            .setOitPipelines(oit)
                             .setLayeringTransform(LayeringTransform.VIEW_OFFSET_Z_LAYERING)
                             .createRenderSetup());
         }

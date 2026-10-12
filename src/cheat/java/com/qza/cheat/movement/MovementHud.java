@@ -65,6 +65,12 @@ public final class MovementHud implements HudElement {
                 String waiting = MovementCopier.waiting();
                 if (waiting != null) {
                     graphics.centeredText(font, "Paused, " + waiting, cx, y + 12, YELLOW);
+                } else if (Minecraft.getInstance().player != null) {
+                    String speed = MovementCopier.speedNote(Minecraft.getInstance().player);
+                    if (speed != null) {
+                        graphics.centeredText(font, speed, cx, y + 12,
+                                MovementCopier.tooSlow(Minecraft.getInstance().player) ? YELLOW : FAINT);
+                    }
                 }
             }
             default -> {
