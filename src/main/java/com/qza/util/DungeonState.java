@@ -9,6 +9,9 @@ import net.minecraft.world.scores.PlayerScoreEntry;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class DungeonState {
     private static final String[] MARKERS = {"The Catacombs", "Kuudra"};
     private static final long CACHE_MS = 500L;
@@ -41,6 +44,27 @@ public final class DungeonState {
     public static boolean catacombsMaster() {
         inDungeon();
         return catacombsMaster;
+    }
+
+    public static List<String> sidebarLines() {
+        List<String> lines = new ArrayList<>();
+        ClientLevel level = Minecraft.getInstance().level;
+        if (level == null) {
+            return lines;
+        }
+        Scoreboard scoreboard = level.getScoreboard();
+        Objective objective = scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR);
+        if (objective == null) {
+            return lines;
+        }
+        for (PlayerScoreEntry entry : scoreboard.listPlayerScores(objective)) {
+            PlayerTeam team = scoreboard.getPlayersTeam(entry.owner());
+            if (team != null) {
+                lines.add(IgnUtil.stripCodes(team.getPlayerPrefix().getString()
+                        + team.getPlayerSuffix().getString()).trim());
+            }
+        }
+        return lines;
     }
 
     public static void reset() {

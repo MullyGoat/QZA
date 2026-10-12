@@ -177,7 +177,8 @@ public final class StatsApi {
                     longMap(object(pb, "cata")),
                     longMap(object(pb, "master")),
                     intMap(object(runs, "cata")),
-                    intMap(object(runs, "master"))));
+                    intMap(object(runs, "master")),
+                    nullableBool(body, "spiritPet")));
         } catch (Exception e) {
             QZA.LOGGER.warn("Could not read stats for {}", ign, e);
             return Result.failed("Stats proxy sent something unreadable");
@@ -205,6 +206,14 @@ public final class StatsApi {
             }
         }
         return fallback;
+    }
+
+    private static Boolean nullableBool(JsonObject source, String key) {
+        if (!source.has(key) || !source.get(key).isJsonPrimitive()
+                || !source.get(key).getAsJsonPrimitive().isBoolean()) {
+            return null;
+        }
+        return source.get(key).getAsBoolean();
     }
 
     private static Integer nullableInt(JsonObject source, String key) {

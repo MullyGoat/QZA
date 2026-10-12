@@ -9,6 +9,7 @@
   "client": [
     "BossEventAccessor",
     "BossOverlayAccessor",
+    "BossProgressMixin",
     "ChatCaptureMixin",
     "ChatHideMixin",
     "ChatInputStyleMixin",
@@ -24,9 +25,11 @@
     "ItemListRecipeBookMixin",
     "ItemListRenderMixin",
     "ItemStarMixin",
+    "MimicDeathMixin",
     "MouseInputMixin",
     "PlayerSizeMixin",
     "ShieldSlotMixin",
+    "StoragePreviewMixin",
     "TooltipHighlightMixin",
     "TooltipScaleMixin"
   ],

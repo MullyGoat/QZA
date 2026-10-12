@@ -19,6 +19,7 @@ import com.qza.gui.CommandShortcutScreen;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.WaypointScreen;
+import com.qza.inventory.StoragePreview;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.itemlist.ItemRepo;
 import com.qza.music.MusicAliases;
@@ -677,6 +678,59 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.dungeonOnlyNotifications));
 
+        settings.add(new ToggleSetting(notify, "Dungeon Score", "Score Display",
+                Component.literal("Shows the run's live score on screen. It counts deaths (the first one costs 1 if "
+                                + "that player has a Legendary Spirit pet), puzzles, rooms, secrets, time, crypts, the "
+                                + "Mimic, the Prince and Bat bonus score and Paul. Move it in ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                () -> cfg.scoreHudEnabled,
+                v -> {
+                    cfg.scoreHudEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(notify, "Dungeon Score", "Score Breakdown",
+                Component.literal("Adds Skill, Explore, Speed and Bonus under the score, plus deaths, crypts, "
+                                + "puzzles, Mimic, Prince and bats").withStyle(ChatFormatting.GRAY),
+                () -> cfg.scoreHudBreakdown,
+                v -> {
+                    cfg.scoreHudBreakdown = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.scoreHudEnabled));
+
+        settings.add(new ToggleSetting(notify, "Dungeon Score", "300 Score Alert",
+                Component.literal("Shows a title and plays a sound once the run reaches 300 score")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.score300Alert,
+                v -> {
+                    cfg.score300Alert = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(notify, "Dungeon Score", "Tell Party",
+                Component.literal("Also says ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("300 Score!").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" in party chat, unless a teammate already said it")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.score300Party,
+                v -> {
+                    cfg.score300Party = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.score300Alert));
+
+        settings.add(new ToggleSetting(notify, "Dungeon Score", "Announce Bonus Kills",
+                Component.literal("Says Mimic Killed, Prince Killed or Bat Killed in party chat when you get one, "
+                                + "so your teammates' score counters include it")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.scoreBonusAnnounce,
+                v -> {
+                    cfg.scoreBonusAnnounce = v;
+                    ConfigManager.save();
+                }));
+
         settings.add(new ToggleSetting(notify, "Party", "Party Invite Alert",
                 Component.literal("Displays party invite notification on screen")
                         .withStyle(ChatFormatting.GRAY),
@@ -1027,6 +1081,19 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.equipmentInInventory));
+
+        settings.add(new ToggleSetting(misc, "Storage Preview", "Storage Preview",
+                Component.literal("In ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("/storage").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(", hovering an Ender Chest page or backpack shows what is inside. "
+                                + "Open each one once so QZA can see it. Hold Shift for the normal tooltip")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.storagePreview,
+                v -> {
+                    cfg.storagePreview = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(StoragePreview::available));
 
         settings.add(new ToggleSetting(misc, "Hide Shield Slot", "Hide Shield Slot",
                 Component.literal("Removes the shield slot from your inventory on SkyBlock, where it does nothing")

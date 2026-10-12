@@ -123,6 +123,7 @@ async function lookup(name, uuid) {
         cataExp: numberOr(dungeons.catacombs_xp, 0),
         secrets: secretsOf(player),
         magicalPower: powerOf(member),
+        spiritPet: hasLegendarySpirit(member),
         runs: {
             cata: completions(floors, CATA_FLOORS),
             master: completions(floors, MASTER_FLOORS),
@@ -160,6 +161,11 @@ function secretsOf(player) {
     const stats = player && player.data ? player.data.stats : null;
     const achievements = stats && stats.achievements ? stats.achievements.skyblock : null;
     return achievements ? numberOr(achievements.dungeon_secrets, 0) : 0;
+}
+
+function hasLegendarySpirit(member) {
+    const pets = member && Array.isArray(member.pets) ? member.pets : [];
+    return pets.some((pet) => pet && pet.type === 'SPIRIT' && pet.tier === 'LEGENDARY');
 }
 
 function powerOf(member) {

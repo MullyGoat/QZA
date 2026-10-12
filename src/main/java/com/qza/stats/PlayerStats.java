@@ -13,7 +13,8 @@ public record PlayerStats(
         Map<Integer, Long> pbCata,
         Map<Integer, Long> pbMaster,
         Map<Integer, Integer> runsCata,
-        Map<Integer, Integer> runsMaster) {
+        Map<Integer, Integer> runsMaster,
+        Boolean spiritPet) {
 
     public int cataLevel() {
         return CataLevel.of(cataExp);

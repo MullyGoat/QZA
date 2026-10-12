@@ -6,6 +6,7 @@ import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.dungeon.CrystalTimer;
+import com.qza.dungeon.DungeonScore;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
@@ -54,6 +55,7 @@ public class GuiEditScreen extends Screen {
         ChatNotification.resetPlacement();
         WitherKey.resetPlacement();
         SplitTimers.resetPlacement();
+        DungeonScore.resetPlacement();
         LeapNotification.resetPlacement();
         PYTimer.resetPlacement();
         CrystalTimer.resetPlacement();
@@ -120,6 +122,16 @@ public class GuiEditScreen extends Screen {
                     cfg.splitTimersY = y;
                 },
                 s -> cfg.splitTimersScale = s));
+
+        targets.add(new Target(
+                DungeonScore::preview,
+                () -> cfg.scoreHudEnabled,
+                () -> cfg.scoreHudX, () -> cfg.scoreHudY, () -> cfg.scoreHudScale,
+                (x, y) -> {
+                    cfg.scoreHudX = x;
+                    cfg.scoreHudY = y;
+                },
+                s -> cfg.scoreHudScale = s));
 
         targets.add(new Target(
                 true,

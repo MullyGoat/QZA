@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.EnderMan;
@@ -47,6 +48,14 @@ public final class Mc {
 
     public static boolean hudHidden() {
         return Minecraft.getInstance().options.hideGui;
+    }
+
+    public static void showTitle(Component title, int fadeIn, int stay, int fadeOut) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.gui != null) {
+            client.gui.setTimes(fadeIn, stay, fadeOut);
+            client.gui.setTitle(title);
+        }
     }
 
     public static void openUri(URI uri) {

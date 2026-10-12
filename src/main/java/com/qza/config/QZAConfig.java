@@ -60,6 +60,22 @@ public class QZAConfig {
 
     public String lagAnnounceMode = "party";
 
+    public boolean score300Alert = true;
+
+    public boolean score300Party = true;
+
+    public boolean scoreBonusAnnounce = false;
+
+    public boolean scoreHudEnabled = true;
+
+    public boolean scoreHudBreakdown = false;
+
+    public double scoreHudX = 0.1;
+
+    public double scoreHudY = 0.12;
+
+    public double scoreHudScale = 1.0;
+
     public boolean leapNotifyEnabled = false;
 
     public boolean leapNotifyClass = false;
@@ -225,6 +241,8 @@ public class QZAConfig {
     public boolean equipmentInInventory = false;
 
     public boolean equipmentRarity = true;
+
+    public boolean storagePreview = true;
 
     public boolean hideShieldSlot = false;
 

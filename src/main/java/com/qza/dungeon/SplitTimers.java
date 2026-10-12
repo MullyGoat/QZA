@@ -4,6 +4,7 @@ import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.notify.NotificationBox;
 import com.qza.timer.ServerTickClock;
+import com.qza.util.BossBars;
 import com.qza.util.DungeonState;
 import com.qza.util.ChatUtil;
 import com.qza.util.IgnUtil;
@@ -47,7 +48,7 @@ public final class SplitTimers {
     private static final Pattern CORE = Pattern.compile("^The Core entrance is opening!$");
     private static final Pattern NECRON = Pattern.compile(
             "^\\[BOSS] Necron: You went further than any human before, congratulations\\.$");
-    private static final Pattern WITHER_KING = Pattern.compile("^\\[BOSS] Wither King: You\\.\\.\\. again\\?$");
+    private static final Pattern NECRON_ARGH = Pattern.compile("^\\[BOSS] Necron: ARGH!$");
     private static final Pattern DEFEATED = Pattern.compile(
             "^\\s*☠ Defeated (.+) in 0?([\\dhms ]+?)\\s*(\\(NEW RECORD!\\))?$", Pattern.MULTILINE);
 
@@ -59,8 +60,8 @@ public final class SplitTimers {
     private static final Split STORM_SPLIT = new Split("§3Storm", STORM, GOLDOR);
     private static final Split TERMINALS_SPLIT = new Split("§6Terminals", GOLDOR, CORE);
     private static final Split GOLDOR_SPLIT = new Split("§7Goldor", CORE, NECRON);
-    private static final Split NECRON_SPLIT = new Split("§cNecron", NECRON, WITHER_KING);
-    private static final Split DRAGONS_SPLIT = new Split("§4Dragons", WITHER_KING, null);
+    private static final Split NECRON_SPLIT = new Split("§cNecron", NECRON, null);
+    private static final Split DRAGONS_SPLIT = new Split("§4Dragons", null, null);
     private static final Split TOTAL_SPLIT = new Split("§1Total", MORT, null);
 
     private static final Split[] ALL = {
@@ -69,6 +70,8 @@ public final class SplitTimers {
 
     private static boolean runOver;
     private static boolean floorSeven;
+    private static boolean necronArgh;
+    private static boolean necronDead;
 
     private SplitTimers() {
     }
@@ -85,6 +88,10 @@ public final class SplitTimers {
 
         long now = System.currentTimeMillis();
         long tick = ServerTickClock.ticks();
+
+        if (NECRON_ARGH.matcher(message).matches()) {
+            necronArgh = true;
+        }
 
         if (DEFEATED.matcher(message).find()) {
             for (Split split : ALL) {
@@ -105,10 +112,35 @@ public final class SplitTimers {
             }
         }
         for (Split split : ALL) {
-            if (!split.started() && split.start.matcher(message).matches()) {
+            if (!split.started() && split.start != null && split.start.matcher(message).matches()) {
                 split.start(now, tick);
             }
         }
+    }
+
+    public static void tick() {
+        if (necronArgh && !necronDead) {
+            Float progress = BossBars.progress("Necron");
+            if (progress != null) {
+                onBossProgress("Necron", progress);
+            }
+        }
+    }
+
+    public static void onBossProgress(String name, float progress) {
+        QZAConfig cfg = ConfigManager.get();
+        if (!(cfg.splitTimersEnabled || cfg.lagTimerEnabled) || progress > 0f || runOver
+                || !necronArgh || necronDead || name == null || !IgnUtil.stripCodes(name).contains("Necron")) {
+            return;
+        }
+        necronDead = true;
+        if (!DungeonState.catacombsMaster() || !NECRON_SPLIT.running()) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long tick = ServerTickClock.ticks();
+        NECRON_SPLIT.end(now, tick);
+        DRAGONS_SPLIT.start(now, tick);
     }
 
     private static void announceLag(double seconds) {
@@ -138,6 +170,8 @@ public final class SplitTimers {
     public static void reset() {
         runOver = false;
         floorSeven = false;
+        necronArgh = false;
+        necronDead = false;
         for (Split split : ALL) {
             split.reset();
         }
