@@ -6,12 +6,17 @@ import com.qza.config.ConfigManager;
 import net.minecraft.client.Minecraft;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Stream;
 
 public final class MusicLibrary {
@@ -25,6 +30,13 @@ public final class MusicLibrary {
             Multiple files become a playlist. Shuffle and looping are
             toggleable in /qza under the Music category.
             """;
+
+    private static final String[] DEFAULT_SONGS = {
+            "BizzM7DissTrack.ogg", "CharlieKirk.ogg", "Phantom.ogg", "Prague.ogg"};
+
+    private static final String DEFAULT_SONG_FOLDER = "/qza-music/";
+
+    private static final String INSTALLED_FILE = "default-songs.txt";
 
     private static List<Path> cached = new ArrayList<>();
 
@@ -45,8 +57,41 @@ public final class MusicLibrary {
             if (!README.equals(existing)) {
                 Files.writeString(readme, README, StandardCharsets.UTF_8);
             }
+            installDefaultSongs(dir);
         } catch (IOException e) {
             QZA.LOGGER.error("Could not create the music folder", e);
+        }
+    }
+
+    private static void installDefaultSongs(Path dir) throws IOException {
+        Path record = ConfigManager.qzaDir().resolve(INSTALLED_FILE);
+        Set<String> installed = new TreeSet<>(Files.isRegularFile(record)
+                ? Files.readAllLines(record, StandardCharsets.UTF_8) : List.of());
+        Set<String> present = new HashSet<>();
+        try (Stream<Path> stream = Files.list(dir)) {
+            stream.forEach(p -> present.add(p.getFileName().toString().toLowerCase(Locale.ROOT)));
+        }
+
+        boolean changed = false;
+        for (String song : DEFAULT_SONGS) {
+            if (installed.contains(song)) {
+                continue;
+            }
+            installed.add(song);
+            changed = true;
+            if (present.contains(song.toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            try (InputStream in = MusicLibrary.class.getResourceAsStream(DEFAULT_SONG_FOLDER + song)) {
+                if (in == null) {
+                    QZA.LOGGER.warn("QZA is missing its bundled song {}", song);
+                    continue;
+                }
+                Files.copy(in, dir.resolve(song));
+            }
+        }
+        if (changed) {
+            Files.write(record, installed, StandardCharsets.UTF_8);
         }
     }
 

@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Map;
 
 public class QZAConfig {
-    public boolean shitterListEnabled = true;
+    public boolean shitterListEnabled = false;
 
     public boolean restrictToDungeonGroups = false;
 
-    public boolean terminalMusicEnabled = true;
+    public boolean terminalMusicEnabled = false;
 
     public String musicStartTrigger = "Who dares trespass into my domain";
 
@@ -56,7 +56,7 @@ public class QZAConfig {
 
     public double splitTimersScale = 1.0;
 
-    public boolean terminalTrackerEnabled = true;
+    public boolean terminalTrackerEnabled = false;
 
     public double terminalTrackerX = 0.9;
 
@@ -68,13 +68,13 @@ public class QZAConfig {
 
     public String lagAnnounceMode = "party";
 
-    public boolean score300Alert = true;
+    public boolean score300Alert = false;
 
     public boolean score300Party = true;
 
     public boolean scoreBonusAnnounce = false;
 
-    public boolean scoreHudEnabled = true;
+    public boolean scoreHudEnabled = false;
 
     public boolean scoreHudBreakdown = false;
 
@@ -134,7 +134,7 @@ public class QZAConfig {
 
     public String starredMobsFelColour = "pink";
 
-    public boolean partyInviteNotifyEnabled = true;
+    public boolean partyInviteNotifyEnabled = false;
 
     public double partyNotifyDuration = 5.0;
 
@@ -144,7 +144,7 @@ public class QZAConfig {
 
     public double partyNotifyScale = 1.0;
 
-    public boolean qzaChatEnabled = true;
+    public boolean qzaChatEnabled = false;
 
     public String chatHistoryMode = "forever";
 
@@ -156,19 +156,19 @@ public class QZAConfig {
 
     public boolean chatBottomLeft = false;
 
-    public boolean chatQzaStyle = true;
+    public boolean chatQzaStyle = false;
 
     public double chatDockTextScale = 85.0;
 
-    public boolean chatHideUseless = true;
+    public boolean chatHideUseless = false;
 
-    public boolean chatHideSeparators = true;
+    public boolean chatHideSeparators = false;
 
     public boolean openChatWithT = false;
 
     public int chatKeyCode = -1;
 
-    public boolean chatNotifyEnabled = true;
+    public boolean chatNotifyEnabled = false;
 
     public String chatNotifyMode = "ringer";
 
@@ -222,7 +222,7 @@ public class QZAConfig {
 
     public double guiScale = 100.0;
 
-    public boolean itemListEnabled = true;
+    public boolean itemListEnabled = false;
 
     public boolean itemListShown = true;
 
@@ -256,7 +256,7 @@ public class QZAConfig {
 
     public boolean equipmentRarity = true;
 
-    public boolean storagePreview = true;
+    public boolean storagePreview = false;
 
     public boolean musicOverlayEnabled = false;
 

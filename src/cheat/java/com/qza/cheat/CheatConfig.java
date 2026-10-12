@@ -15,7 +15,7 @@ public class CheatConfig {
 
     public boolean melodyAimEnabled = false;
 
-    public boolean starredMobEsp = true;
+    public boolean starredMobEsp = false;
 
     public boolean movementCopierEnabled = false;
 
