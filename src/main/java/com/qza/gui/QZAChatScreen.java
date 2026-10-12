@@ -16,7 +16,9 @@ import com.qza.util.IgnUtil;
 import com.qza.util.PlayerFaces;
 import com.qza.util.PlayerLookup;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Options;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
@@ -38,6 +40,7 @@ import java.util.Optional;
 
 public class QZAChatScreen extends Screen {
     private static final int PANEL_BG = 0x55000000;
+    private static final int DOCK_BG = 0x77000000;
     private static final int RAIL_BG = 0x33000000;
     private static final int BOX_BORDER = 0x40FFFFFF;
     private static final int DIVIDER = 0xFFC8D4DC;
@@ -66,6 +69,11 @@ public class QZAChatScreen extends Screen {
     private static final int LINE_H = 10;
 
     private static final float TITLE_SCALE = 1.5f;
+
+    private static final int DOCK_MARGIN = 2;
+    private static final int DOCK_PAD = 7;
+    private static final int DOCK_MIN_H = 150;
+    private static final int DOCK_RAIL_MIN = 118;
 
     private static final String TAB_DM = "dm";
     private static final String[] TAB_KEYS = {
@@ -126,6 +134,13 @@ public class QZAChatScreen extends Screen {
     private int railX;
     private int railY;
     private int railH;
+    private int railW;
+    private int railBottom;
+    private int railBgTop;
+    private int railBgRight;
+    private int tabY;
+    private int addY;
+    private int headerY;
     private int threadX;
     private int threadY;
     private int threadW;
@@ -166,12 +181,16 @@ public class QZAChatScreen extends Screen {
         return (float) Math.max(0.5, Math.min(1.5, pct / 100.0));
     }
 
+    private static boolean docked() {
+        return ConfigManager.get().chatBottomLeft;
+    }
+
     private float offsetX() {
-        return this.width * (1f - scale()) / 2f;
+        return docked() ? 0f : this.width * (1f - scale()) / 2f;
     }
 
     private float offsetY() {
-        return this.height * (1f - scale()) / 2f;
+        return this.height * (1f - scale()) / (docked() ? 1f : 2f);
     }
 
     @Override
@@ -188,15 +207,14 @@ public class QZAChatScreen extends Screen {
         }
 
         String draft = input == null ? null : input.getValue();
-        int inputW = threadW - SEND_W - 6;
-        input = new EditBox(this.font, threadX + 5, inputY + 5, Math.max(40, inputW - 10), 12,
+        input = new EditBox(this.font, threadX + 5, inputY + 5, Math.max(40, inputBoxW() - 10), 12,
                 Component.empty());
         input.setBordered(false);
         input.setMaxLength(240);
         addRenderableWidget(input);
         refreshHint();
 
-        ignInput = new EditBox(this.font, railX + 5, panelY + 24, RAIL_W - 41, 12,
+        ignInput = new EditBox(this.font, railX + 5, addY + 4, railW - 41, 12,
                 Component.empty());
         ignInput.setBordered(false);
         ignInput.setMaxLength(16);
@@ -227,6 +245,10 @@ public class QZAChatScreen extends Screen {
     }
 
     private void layout() {
+        if (docked()) {
+            layoutDocked();
+            return;
+        }
         panelX = 8;
         panelY = 6;
         panelW = this.width - 16;
@@ -234,9 +256,16 @@ public class QZAChatScreen extends Screen {
 
         boolean dm = isDm();
 
+        railW = RAIL_W;
+        tabY = panelY + 42;
+        addY = panelY + 20;
+        headerY = panelY + HEADER_H;
+        railBgTop = panelY + HEADER_H;
+        railBgRight = panelX + RAIL_W + 8;
+
         railX = panelX + 10;
-        railY = panelY + HEADER_H;
-        int railBottom = panelY + panelH - 10;
+        railY = headerY;
+        railBottom = panelY + panelH - 10;
         railH = Math.max(40, railBottom - ACCOUNT_H - 4 - railY);
 
         threadX = dm ? panelX + RAIL_W + 28 : panelX + 12;
@@ -247,11 +276,66 @@ public class QZAChatScreen extends Screen {
         threadH = Math.max(40, inputY - 8 - threadY);
     }
 
+    private void layoutDocked() {
+        float s = scale();
+        Options options = this.minecraft.options;
+        double chatScale = options.chatScale().get();
+        int wide = (int) Math.round((ChatComponent.getWidth(options.chatWidth().get()) + (12 * chatScale)) / s);
+        int tall = (int) Math.round(((ChatComponent.getHeight(options.chatHeightFocused().get()) * chatScale) + 38) / s);
+        int minW = tabsWidth() + (DOCK_PAD * 2) + 24;
+        int maxW = (int) (this.width / s) - (DOCK_MARGIN * 2);
+        int maxH = (int) (this.height / s) - (DOCK_MARGIN * 2);
+
+        panelW = Math.max(120, Math.min(maxW, Math.max(minW, wide)));
+        panelH = Math.max(80, Math.min(maxH, Math.max(DOCK_MIN_H, tall)));
+        panelX = DOCK_MARGIN;
+        panelY = this.height - DOCK_MARGIN - panelH;
+
+        boolean dm = isDm();
+
+        railW = Math.max(DOCK_RAIL_MIN, Math.min(RAIL_W, Math.round(panelW * 0.3f)));
+        tabY = panelY + 5;
+        headerY = panelY + 25;
+        addY = headerY;
+        railBgTop = panelY + 21;
+
+        railX = panelX + DOCK_PAD;
+        railY = headerY + 22;
+        railBgRight = railX + railW + 6;
+        railBottom = panelY + panelH - 6;
+        railH = Math.max(CONTACT_H, railBottom - ACCOUNT_H - 4 - railY);
+
+        threadX = dm ? railBgRight + 7 : panelX + DOCK_PAD;
+        threadW = Math.max(80, panelX + panelW - 10 - threadX);
+        threadY = hasHeader() ? headerY + 22 : headerY;
+        inputY = railBottom - INPUT_H;
+        threadH = Math.max(30, inputY - 6 - threadY);
+    }
+
+    private int tabsWidth() {
+        int w = 0;
+        for (String label : TAB_LABELS) {
+            w += this.font.width(label) + 18;
+        }
+        return w - 4;
+    }
+
+    private boolean hasHeader() {
+        return !docked() || isDm() || inviteLabel() != null;
+    }
+
+    private int inputBoxW() {
+        return docked() ? threadW : threadW - SEND_W - 6;
+    }
+
     private static boolean isDm() {
         return TAB_DM.equals(selectedTab);
     }
 
     private int[] settingsRect() {
+        if (docked()) {
+            return new int[]{panelX + panelW - 23, panelY + 3, 16, 16};
+        }
         return new int[]{panelX + panelW - 28, panelY + 20, 16, 16};
     }
 
@@ -282,7 +366,7 @@ public class QZAChatScreen extends Screen {
         for (int i = 0; i < index; i++) {
             x += this.font.width(TAB_LABELS[i]) + 18;
         }
-        return new int[]{x, panelY + 42, this.font.width(TAB_LABELS[index]) + 14, TAB_H};
+        return new int[]{x, tabY, this.font.width(TAB_LABELS[index]) + 14, TAB_H};
     }
 
     private void selectTab(String tab) {
@@ -347,10 +431,9 @@ public class QZAChatScreen extends Screen {
     }
 
     private void repositionInput() {
-        int boxW = threadW - SEND_W - 6;
         input.setX(threadX + 5);
         input.setY(inputY + 5);
-        input.setWidth(Math.max(40, boxW - 10));
+        input.setWidth(Math.max(40, inputBoxW() - 10));
     }
 
     private ChatConversation current() {
@@ -601,14 +684,16 @@ public class QZAChatScreen extends Screen {
         graphics.pose().translate(offsetX(), offsetY());
         graphics.pose().scale(s, s);
 
-        graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL_BG);
+        graphics.fill(panelX, panelY, panelX + panelW, panelY + panelH, docked() ? DOCK_BG : PANEL_BG);
         outline(graphics, panelX, panelY, panelW, panelH, 0x33FFFFFF);
         if (isDm()) {
-            graphics.fill(panelX, panelY + HEADER_H, panelX + RAIL_W + 8,
-                    panelY + panelH, RAIL_BG);
+            graphics.fill(panelX + (docked() ? 1 : 0), railBgTop, railBgRight,
+                    panelY + panelH - (docked() ? 1 : 0), RAIL_BG);
         }
 
-        drawHeader(graphics);
+        if (!docked()) {
+            drawHeader(graphics);
+        }
         drawSettings(graphics, mx, my);
         drawTabs(graphics, mx, my);
         if (isDm()) {
@@ -618,6 +703,7 @@ public class QZAChatScreen extends Screen {
         }
         drawThread(graphics);
         drawJump(graphics, mx, my);
+        drawCopied(graphics);
         drawInvite(graphics, mx, my);
         drawInput(graphics, mx, my);
 
@@ -694,11 +780,11 @@ public class QZAChatScreen extends Screen {
             return;
         }
 
-        int frameW = RAIL_W - 31;
+        int frameW = railW - 31;
         boolean valid = validIgn(ignInput.getValue()) != null;
         boolean empty = ignInput.getValue().trim().isEmpty();
-        graphics.fill(railX, panelY + 20, railX + frameW, panelY + 36, 0x66000000);
-        outline(graphics, railX, panelY + 20, frameW, 16,
+        graphics.fill(railX, addY, railX + frameW, addY + 16, 0x66000000);
+        outline(graphics, railX, addY, frameW, 16,
                 empty || valid ? BOX_BORDER : 0xFFE05555);
 
         int[] go = goRect();
@@ -712,7 +798,7 @@ public class QZAChatScreen extends Screen {
     }
 
     private int[] kebabRect(int rowY) {
-        return new int[]{railX + RAIL_W - 13, rowY + 2, 11, 13};
+        return new int[]{railX + railW - 13, rowY + 2, 11, 13};
     }
 
     private void drawKebab(GuiGraphicsExtractor graphics, int[] r, boolean hovered) {
@@ -766,7 +852,7 @@ public class QZAChatScreen extends Screen {
 
     private void openMenu(String ign, double x, double y) {
         menuFor = ign;
-        menuX = (int) Math.round(Math.min(x, railX + RAIL_W));
+        menuX = (int) Math.round(Math.min(x, railX + railW));
         menuY = (int) Math.round(Math.min(y, panelY + panelH - menuHeight() - 4));
     }
 
@@ -783,11 +869,11 @@ public class QZAChatScreen extends Screen {
     }
 
     private int[] addRect() {
-        return new int[]{railX, panelY + 20, 74, 16};
+        return new int[]{railX, addY, 74, 16};
     }
 
     private int[] goRect() {
-        return new int[]{railX + RAIL_W - 27, panelY + 20, 27, 16};
+        return new int[]{railX + railW - 27, addY, 27, 16};
     }
 
     private static String validIgn(String raw) {
@@ -815,8 +901,8 @@ public class QZAChatScreen extends Screen {
         }
         if (adding) {
             ignInput.setX(railX + 5);
-            ignInput.setY(panelY + 24);
-            ignInput.setWidth(RAIL_W - 41);
+            ignInput.setY(addY + 4);
+            ignInput.setWidth(railW - 41);
         } else {
             int[] field = inviteFieldRect();
             ignInput.setX(field[0] + 5);
@@ -850,7 +936,7 @@ public class QZAChatScreen extends Screen {
             return;
         }
 
-        graphics.enableScissor(railX - 2, railY, railX + RAIL_W, railY + railH);
+        graphics.enableScissor(railX - 2, railY, railX + railW, railY + railH);
 
         int top = railY - (int) Math.round(railScroll);
         for (int i = 0; i < all.size(); i++) {
@@ -861,25 +947,28 @@ public class QZAChatScreen extends Screen {
             }
 
             boolean active = conversation.name.equalsIgnoreCase(selected);
-            boolean hovered = mouseX >= railX - 2 && mouseX <= railX + RAIL_W
+            boolean hovered = mouseX >= railX - 2 && mouseX <= railX + railW
                     && mouseY >= y && mouseY < y + CONTACT_H
                     && mouseY >= railY && mouseY <= railY + railH;
 
             if (active) {
-                graphics.fill(railX - 2, y, railX + RAIL_W, y + CONTACT_H - 1, 0x66000000);
+                graphics.fill(railX - 2, y, railX + railW, y + CONTACT_H - 1, 0x66000000);
                 graphics.fill(railX - 2, y, railX, y + CONTACT_H - 1, PINK);
             } else if (hovered) {
-                graphics.fill(railX - 2, y, railX + RAIL_W, y + CONTACT_H - 1, 0x22FFFFFF);
+                graphics.fill(railX - 2, y, railX + railW, y + CONTACT_H - 1, 0x22FFFFFF);
             }
 
             PlayerFaceExtractor.extractRenderState(graphics,
                     PlayerFaces.skinFor(conversation.name), railX + 5, y + 5, FACE);
 
             int nameX = railX + 5 + FACE + 6;
-            int room = (railX + RAIL_W) - nameX - 26;
+            int room = (railX + railW) - nameX - 26;
             graphics.text(this.font, trim(conversation.name, room), nameX, y + 4,
                     active ? PINK : TEXT);
-            graphics.text(this.font, trim(conversation.preview(), room + 20), nameX, y + 15,
+            String badge = conversation.unread <= 0 ? null
+                    : conversation.unread > 9 ? "9+" : String.valueOf(conversation.unread);
+            int previewRoom = badge == null ? room + 20 : room + 10 - this.font.width(badge);
+            graphics.text(this.font, trim(conversation.preview(), previewRoom), nameX, y + 15,
                     TEXT_FAINT);
 
             if (hovered && !ChatHistory.viewingOther()) {
@@ -889,13 +978,12 @@ public class QZAChatScreen extends Screen {
                 String when = ago(conversation.lastActivity);
                 if (!when.isEmpty()) {
                     graphics.text(this.font, when,
-                            railX + RAIL_W - this.font.width(when) - 4, y + 4, TEXT_FAINT);
+                            railX + railW - this.font.width(when) - 4, y + 4, TEXT_FAINT);
                 }
             }
-            if (conversation.unread > 0) {
-                String badge = conversation.unread > 9 ? "9+" : String.valueOf(conversation.unread);
+            if (badge != null) {
                 int bw = this.font.width(badge) + 6;
-                int bx = railX + RAIL_W - bw - 4;
+                int bx = railX + railW - bw - 4;
                 graphics.fill(bx, y + 15, bx + bw, y + 25, PINK);
                 graphics.text(this.font, badge, bx + 3, y + 16, 0xFF201020);
             }
@@ -905,7 +993,7 @@ public class QZAChatScreen extends Screen {
 
         int total = railContentHeight();
         if (total > railH) {
-            int trackX = railX + RAIL_W + 2;
+            int trackX = railX + railW + 2;
             graphics.fill(trackX, railY, trackX + 3, railY + railH, 0x33FFFFFF);
             int barH = Math.max(16, (int) ((float) railH / total * railH));
             int barY = railY + (int) ((railScroll / (total - railH)) * (railH - barH));
@@ -914,7 +1002,7 @@ public class QZAChatScreen extends Screen {
     }
 
     private int[] accountRect() {
-        return new int[]{railX - 2, panelY + panelH - 10 - ACCOUNT_H, RAIL_W + 2, ACCOUNT_H};
+        return new int[]{railX - 2, railBottom - ACCOUNT_H, railW + 2, ACCOUNT_H};
     }
 
     private int accountRows() {
@@ -1034,19 +1122,23 @@ public class QZAChatScreen extends Screen {
                 return;
             }
             PlayerFaceExtractor.extractRenderState(graphics,
-                    PlayerFaces.skinFor(conversation.name), threadX, railY, FACE);
-            graphics.text(this.font, conversation.name, threadX + FACE + 6, railY + 4, TEXT);
-        } else {
-            graphics.text(this.font, channelTitle(), threadX, railY + 4, PINK);
+                    PlayerFaces.skinFor(conversation.name), threadX, headerY, FACE);
+            graphics.text(this.font, conversation.name, threadX + FACE + 6, headerY + 4, TEXT);
+        } else if (!docked()) {
+            graphics.text(this.font, channelTitle(), threadX, headerY + 4, PINK);
         }
-        graphics.fill(threadX, railY + 18, threadX + threadW, railY + 19, 0x33FFFFFF);
+        if (hasHeader()) {
+            graphics.fill(threadX, headerY + 18, threadX + threadW, headerY + 19, 0x33FFFFFF);
+        }
 
-        String hint = System.currentTimeMillis() - copiedAt < COPIED_MS
-                ? "Copied to clipboard"
-                : "Right-click a message to copy";
-        int hintColour = System.currentTimeMillis() - copiedAt < COPIED_MS ? 0xFF7BE87B : TEXT_FAINT;
-        graphics.text(this.font, hint,
-                threadX + threadW - this.font.width(hint), railY + 4, hintColour);
+        if (!docked()) {
+            String hint = System.currentTimeMillis() - copiedAt < COPIED_MS
+                    ? "Copied to clipboard"
+                    : "Right-click a message to copy";
+            int hintColour = System.currentTimeMillis() - copiedAt < COPIED_MS ? 0xFF7BE87B : TEXT_FAINT;
+            graphics.text(this.font, hint,
+                    threadX + threadW - this.font.width(hint), headerY + 4, hintColour);
+        }
 
         if (bubbles.isEmpty()) {
             graphics.centeredText(this.font,
@@ -1104,10 +1196,26 @@ public class QZAChatScreen extends Screen {
         }
     }
 
+    private void drawCopied(GuiGraphicsExtractor graphics) {
+        if (!docked() || System.currentTimeMillis() - copiedAt >= COPIED_MS) {
+            return;
+        }
+        String label = "Copied to clipboard";
+        int w = this.font.width(label) + 16;
+        int x = threadX + (threadW / 2) - (w / 2);
+        int y = threadY + 2;
+        graphics.fill(x, y, x + w, y + 16, 0xF0223140);
+        outline(graphics, x, y, w, 16, 0xFF7BE87B);
+        graphics.centeredText(this.font, label, x + (w / 2), y + 4, 0xFF7BE87B);
+    }
+
     private void drawInput(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        int boxW = threadW - SEND_W - 6;
+        int boxW = inputBoxW();
         graphics.fill(threadX, inputY, threadX + boxW, inputY + INPUT_H, 0x66000000);
         outline(graphics, threadX, inputY, boxW, INPUT_H, BOX_BORDER);
+        if (docked()) {
+            return;
+        }
 
         int[] send = sendRect();
         String typed = input.getValue().trim();
@@ -1237,12 +1345,12 @@ public class QZAChatScreen extends Screen {
     private int[] inviteRect() {
         String label = inviteLabel();
         int w = label == null ? 0 : this.font.width(label) + 16;
-        return new int[]{threadX + (threadW / 2) - (w / 2), railY, w, 16};
+        return new int[]{threadX + (threadW / 2) - (w / 2), headerY, w, 16};
     }
 
     private int[] inviteFieldRect() {
         int total = INVITE_FIELD_W + 4 + INVITE_GO_W;
-        return new int[]{threadX + (threadW / 2) - (total / 2), railY, INVITE_FIELD_W, 16};
+        return new int[]{threadX + (threadW / 2) - (total / 2), headerY, INVITE_FIELD_W, 16};
     }
 
     private int[] inviteGoRect() {
@@ -1441,12 +1549,12 @@ public class QZAChatScreen extends Screen {
             }
         }
 
-        if (inside(mouseX, mouseY, sendRect())) {
+        if (!docked() && inside(mouseX, mouseY, sendRect())) {
             sendCurrent();
             return true;
         }
 
-        if (isDm() && mouseX >= railX - 2 && mouseX <= railX + RAIL_W
+        if (isDm() && mouseX >= railX - 2 && mouseX <= railX + railW
                 && mouseY >= railY && mouseY <= railY + railH) {
             ChatConversation hit = contactAt(mouseX, mouseY);
             if (hit != null && !ChatHistory.viewingOther()
@@ -1654,7 +1762,7 @@ public class QZAChatScreen extends Screen {
     }
 
     private ChatConversation contactAt(double x, double y) {
-        if (!isDm() || x < railX - 2 || x > railX + RAIL_W || y < railY || y > railY + railH) {
+        if (!isDm() || x < railX - 2 || x > railX + railW || y < railY || y > railY + railH) {
             return null;
         }
         List<ChatConversation> all = ChatHistory.conversations();
@@ -1688,7 +1796,7 @@ public class QZAChatScreen extends Screen {
         double mx = (mouseX - offsetX()) / s;
         double my = (mouseY - offsetY()) / s;
 
-        if (isDm() && mx >= railX - 2 && mx <= railX + RAIL_W + 6
+        if (isDm() && mx >= railX - 2 && mx <= railX + railW + 6
                 && my >= railY && my <= railY + railH) {
             railScroll -= verticalAmount * CONTACT_H;
             clampRailScroll();

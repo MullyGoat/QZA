@@ -22,7 +22,7 @@ public class ChatHideMixin {
     private void qzaHideVanillaChat(GuiGraphicsExtractor graphics, Font font, int x, int y,
                                     int width, ChatComponent.DisplayMode mode, boolean focused,
                                     CallbackInfo ci) {
-        if (!ConfigManager.get().hideVanillaChat) {
+        if (!ConfigManager.get().hideVanillaChat && !ConfigManager.get().chatBottomLeft) {
             return;
         }
         if (Mc.screen() instanceof QZAChatScreen) {

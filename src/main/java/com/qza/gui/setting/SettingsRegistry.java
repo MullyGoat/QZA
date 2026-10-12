@@ -39,6 +39,7 @@ import com.qza.waypoint.WaypointColour;
 import com.qza.waypoint.WaypointEditor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.network.chat.Component;
 
 import java.nio.file.Path;
@@ -449,6 +450,30 @@ public final class SettingsRegistry {
                 () -> Mc.setScreen(new QZAChatScreen()))
                 .visibleWhen(() -> cfg.qzaChatEnabled));
 
+        settings.add(new ToggleSetting(chat, "QZA Chat", "Bottom Left",
+                Component.literal("Opens QZA Chat in the bottom left, in place of Minecraft's chat")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.chatBottomLeft,
+                v -> {
+                    cfg.chatBottomLeft = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.qzaChatEnabled));
+
+        settings.add(new ToggleSetting(chat, "QZA Chat", "QZA Style Chat",
+                Component.literal("Gives Minecraft's chat the background and text style of QZA Chat")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.chatQzaStyle,
+                v -> {
+                    cfg.chatQzaStyle = v;
+                    ConfigManager.save();
+                    ChatComponent vanilla = Mc.chat();
+                    if (vanilla != null) {
+                        vanilla.resetChatScroll();
+                    }
+                })
+                .visibleWhen(() -> cfg.qzaChatEnabled));
+
         settings.add(new ToggleSetting(chat, "QZA Chat", "Hide Vanilla Chat",
                 Component.literal("Hides Minecraft's chat in the corner while QZA Chat is open")
                         .withStyle(ChatFormatting.GRAY),
@@ -457,7 +482,7 @@ public final class SettingsRegistry {
                     cfg.hideVanillaChat = v;
                     ConfigManager.save();
                 })
-                .visibleWhen(() -> cfg.qzaChatEnabled));
+                .visibleWhen(() -> cfg.qzaChatEnabled && !cfg.chatBottomLeft));
 
         settings.add(new DropdownSetting(chat, "Open Chat", "Default Tab",
                 Component.literal("Select which tab QZA Chat goes to when opened")

@@ -130,6 +130,10 @@ public class QZAConfig {
 
     public boolean hideVanillaChat = false;
 
+    public boolean chatBottomLeft = false;
+
+    public boolean chatQzaStyle = true;
+
     public boolean openChatWithT = false;
 
     public int chatKeyCode = -1;

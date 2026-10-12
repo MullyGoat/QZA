@@ -31,6 +31,11 @@ public final class Mc {
         return client.gui == null ? null : client.gui.hud.getChat();
     }
 
+    public static long chatQueueSize() {
+        Minecraft client = Minecraft.getInstance();
+        return client.gui == null || client.gui.chatListener() == null ? 0L : client.gui.chatListener().queueSize();
+    }
+
     public static BossHealthOverlay bossOverlay() {
         Minecraft client = Minecraft.getInstance();
         return client.gui == null ? null : client.gui.hud.getBossOverlay();
