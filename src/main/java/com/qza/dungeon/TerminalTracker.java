@@ -24,7 +24,7 @@ public final class TerminalTracker {
                     + "|^\\[BOSS] Storm: I should have known that I stood no chance\\.$");
     private static final Pattern CORE = Pattern.compile("^The Core entrance is opening!$");
     private static final Pattern PROGRESS = Pattern.compile(
-            "^(\\w{1,16}) (?:activated|completed) a (terminal|device|lever)! \\((\\d+)/(\\d+)\\)$");
+            "^(\\w{1,16}) (?:activated|completed) a (terminal|device|lever)! \\((\\d+)/(\\d+)\\)(?:\\s.*)?$");
 
     private static final int SECTIONS = 4;
     private static final int LAST = SECTIONS - 1;

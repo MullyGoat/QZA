@@ -118,6 +118,7 @@ public class QZA implements ClientModInitializer {
             DungeonScore.tick(client);
             TerminalTracker.tick(client);
             ChatCleaner.tick();
+            ChannelHistory.tick();
 
             Object level = client.level;
             if (level != lastLevel) {

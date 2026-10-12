@@ -511,7 +511,8 @@ public final class SettingsRegistry {
 
         settings.add(new ToggleSetting(chat, "Clean Up", "Hide Useless Messages",
                 Component.literal("Hides Hypixel spam like lobby joins, Warping..., profile info, Watchdog, "
-                                + "ability cooldowns, heal and damage lines and essence pickups")
+                                + "ability cooldowns, heal and damage lines and essence pickups. An archer's "
+                                + "Explosive Shot damage still shows in dungeons")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.chatHideUseless,
                 v -> {
@@ -1140,7 +1141,8 @@ public final class SettingsRegistry {
 
         settings.add(new ToggleSetting(misc, "Music Player Overlay", "Music Player Overlay",
                 Component.literal("Shows the song playing in Spotify, Apple Music, YouTube Music or your browser, "
-                                + "with its cover, title, artist, where you are in it and its length. It reads the "
+                                + "with its cover, title, artist, where you are in it and its length. Open your "
+                                + "inventory to pause, skip, go back or click the bar to jump. It reads the "
                                 + "Windows media controls. Move it in ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE)),
@@ -1150,6 +1152,16 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(MusicOverlay::available));
+
+        settings.add(new ToggleSetting(misc, "Music Player Overlay", "Show Cover",
+                Component.literal("Shows the song's picture. Turn it off to only show the title, artist and length")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.musicOverlayCover,
+                v -> {
+                    cfg.musicOverlayCover = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> MusicOverlay.available() && cfg.musicOverlayEnabled));
 
         settings.add(new ToggleSetting(misc, "Hide Shield Slot", "Hide Shield Slot",
                 Component.literal("Removes the shield slot from your inventory on SkyBlock, where it does nothing")

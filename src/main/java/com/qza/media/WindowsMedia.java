@@ -7,6 +7,7 @@ import com.sun.jna.NativeLibrary;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 import com.sun.jna.WString;
+import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
@@ -17,6 +18,15 @@ import java.util.function.Predicate;
 final class WindowsMedia {
     static final int CLOSED = 0;
     static final int PLAYING = 4;
+
+    static final int CAN_PREVIOUS = 1;
+    static final int CAN_NEXT = 2;
+    static final int CAN_TOGGLE = 4;
+    static final int CAN_SEEK = 8;
+
+    enum Action {
+        TOGGLE, NEXT, PREVIOUS, SEEK
+    }
 
     private static final int RO_INIT_MULTITHREADED = 1;
     private static final int ASYNC_STARTED = 0;
@@ -42,6 +52,10 @@ final class WindowsMedia {
     private static final int SESSION_MEDIA_PROPERTIES_ASYNC = 7;
     private static final int SESSION_TIMELINE = 8;
     private static final int SESSION_PLAYBACK_INFO = 9;
+    private static final int SESSION_SKIP_NEXT = 16;
+    private static final int SESSION_SKIP_PREVIOUS = 17;
+    private static final int SESSION_TOGGLE = 20;
+    private static final int SESSION_SEEK = 24;
     private static final int PROPS_TITLE = 6;
     private static final int PROPS_ARTIST = 9;
     private static final int PROPS_ALBUM = 10;
@@ -50,7 +64,12 @@ final class WindowsMedia {
     private static final int TIMELINE_END = 7;
     private static final int TIMELINE_POSITION = 10;
     private static final int TIMELINE_UPDATED = 11;
+    private static final int PLAYBACK_CONTROLS = 6;
     private static final int PLAYBACK_STATUS = 7;
+    private static final int CONTROLS_NEXT = 12;
+    private static final int CONTROLS_PREVIOUS = 13;
+    private static final int CONTROLS_TOGGLE = 16;
+    private static final int CONTROLS_SEEK = 20;
     private static final int VECTOR_GET_AT = 6;
     private static final int VECTOR_SIZE = 7;
     private static final int ASYNC_INFO_STATUS = 7;
@@ -71,7 +90,7 @@ final class WindowsMedia {
     private static Pointer manager;
     private static Pointer bufferFactory;
 
-    record Track(String app, String title, String artist, String album, int status,
+    record Track(String app, String title, String artist, String album, int status, int controls,
                  long startTicks, long endTicks, long positionTicks, long updatedTicks) {
         String key() {
             return app + "\n" + title + "\n" + artist + "\n" + album;
@@ -115,9 +134,11 @@ final class WindowsMedia {
         try {
             String app = string(session, SESSION_APP_ID);
             int status = CLOSED;
+            int controls = 0;
             Pointer playback = out(session, SESSION_PLAYBACK_INFO);
             if (playback != null) {
                 status = integer(playback, PLAYBACK_STATUS, CLOSED);
+                controls = controls(playback);
                 release(playback);
             }
 
@@ -140,7 +161,7 @@ final class WindowsMedia {
             }
             try {
                 Track track = new Track(app, string(props, PROPS_TITLE), string(props, PROPS_ARTIST),
-                        string(props, PROPS_ALBUM), status, start, end, position, updated);
+                        string(props, PROPS_ALBUM), status, controls, start, end, position, updated);
                 byte[] thumbnail = wantThumbnail.test(track) ? thumbnail(props) : null;
                 return new Snapshot(track, thumbnail);
             } finally {
@@ -152,6 +173,85 @@ final class WindowsMedia {
     }
 
     record Snapshot(Track track, byte[] thumbnail) {
+    }
+
+    static boolean command(String app, Action action, long positionTicks) {
+        Pointer session = find(app);
+        if (session == null) {
+            return false;
+        }
+        try {
+            PointerByReference op = new PointerByReference();
+            int hr = switch (action) {
+                case TOGGLE -> invoke(session, SESSION_TOGGLE, op);
+                case NEXT -> invoke(session, SESSION_SKIP_NEXT, op);
+                case PREVIOUS -> invoke(session, SESSION_SKIP_PREVIOUS, op);
+                case SEEK -> invoke(session, SESSION_SEEK, positionTicks, op);
+            };
+            if (hr < 0 || op.getValue() == null) {
+                return false;
+            }
+            Pointer operation = op.getValue();
+            try {
+                if (!finished(operation)) {
+                    return false;
+                }
+                ByteByReference done = new ByteByReference();
+                return invoke(operation, ASYNC_OPERATION_RESULTS, done) >= 0 && done.getValue() != 0;
+            } finally {
+                release(operation);
+            }
+        } finally {
+            release(session);
+        }
+    }
+
+    private static Pointer find(String app) {
+        Pointer sessions = out(manager, MANAGER_GET_SESSIONS);
+        if (sessions != null) {
+            try {
+                int size = integer(sessions, VECTOR_SIZE, 0);
+                for (int i = 0; i < size; i++) {
+                    PointerByReference item = new PointerByReference();
+                    if (invoke(sessions, VECTOR_GET_AT, i, item) < 0 || item.getValue() == null) {
+                        continue;
+                    }
+                    Pointer session = item.getValue();
+                    if (string(session, SESSION_APP_ID).equals(app)) {
+                        return session;
+                    }
+                    release(session);
+                }
+            } finally {
+                release(sessions);
+            }
+        }
+        return out(manager, MANAGER_GET_CURRENT_SESSION);
+    }
+
+    private static int controls(Pointer playback) {
+        Pointer controls = out(playback, PLAYBACK_CONTROLS);
+        if (controls == null) {
+            return 0;
+        }
+        try {
+            int flags = 0;
+            if (bool(controls, CONTROLS_PREVIOUS)) {
+                flags |= CAN_PREVIOUS;
+            }
+            if (bool(controls, CONTROLS_NEXT)) {
+                flags |= CAN_NEXT;
+            }
+            if (bool(controls, CONTROLS_TOGGLE)) {
+                flags |= CAN_TOGGLE;
+            }
+            if (bool(controls, CONTROLS_SEEK)) {
+                flags |= CAN_SEEK;
+            }
+            return flags;
+        } finally {
+            release(controls);
+        }
     }
 
     private static Pointer pick() {
@@ -280,42 +380,50 @@ final class WindowsMedia {
         if (operation == null) {
             return null;
         }
+        try {
+            if (!finished(operation)) {
+                return null;
+            }
+            PointerByReference result = new PointerByReference();
+            return invoke(operation, resultsSlot, result) < 0 ? null : result.getValue();
+        } finally {
+            release(operation);
+        }
+    }
+
+    private static boolean finished(Pointer operation) {
         Pointer info = query(operation, IID_ASYNC_INFO);
         if (info == null) {
-            release(operation);
-            return null;
+            return false;
         }
         try {
             long deadline = System.currentTimeMillis() + ASYNC_TIMEOUT_MS;
             IntByReference status = new IntByReference();
             while (true) {
                 if (invoke(info, ASYNC_INFO_STATUS, status) < 0) {
-                    return null;
+                    return false;
                 }
                 int state = status.getValue();
                 if (state == ASYNC_COMPLETED) {
-                    break;
+                    return true;
                 }
                 if (state != ASYNC_STARTED) {
-                    return null;
+                    return false;
                 }
                 if (System.currentTimeMillis() > deadline) {
                     invoke(info, ASYNC_INFO_CANCEL);
-                    return null;
+                    return false;
                 }
                 try {
                     Thread.sleep(5L);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     invoke(info, ASYNC_INFO_CANCEL);
-                    return null;
+                    return false;
                 }
             }
-            PointerByReference result = new PointerByReference();
-            return invoke(operation, resultsSlot, result) < 0 ? null : result.getValue();
         } finally {
             release(info);
-            release(operation);
         }
     }
 
@@ -330,6 +438,11 @@ final class WindowsMedia {
     private static int integer(Pointer self, int slot, int fallback) {
         IntByReference value = new IntByReference();
         return invoke(self, slot, value) < 0 ? fallback : value.getValue();
+    }
+
+    private static boolean bool(Pointer self, int slot) {
+        ByteByReference value = new ByteByReference();
+        return invoke(self, slot, value) >= 0 && value.getValue() != 0;
     }
 
     private static long int64(Pointer self, int slot) {

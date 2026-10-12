@@ -3,6 +3,7 @@ package com.qza.chat;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.mixin.ChatComponentInvoker;
+import com.qza.util.DungeonState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.gui.Font;
@@ -36,6 +37,9 @@ public final class ChatCleaner {
             "Party > ", "Guild > ", "Officer > ", "Co-op > ", "Coop > ", "From ", "To "};
 
     private static final String[] NPC_PREFIXES = {"[NPC] ", "[SKULL] ", "[BOMB] "};
+
+    private static final Pattern ARCHER_CRIT = Pattern.compile(
+            "^Your Explosive Shot hit [\\d,]+ (?:enemy|enemies) for [\\d,.]+ damage\\.$");
 
     private static final Pattern[] USELESS = compile(
             "Warping you to your SkyBlock island\\.\\.\\.",
@@ -438,6 +442,9 @@ public final class ChatCleaner {
         }
         String text = visible(row).trim();
         if (text.isEmpty() || chatLike(text)) {
+            return false;
+        }
+        if (DungeonState.inDungeon() && ARCHER_CRIT.matcher(text).matches()) {
             return false;
         }
         for (Pattern pattern : USELESS) {

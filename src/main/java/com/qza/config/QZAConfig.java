@@ -266,6 +266,8 @@ public class QZAConfig {
 
     public double musicOverlayScale = 1.0;
 
+    public boolean musicOverlayCover = true;
+
     public boolean hideShieldSlot = false;
 
     public boolean hideCrafting = false;

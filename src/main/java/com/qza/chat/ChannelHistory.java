@@ -2,12 +2,17 @@ package com.qza.chat;
 
 import com.qza.config.ConfigManager;
 import com.qza.util.IgnUtil;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.PlainTextContents;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 public final class ChannelHistory {
     public static final String EVERYTHING = ChannelParser.EVERYTHING;
@@ -46,7 +51,73 @@ public final class ChannelHistory {
 
     private static int clientStatsRows = -1;
 
+    private static final Pattern CLEAR_INFO = Pattern.compile(
+            "^(?:\\[[^\\]]{1,12}]\\s*)?(?:[A-Za-z]{2,12} » ?)?\\w{1,16}: \\d+(?:-\\d+)? Rooms? \\| \\d+ Secrets?"
+                    + "(?: \\| \\d+ Deaths?)?$");
+
+    private static final Pattern MOD_PREFIX = Pattern.compile("^(?:\\[[^\\]]{1,12}]|[A-Za-z]{2,12} »)$");
+
+    private static final int CLEAR_INFO_QUIET_TICKS = 3;
+
+    private static final int MAX_CLEAR_INFO_ROWS = 8;
+
+    private static final List<Component> clearInfo = new ArrayList<>();
+
+    private static int clearInfoQuiet;
+
     private ChannelHistory() {
+    }
+
+    public static void tick() {
+        if (clearInfo.isEmpty() || ++clearInfoQuiet < CLEAR_INFO_QUIET_TICKS) {
+            return;
+        }
+        List<Component> rows = new ArrayList<>();
+        rows.add(Component.literal("Clear Info").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));
+        rows.addAll(clearInfo.subList(0, Math.min(clearInfo.size(), MAX_CLEAR_INFO_ROWS)));
+        clearInfo.clear();
+
+        MutableComponent rich = Component.empty();
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < rows.size(); i++) {
+            if (i > 0) {
+                rich.append("\n");
+                text.append('\n');
+            }
+            rich.append(rows.get(i));
+            text.append(rows.get(i).getString());
+        }
+        ChatMessage message = record(PARTY, rich, text.toString(), null, false);
+        message.rows = rows;
+        message.centred = new boolean[rows.size()];
+    }
+
+    private static Component withoutPrefix(Component rich) {
+        StringBuilder own = new StringBuilder();
+        rich.getContents().visit(part -> {
+            own.append(part);
+            return Optional.empty();
+        });
+        List<Component> siblings = rich.getSiblings();
+        if (siblings.isEmpty() || !MOD_PREFIX.matcher(IgnUtil.stripCodes(own.toString()).trim()).matches()) {
+            return rich;
+        }
+        MutableComponent out = Component.empty();
+        for (int i = 0; i < siblings.size(); i++) {
+            out.append(i == 0 ? trimStart(siblings.get(i)) : siblings.get(i));
+        }
+        return out;
+    }
+
+    private static Component trimStart(Component part) {
+        if (!(part.getContents() instanceof PlainTextContents plain)) {
+            return part;
+        }
+        MutableComponent out = Component.literal(plain.text().stripLeading()).setStyle(part.getStyle());
+        for (Component sibling : part.getSiblings()) {
+            out.append(sibling);
+        }
+        return out;
     }
 
     public static void onChatMessage(Component rich, String plain) {
@@ -170,6 +241,11 @@ public final class ChannelHistory {
             return;
         }
         String message = IgnUtil.stripCodes(plain).trim();
+        if (CLEAR_INFO.matcher(message).matches()) {
+            clearInfo.add(withoutPrefix(rich));
+            clearInfoQuiet = 0;
+            return;
+        }
         if (ChannelParser.isStatsHeader(message)) {
             note(PARTY, rich, plain);
             clientStatsRows = 0;
@@ -243,6 +319,7 @@ public final class ChannelHistory {
         endBlock();
         forgetDivider();
         clientStatsRows = -1;
+        clearInfo.clear();
     }
 
     public static String inviteCommand(String channel) {

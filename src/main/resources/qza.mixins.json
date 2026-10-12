@@ -28,6 +28,7 @@
     "ItemStarMixin",
     "MimicDeathMixin",
     "MouseInputMixin",
+    "MusicControlsMixin",
     "PlayerSizeMixin",
     "ShieldSlotMixin",
     "StoragePreviewMixin",
