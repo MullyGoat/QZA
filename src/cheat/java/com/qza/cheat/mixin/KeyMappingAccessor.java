@@ -8,6 +8,9 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface KeyMappingAccessor {
 
     @Accessor("isDown")
+    boolean qzaIsDown();
+
+    @Accessor("isDown")
     void qzaSetDown(boolean down);
 
     @Accessor("clickCount")

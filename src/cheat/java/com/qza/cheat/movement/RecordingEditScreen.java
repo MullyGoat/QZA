@@ -200,7 +200,7 @@ public class RecordingEditScreen extends CopierScreen {
     }
 
     @Override
-    void draw(GuiGraphicsExtractor graphics, int mx, int my) {
+    protected void draw(GuiGraphicsExtractor graphics, int mx, int my) {
         panel(graphics, panelX, panelY, panelW, PANEL_H, "QZA EDIT RECORDING");
 
         graphics.text(this.font, "Name", bodyX, panelY + 42, TEXT_DIM);
@@ -317,7 +317,7 @@ public class RecordingEditScreen extends CopierScreen {
     }
 
     @Override
-    boolean clicked(MouseButtonEvent local) {
+    protected boolean clicked(MouseButtonEvent local) {
         if (local.button() != InputConstants.MOUSE_BUTTON_LEFT) {
             return false;
         }
@@ -381,7 +381,7 @@ public class RecordingEditScreen extends CopierScreen {
     }
 
     @Override
-    boolean dragged(MouseButtonEvent local) {
+    protected boolean dragged(MouseButtonEvent local) {
         if (dragging == 1 || dragging == 2) {
             moveHandle(local.x());
             return true;
@@ -394,7 +394,7 @@ public class RecordingEditScreen extends CopierScreen {
     }
 
     @Override
-    void released(MouseButtonEvent local) {
+    protected void released(MouseButtonEvent local) {
         dragging = 0;
     }
 

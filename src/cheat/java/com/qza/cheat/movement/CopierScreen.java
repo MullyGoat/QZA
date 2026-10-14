@@ -8,22 +8,22 @@ import net.minecraft.network.chat.Component;
 
 import java.util.Locale;
 
-abstract class CopierScreen extends Screen {
-    static final int PANEL_BG = 0x55000000;
-    static final int BOX_BG = 0x66000000;
-    static final int BOX_BORDER = 0x40FFFFFF;
-    static final int DIVIDER = 0xFFC8D4DC;
-    static final int TEXT = 0xFFFFFFFF;
-    static final int TEXT_DIM = 0xFFAAAAAA;
-    static final int TEXT_FAINT = 0xFF8A8A8A;
-    static final int PINK = 0xFFFF55FF;
-    static final int BAD = 0xFFE05555;
-    static final int GOOD = 0xFF55FF55;
+public abstract class CopierScreen extends Screen {
+    protected static final int PANEL_BG = 0x55000000;
+    protected static final int BOX_BG = 0x66000000;
+    protected static final int BOX_BORDER = 0x40FFFFFF;
+    protected static final int DIVIDER = 0xFFC8D4DC;
+    protected static final int TEXT = 0xFFFFFFFF;
+    protected static final int TEXT_DIM = 0xFFAAAAAA;
+    protected static final int TEXT_FAINT = 0xFF8A8A8A;
+    protected static final int PINK = 0xFFFF55FF;
+    protected static final int BAD = 0xFFE05555;
+    protected static final int GOOD = 0xFF55FF55;
 
-    static final float TITLE_SCALE = 1.5f;
-    static final int FIELD_H = 16;
+    protected static final float TITLE_SCALE = 1.5f;
+    protected static final int FIELD_H = 16;
 
-    CopierScreen() {
+    protected CopierScreen() {
         super(Component.literal("QZA"));
     }
 
@@ -40,11 +40,11 @@ abstract class CopierScreen extends Screen {
         return this.height * (1f - scale()) / 2f;
     }
 
-    int logicalX(double mouseX) {
+    protected int logicalX(double mouseX) {
         return (int) Math.round((mouseX - offsetX()) / scale());
     }
 
-    int logicalY(double mouseY) {
+    protected int logicalY(double mouseY) {
         return (int) Math.round((mouseY - offsetY()) / scale());
     }
 
@@ -68,9 +68,9 @@ abstract class CopierScreen extends Screen {
         graphics.pose().popMatrix();
     }
 
-    abstract void draw(GuiGraphicsExtractor graphics, int mx, int my);
+    protected abstract void draw(GuiGraphicsExtractor graphics, int mx, int my);
 
-    void panel(GuiGraphicsExtractor graphics, int x, int y, int w, int h, String title) {
+    protected void panel(GuiGraphicsExtractor graphics, int x, int y, int w, int h, String title) {
         graphics.fill(x, y, x + w, y + h, PANEL_BG);
         outline(graphics, x, y, w, h, 0x33FFFFFF);
 
@@ -83,30 +83,30 @@ abstract class CopierScreen extends Screen {
         graphics.fill(x + 8, y + 28, x + w - 8, y + 29, DIVIDER);
     }
 
-    static void outline(GuiGraphicsExtractor graphics, int x, int y, int w, int h, int colour) {
+    protected static void outline(GuiGraphicsExtractor graphics, int x, int y, int w, int h, int colour) {
         graphics.fill(x, y, x + w, y + 1, colour);
         graphics.fill(x, y + h - 1, x + w, y + h, colour);
         graphics.fill(x, y + 1, x + 1, y + h - 1, colour);
         graphics.fill(x + w - 1, y + 1, x + w, y + h - 1, colour);
     }
 
-    static boolean inside(double x, double y, int[] r) {
+    protected static boolean inside(double x, double y, int[] r) {
         return x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
     }
 
-    void box(GuiGraphicsExtractor graphics, int x, int y, int w, boolean ok) {
+    protected void box(GuiGraphicsExtractor graphics, int x, int y, int w, boolean ok) {
         graphics.fill(x, y, x + w, y + FIELD_H, BOX_BG);
         outline(graphics, x, y, w, FIELD_H, ok ? BOX_BORDER : BAD);
     }
 
-    void button(GuiGraphicsExtractor graphics, int[] r, String label, int mx, int my) {
+    protected void button(GuiGraphicsExtractor graphics, int[] r, String label, int mx, int my) {
         boolean hovered = inside(mx, my, r);
         graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hovered ? 0xAA3C5A70 : 0x66223140);
         outline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFAFD4EC : 0xFF6A8CA8);
         graphics.centeredText(this.font, label, r[0] + (r[2] / 2), r[1] + ((r[3] - 8) / 2), TEXT);
     }
 
-    void dangerButton(GuiGraphicsExtractor graphics, int[] r, String label, int mx, int my) {
+    protected void dangerButton(GuiGraphicsExtractor graphics, int[] r, String label, int mx, int my) {
         boolean hovered = inside(mx, my, r);
         graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], hovered ? 0xAA8B2E2E : 0x66401E1E);
         outline(graphics, r[0], r[1], r[2], r[3], hovered ? 0xFFFF9A9A : 0xFFA85C5C);
@@ -114,7 +114,7 @@ abstract class CopierScreen extends Screen {
                 hovered ? 0xFFFFFFFF : 0xFFCCCCCC);
     }
 
-    String trim(String label, int maxWidth) {
+    protected String trim(String label, int maxWidth) {
         if (maxWidth <= 0 || this.font.width(label) <= maxWidth) {
             return label;
         }
@@ -125,11 +125,11 @@ abstract class CopierScreen extends Screen {
         return shown + "...";
     }
 
-    static String seconds(double value) {
+    protected static String seconds(double value) {
         return String.format(Locale.ROOT, "%.2fs", value);
     }
 
-    MouseButtonEvent toLogical(MouseButtonEvent event) {
+    protected MouseButtonEvent toLogical(MouseButtonEvent event) {
         float s = scale();
         float ox = offsetX();
         float oy = offsetY();
@@ -148,7 +148,7 @@ abstract class CopierScreen extends Screen {
         return super.mouseClicked(local, doubleClick);
     }
 
-    boolean clicked(MouseButtonEvent local) {
+    protected boolean clicked(MouseButtonEvent local) {
         return false;
     }
 
@@ -162,7 +162,7 @@ abstract class CopierScreen extends Screen {
         return super.mouseDragged(local, deltaX / s, deltaY / s);
     }
 
-    boolean dragged(MouseButtonEvent local) {
+    protected boolean dragged(MouseButtonEvent local) {
         return false;
     }
 
@@ -173,7 +173,7 @@ abstract class CopierScreen extends Screen {
         return super.mouseReleased(local);
     }
 
-    void released(MouseButtonEvent local) {
+    protected void released(MouseButtonEvent local) {
     }
 
     @Override

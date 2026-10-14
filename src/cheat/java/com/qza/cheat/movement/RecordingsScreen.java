@@ -96,7 +96,7 @@ public class RecordingsScreen extends CopierScreen {
     }
 
     @Override
-    void draw(GuiGraphicsExtractor graphics, int mx, int my) {
+    protected void draw(GuiGraphicsExtractor graphics, int mx, int my) {
         if (confirming != null && System.currentTimeMillis() > confirmUntil) {
             confirming = null;
         }
@@ -147,7 +147,7 @@ public class RecordingsScreen extends CopierScreen {
     }
 
     @Override
-    boolean clicked(MouseButtonEvent local) {
+    protected boolean clicked(MouseButtonEvent local) {
         if (local.button() != InputConstants.MOUSE_BUTTON_LEFT) {
             return false;
         }

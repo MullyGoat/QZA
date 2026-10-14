@@ -36,6 +36,8 @@ public final class Recording {
     public List<MoveFrame> frames = new ArrayList<>();
 
     transient Path file;
+    transient BlockPos startBlock;
+    transient String startArea = "";
 
     private transient int[] cached;
     private transient int cachedFrom = -1;

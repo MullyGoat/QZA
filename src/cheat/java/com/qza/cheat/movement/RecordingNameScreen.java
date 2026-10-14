@@ -67,7 +67,7 @@ public class RecordingNameScreen extends CopierScreen {
     }
 
     @Override
-    void draw(GuiGraphicsExtractor graphics, int mx, int my) {
+    protected void draw(GuiGraphicsExtractor graphics, int mx, int my) {
         int w = panelW();
         panel(graphics, panelX, panelY, w, PANEL_H, "QZA MOVEMENT COPIER");
 
@@ -95,7 +95,7 @@ public class RecordingNameScreen extends CopierScreen {
     }
 
     @Override
-    boolean clicked(MouseButtonEvent local) {
+    protected boolean clicked(MouseButtonEvent local) {
         if (local.button() != InputConstants.MOUSE_BUTTON_LEFT) {
             return false;
         }
@@ -130,7 +130,14 @@ public class RecordingNameScreen extends CopierScreen {
         }
         done = true;
         recording.name = chosenName();
+        boolean onStart = MovementCopier.placeOnStart(recording);
         Recordings.add(recording);
+        if (onStart) {
+            MovementCopier.placed(recording);
+            ChatUtil.success("Saved " + recording.name + " (" + seconds(recording.seconds()) + ") and put it on "
+                    + recording.blockText() + ", the block you started on. " + recording.startHint());
+            return;
+        }
         ChatUtil.success("Saved " + recording.name + " (" + seconds(recording.seconds()) + "). Look at a block and use "
                 + "/qza recorder place " + recording.name + " to put it on that block.");
     }

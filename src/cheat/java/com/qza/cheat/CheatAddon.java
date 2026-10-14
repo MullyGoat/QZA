@@ -1,6 +1,8 @@
 package com.qza.cheat;
 
 import com.qza.addon.QZAAddon;
+import com.qza.cheat.click.AutoClicker;
+import com.qza.cheat.click.AutoClickerScreen;
 import com.qza.cheat.movement.MovementCopier;
 import com.qza.cheat.movement.RecordingsScreen;
 import com.qza.compat.Mc;
@@ -28,6 +30,7 @@ public class CheatAddon implements QZAAddon {
         DeathBow.reset();
         MelodyAim.reset();
         MovementCopier.reset();
+        AutoClicker.reset();
     }
 
     @Override
@@ -122,7 +125,53 @@ public class CheatAddon implements QZAAddon {
                     CheatConfigManager.save();
                 }));
 
+        addAutoClicker(settings, cfg);
         addMovementCopier(settings, cfg);
+    }
+
+    private static void addAutoClicker(List<Setting> settings, CheatConfig cfg) {
+        String card = "Auto Clicker";
+
+        settings.add(new ToggleSetting(CATEGORY, card, "Auto Clicker",
+                Component.literal("Clicks for you while you hold left click, but only with the exact "
+                                + "items you set it up on, so everything else swings normally. The gap "
+                                + "between clicks is a different random length every time")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.autoClickerEnabled,
+                v -> {
+                    cfg.autoClickerEnabled = v;
+                    if (!v) {
+                        AutoClicker.reset();
+                    }
+                    CheatConfigManager.save();
+                }));
+
+        settings.add(new SliderSetting(CATEGORY, card, "Clicks",
+                Component.literal("How fast to click the item you bind next. Each item keeps its own "
+                        + "speed, so this only sets the one you're about to add")
+                        .withStyle(ChatFormatting.GRAY),
+                AutoClicker.MIN_CPS, AutoClicker.MAX_CPS, 1, " a second",
+                () -> cfg.autoClickerCps,
+                v -> {
+                    cfg.autoClickerCps = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.autoClickerEnabled));
+
+        settings.add(new ActionSetting(CATEGORY, card, "Held Item",
+                Component.literal("Turns the auto clicker on or off for the item in your hand. It goes "
+                                + "by the item's own SkyBlock id, so another copy of the same item "
+                                + "won't click").withStyle(ChatFormatting.GRAY),
+                AutoClicker::heldLabel,
+                AutoClicker::toggleHeld)
+                .visibleWhen(() -> cfg.autoClickerEnabled));
+
+        settings.add(new ActionSetting(CATEGORY, card, "Items",
+                Component.literal("Change how fast each item clicks, or take one off the list")
+                        .withStyle(ChatFormatting.GRAY),
+                "Open",
+                () -> Mc.setScreen(new AutoClickerScreen(new QZAScreen())))
+                .visibleWhen(() -> cfg.autoClickerEnabled));
     }
 
     private static void addMovementCopier(List<Setting> settings, CheatConfig cfg) {
@@ -168,6 +217,17 @@ public class CheatAddon implements QZAAddon {
                 () -> cfg.movementCountdown,
                 v -> {
                     cfg.movementCountdown = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.movementCopierEnabled));
+
+        settings.add(new ToggleSetting(CATEGORY, card, "Place On Start Block",
+                Component.literal("When you save a recording, puts it on the block you were standing on when it "
+                        + "started, so it shows as a highlighted block, or a ring in boss. Discarded recordings aren't "
+                        + "placed").withStyle(ChatFormatting.GRAY),
+                () -> cfg.movementPlaceStart,
+                v -> {
+                    cfg.movementPlaceStart = v;
                     CheatConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.movementCopierEnabled));

@@ -1,6 +1,8 @@
 package com.qza.cheat;
 
 import com.qza.QZA;
+import com.qza.cheat.click.AutoClicker;
+import com.qza.cheat.click.ClickCommand;
 import com.qza.cheat.movement.DungeonBoss;
 import com.qza.cheat.movement.MovementCommand;
 import com.qza.cheat.movement.MovementCopier;
@@ -24,7 +26,10 @@ public class QZACheat implements ClientModInitializer {
     public void onInitializeClient() {
         CheatConfigManager.load();
 
-        ClientTickEvents.START_CLIENT_TICK.register(MovementCopier::onStartTick);
+        ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            MovementCopier.onStartTick(client);
+            AutoClicker.onStartTick(client);
+        });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             DeathBow.tick();
             MelodyAim.tick(Mc.screen());
@@ -43,9 +48,12 @@ public class QZACheat implements ClientModInitializer {
             MelodyAim.reset();
             DungeonBoss.reset();
             MovementCopier.reset();
+            AutoClicker.reset();
         });
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) ->
-                MovementCommand.register(dispatcher));
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) -> {
+            MovementCommand.register(dispatcher);
+            ClickCommand.register(dispatcher);
+        });
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(QZA.MOD_ID, "movement_copier"),
                 new MovementHud());

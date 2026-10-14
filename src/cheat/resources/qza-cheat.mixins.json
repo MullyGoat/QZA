@@ -4,6 +4,7 @@
   "package": "com.qza.cheat.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "AutoClickHoldMixin",
     "CarriedItemInvoker",
     "ContainerPosAccessor",
     "DeathBowReleaseMixin",

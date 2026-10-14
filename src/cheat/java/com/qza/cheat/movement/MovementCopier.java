@@ -59,6 +59,7 @@ public final class MovementCopier {
     private static final double MAX_DRIFT = 4.0;
     private static final double NEAR_BELOW = 0.3;
     private static final double SAME_START = 2.0;
+    private static final int START_SEARCH = 3;
     private static final Identifier SPRINTING = Identifier.withDefaultNamespace("sprinting");
     private static final double SPRINT_BOOST = 1.3;
     private static final double SPEED_UNITS = 1000.0;
@@ -366,8 +367,53 @@ public final class MovementCopier {
             return;
         }
         done.name = Recordings.nextName();
+        boolean onStart = placeOnStart(done);
         Recordings.add(done);
-        ChatUtil.info("Saved your recording as " + done.name + " because " + reason + ".");
+        ChatUtil.info("Saved your recording as " + done.name + " because " + reason + "."
+                + (onStart ? " It's on " + done.blockText() + ", the block you started on." : ""));
+        if (onStart) {
+            placed(done);
+        }
+    }
+
+    public static boolean placeOnStart(Recording done) {
+        BlockPos pos = done.startBlock;
+        if (pos == null || !CheatConfigManager.get().movementPlaceStart) {
+            return false;
+        }
+        Recording other = Recordings.at(pos, done.startArea);
+        if (other != null && other != done && !other.name.equalsIgnoreCase(done.name)) {
+            other.block = null;
+            Recordings.save(other);
+            ChatUtil.info("Took " + other.name + " off that block.");
+        }
+        done.block = new int[]{pos.getX(), pos.getY(), pos.getZ()};
+        done.area = done.startArea == null ? "" : done.startArea;
+        return true;
+    }
+
+    private static BlockPos startBlock(Level level, LocalPlayer player) {
+        if (level == null) {
+            return null;
+        }
+        BlockPos under = standingOn(player);
+        if (solid(level, under)) {
+            return under;
+        }
+        if (player.onGround() && player.mainSupportingBlockPos.isPresent()) {
+            return player.mainSupportingBlockPos.get();
+        }
+        for (int down = 1; down <= START_SEARCH; down++) {
+            BlockPos below = under.below(down);
+            if (solid(level, below)) {
+                return below;
+            }
+        }
+        return null;
+    }
+
+    private static boolean solid(Level level, BlockPos pos) {
+        return !level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
     }
 
     public static void playSoon(Recording target) {
@@ -462,6 +508,10 @@ public final class MovementCopier {
     private static void capture(Minecraft client, LocalPlayer player) {
         if (recording == null || client.isPaused()) {
             return;
+        }
+        if (recording.frames.isEmpty()) {
+            recording.startBlock = startBlock(client.level, player);
+            recording.startArea = SkyBlockArea.current();
         }
         MoveFrame frame = new MoveFrame();
         frame.yaw = player.getYRot();

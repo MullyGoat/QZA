@@ -1,5 +1,8 @@
 package com.qza.cheat;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 public class CheatConfig {
     public boolean deathBowEnabled = false;
 
@@ -23,6 +26,8 @@ public class CheatConfig {
 
     public double movementCountdown = 3.0;
 
+    public boolean movementPlaceStart = true;
+
     public double movementLagTolerance = 5.0;
 
     public boolean movementHighlight = true;
@@ -36,4 +41,10 @@ public class CheatConfig {
     public double movementPlaySpeed = 0.0;
 
     public boolean movementDebug = false;
+
+    public boolean autoClickerEnabled = false;
+
+    public double autoClickerCps = 10.0;
+
+    public Map<String, com.qza.cheat.click.ClickItem> autoClickerItems = new LinkedHashMap<>();
 }
