@@ -14,6 +14,7 @@ import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
+import com.qza.dungeon.StormTimer;
 import com.qza.dungeon.StarredMobs;
 import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
@@ -100,6 +101,7 @@ public class QZA implements ClientModInitializer {
             TerminalTracker.onChatMessage(plain);
             LeapNotification.onChatMessage(plain);
             PYTimer.onChatMessage(plain);
+            StormTimer.onChatMessage(plain);
             PartyNotification.onChatMessage(plain);
             PartyFullAlert.onChatMessage(plain);
             PartyFinderQueue.onChatMessage(plain);
@@ -114,6 +116,7 @@ public class QZA implements ClientModInitializer {
             WitherKey.tick();
             NecronLeap.tick();
             CrystalTimer.tick();
+            StormTimer.tick();
             SplitTimers.tick();
             DungeonScore.tick(client);
             TerminalTracker.tick(client);
@@ -132,6 +135,7 @@ public class QZA implements ClientModInitializer {
                 TerminalTracker.reset();
                 LeapNotification.reset();
                 PYTimer.reset();
+                StormTimer.reset();
             }
         });
 
@@ -147,6 +151,7 @@ public class QZA implements ClientModInitializer {
             TerminalTracker.reset();
             LeapNotification.reset();
             PYTimer.reset();
+            StormTimer.reset();
             ServerTickClock.reset();
             ChatCleaner.reset();
             PartyNotification.clear();

@@ -29,6 +29,7 @@
     "MimicDeathMixin",
     "MouseInputMixin",
     "MusicControlsMixin",
+    "NoLoadingScreenMixin",
     "PlayerSizeMixin",
     "ShieldSlotMixin",
     "StoragePreviewMixin",

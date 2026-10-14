@@ -13,6 +13,7 @@ import com.qza.dungeon.CrystalTimer;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
+import com.qza.dungeon.StormTimer;
 import com.qza.dungeon.WitherKey;
 import com.qza.gui.CommandKeybindScreen;
 import com.qza.gui.CommandShortcutScreen;
@@ -363,6 +364,33 @@ public final class SettingsRegistry {
                     PYTimer.reset();
                     ConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(f7, "Storm Timer", "Storm Timer",
+                Component.literal("Counts how long Storm phase has lasted in tick time, from Storm's first line "
+                                + "until he dies. Drag it in ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.stormTimerEnabled,
+                v -> {
+                    cfg.stormTimerEnabled = v;
+                    StormTimer.reset();
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(f7, "Storm Timer", "Count Down From 5",
+                Component.literal("Only shows the last 5 seconds before 29s into Storm, counting down to 0")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.stormTimerCountDown,
+                v -> {
+                    cfg.stormTimerCountDown = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.stormTimerEnabled));
+
+        settings.add(colourSetting(f7, "Storm Timer", "Timer Colour", "Colour of the Storm Timer",
+                () -> cfg.stormTimerColour, v -> cfg.stormTimerColour = v)
+                .visibleWhen(() -> cfg.stormTimerEnabled));
 
         settings.add(new ToggleSetting(f7, "Crystal Spawn Timer", "Crystal Spawn Timer",
                 Component.literal("Shows ")
@@ -1171,6 +1199,25 @@ public final class SettingsRegistry {
                     cfg.hideShieldSlot = v;
                     ConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(misc, "No Loading Screen", "No Loading Screen",
+                Component.literal("Skips the loading terrain screen when you switch islands or servers, so you see "
+                        + "the world while it loads in").withStyle(ChatFormatting.GRAY),
+                () -> cfg.noLoadingScreen,
+                v -> {
+                    cfg.noLoadingScreen = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "No Loading Screen", "Servers Only",
+                Component.literal("Only skips it on servers, not in singleplayer or LAN worlds")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.noLoadingScreenServersOnly,
+                v -> {
+                    cfg.noLoadingScreenServersOnly = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.noLoadingScreen));
 
         settings.add(new ToggleSetting(misc, "Hide Crafting", "Hide Crafting",
                 Component.literal("Removes the crafting grid, its arrow, the output slot and the Crafting text "

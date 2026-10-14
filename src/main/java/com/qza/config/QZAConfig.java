@@ -106,6 +106,18 @@ public class QZAConfig {
 
     public double pyTimerScale = 1.5;
 
+    public boolean stormTimerEnabled = false;
+
+    public boolean stormTimerCountDown = false;
+
+    public String stormTimerColour = "white";
+
+    public double stormTimerX = 0.5;
+
+    public double stormTimerY = 0.61;
+
+    public double stormTimerScale = 1.5;
+
     public boolean necronLeapEnabled = false;
 
     public double necronLeapX = 0.5;
@@ -271,6 +283,10 @@ public class QZAConfig {
     public boolean hideShieldSlot = false;
 
     public boolean hideCrafting = false;
+
+    public boolean noLoadingScreen = false;
+
+    public boolean noLoadingScreenServersOnly = true;
 
     public boolean itemStarCount = false;
 

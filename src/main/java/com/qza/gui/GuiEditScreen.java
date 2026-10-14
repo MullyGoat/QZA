@@ -10,6 +10,7 @@ import com.qza.dungeon.DungeonScore;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
+import com.qza.dungeon.StormTimer;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
@@ -63,6 +64,7 @@ public class GuiEditScreen extends Screen {
         MusicOverlay.resetPlacement();
         LeapNotification.resetPlacement();
         PYTimer.resetPlacement();
+        StormTimer.resetPlacement();
         CrystalTimer.resetPlacement();
         NecronLeap.resetPlacement();
         ClockDisplay.resetPlacement();
@@ -159,6 +161,18 @@ public class GuiEditScreen extends Screen {
                     cfg.pyTimerY = y;
                 },
                 s -> cfg.pyTimerScale = s));
+
+        targets.add(new Target(
+                true,
+                StormTimer.text(12.35),
+                StormTimer.colour(),
+                () -> cfg.stormTimerEnabled,
+                () -> cfg.stormTimerX, () -> cfg.stormTimerY, () -> cfg.stormTimerScale,
+                (x, y) -> {
+                    cfg.stormTimerX = x;
+                    cfg.stormTimerY = y;
+                },
+                s -> cfg.stormTimerScale = s));
 
         targets.add(new Target(
                 true,
