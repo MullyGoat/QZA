@@ -26,12 +26,6 @@ version (`26.1.2`, `26.2` or `26.3`) and install one of them, not both:
 - `QZA-<version>-<minecraft>-legit.jar` is QZA.
 - `QZA-<version>-<minecraft>-cheats.jar` is QZA Cheats: Normal QZA with extra cheat features
 
-## Building
-
-`./gradlew build` builds for 26.1.2. Add `-Pmc=26.2` or `-Pmc=26.3` for the other versions.
-Each version's Minecraft and Fabric API numbers live in `versions/<minecraft>.properties`, and
-code that differs between versions lives in `src/compat/<minecraft>` and `src/cheatcompat/<minecraft>`.
-
 ## QZA Cheats
 
 Cheat features live only in the cheat jar, under **Cheats** in `/qza`. Their
