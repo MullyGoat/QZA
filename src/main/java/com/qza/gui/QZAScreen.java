@@ -99,6 +99,7 @@ public class QZAScreen extends Screen {
     private NumberSetting numberFocus;
     private int numberBox = -1;
     private String numberText = "";
+    private boolean numberFresh;
     private String lastQuery = "";
 
     private SliderSetting draggingSlider;
@@ -415,6 +416,7 @@ public class QZAScreen extends Screen {
         numberFocus = number;
         numberBox = index;
         numberText = String.valueOf(number.values()[index]);
+        numberFresh = true;
     }
 
     private void commitNumber() {
@@ -425,6 +427,7 @@ public class QZAScreen extends Screen {
         numberFocus = null;
         numberBox = -1;
         numberText = "";
+        numberFresh = false;
     }
 
     private void drawNumberBoxes(GuiGraphicsExtractor graphics, NumberSetting number,
@@ -442,6 +445,11 @@ public class QZAScreen extends Screen {
             outline(graphics, r[0], r[1], r[2], r[3], border);
 
             String shown = focused ? text + "_" : text;
+            if (focused && numberFresh && !text.isEmpty()) {
+                int textW = this.font.width(text);
+                int left = r[0] + (r[2] / 2) - (this.font.width(shown) / 2);
+                graphics.fill(left - 1, r[1] + 3, left + textW, r[1] + 13, 0xFF3A6EA5);
+            }
             graphics.centeredText(this.font, Component.literal(shown),
                     r[0] + (r[2] / 2), r[1] + 4, bad ? 0xFFFF9B9B : TEXT);
 
@@ -1338,7 +1346,12 @@ public class QZAScreen extends Screen {
 
         if (numberFocus != null) {
             if (event.key() == InputConstants.KEY_BACKSPACE) {
-                if (!numberText.isEmpty()) {
+                if (numberFresh) {
+                    numberFresh = false;
+                    numberText = "";
+                    numberFocus.commit(numberBox, numberText);
+                    ConfigManager.save();
+                } else if (!numberText.isEmpty()) {
                     numberText = numberText.substring(0, numberText.length() - 1);
                     numberFocus.commit(numberBox, numberText);
                     ConfigManager.save();
@@ -1372,6 +1385,10 @@ public class QZAScreen extends Screen {
         if (numberFocus != null) {
             int typed = event.codepoint();
             if (typed >= '0' && typed <= '9') {
+                if (numberFresh) {
+                    numberFresh = false;
+                    numberText = "";
+                }
                 if (numberText.length() < numberFocus.field(numberBox).digits()) {
 
                     String base = "0".equals(numberText) ? "" : numberText;
