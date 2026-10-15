@@ -15,6 +15,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
+import java.util.Locale;
 
 public class CheatAddon implements QZAAddon {
     private static final String CATEGORY = "Cheats";
@@ -254,9 +255,46 @@ public class CheatAddon implements QZAAddon {
                 })
                 .visibleWhen(() -> cfg.movementCopierEnabled));
 
+        settings.add(new SliderSetting(CATEGORY, card, "Start Turn Speed",
+                Component.literal("How fast your camera turns to the recording's starting view before it plays. "
+                        + "1x is the normal speed, higher is faster").withStyle(ChatFormatting.GRAY),
+                0.25, 4, 0.05, "x",
+                () -> cfg.movementTurnSpeed,
+                v -> {
+                    cfg.movementTurnSpeed = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.movementCopierEnabled));
+
+        settings.add(new ToggleSetting(CATEGORY, card, "Start Turn Overshoot",
+                Component.literal("Lets the starting turn go a little past or short of the view and then correct "
+                        + "back, like a hand on a mouse. Turn it off to land straight on the view")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.movementTurnOvershoot,
+                v -> {
+                    cfg.movementTurnOvershoot = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.movementCopierEnabled));
+
+        settings.add(new SliderSetting(CATEGORY, card, "Overshoot Amount",
+                Component.literal("How many degrees the starting turn goes past the view before it comes back. "
+                        + "Auto goes past by about 2-7% of the turn, and sometimes stops a little short instead. It "
+                        + "never goes past by more than half the turn, and turns under 6 degrees don't overshoot")
+                        .withStyle(ChatFormatting.GRAY),
+                0, 15, 0.5, "",
+                () -> cfg.movementOvershootDegrees,
+                v -> {
+                    cfg.movementOvershootDegrees = v;
+                    CheatConfigManager.save();
+                },
+                v -> v <= 0 ? "Auto" : String.format(Locale.ROOT, "%.1f°", v))
+                .visibleWhen(() -> cfg.movementCopierEnabled && cfg.movementTurnOvershoot));
+
         settings.add(new ToggleSetting(CATEGORY, card, "Match Recorded Speed",
-                Component.literal("If you're faster than when you recorded, slows your walking on the ground to "
-                        + "the recorded speed so the route and its jumps land the same. It can't make you faster, so "
+                Component.literal("If you're faster than when you recorded, lets go of your movement keys for a "
+                        + "tick whenever you get ahead of the route on the ground, so the route and its jumps land the "
+                        + "same. It can't make you faster, so "
                         + "record at the lowest speed you'll have").withStyle(ChatFormatting.GRAY),
                 () -> cfg.movementMatchSpeed,
                 v -> {

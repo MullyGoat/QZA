@@ -36,7 +36,13 @@ public class CheatConfig {
 
     public double movementWalkSpeed = 5.0;
 
-    public boolean movementMatchSpeed = true;
+    public double movementTurnSpeed = 1.0;
+
+    public boolean movementTurnOvershoot = true;
+
+    public double movementOvershootDegrees = 0.0;
+
+    public boolean movementMatchSpeed = false;
 
     public double movementPlaySpeed = 0.0;
 

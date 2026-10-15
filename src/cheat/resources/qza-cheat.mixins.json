@@ -13,7 +13,6 @@
     "MinecraftAccessor",
     "MouseHandlerAccessor",
     "MouseTurnMixin",
-    "MoveSpeedMixin",
     "PlayerFreezeMixin",
     "RecordKeyMixin",
     "TeleportMixin"

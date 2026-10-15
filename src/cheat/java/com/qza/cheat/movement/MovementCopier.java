@@ -2,6 +2,7 @@ package com.qza.cheat.movement;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.chat.ChatKeybind;
+import com.qza.cheat.CheatConfig;
 import com.qza.cheat.CheatConfigManager;
 import com.qza.cheat.mixin.KeyMappingAccessor;
 import com.qza.cheat.mixin.MinecraftAccessor;
@@ -28,6 +29,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -74,6 +76,7 @@ public final class MovementCopier {
     private static final int GREEN = 0xFF55FF55;
     private static final int YELLOW = 0xFFFFFF55;
     private static final int LAG_TEST_TICK = 20;
+    private static final double STILL_SQ = 9.0E-6;
 
     private static State state = State.IDLE;
     private static long countdownEnd;
@@ -115,6 +118,7 @@ public final class MovementCopier {
     private static long liningSince;
     private static float yawShift;
     private static boolean walkStart;
+    private static RingCenter center;
 
     private static final Set<Recording> insideRings = new HashSet<>();
     private static Vec3 lastTickPos;
@@ -586,19 +590,6 @@ public final class MovementCopier {
         return playing.speedAt(at);
     }
 
-    public static float inputScale(LocalPlayer player) {
-        if (state != State.PLAYING || lining || frozen || waiting != null || applied < 0 || playing == null
-                || !player.onGround() || !CheatConfigManager.get().movementMatchSpeed) {
-            return 1.0f;
-        }
-        double recorded = recordedSpeed();
-        double now = playerSpeed(player);
-        if (recorded <= 0.0 || now <= recorded) {
-            return 1.0f;
-        }
-        return (float) (recorded / now);
-    }
-
     public static String speedNote(LocalPlayer player) {
         if (state != State.PLAYING || lining || playing == null || !CheatConfigManager.get().movementMatchSpeed) {
             return null;
@@ -652,31 +643,53 @@ public final class MovementCopier {
         offY = 0.0;
         offZ = 0.0;
         walkStart = walkedIn;
+        BlockPos ring = walkedIn && DungeonBoss.inBoss() ? target.blockPos() : null;
         state = State.PLAYING;
 
         MoveFrame first = target.frames.get(order[0]);
         LocalPlayer player = client.player;
+        lining = true;
+        liningSince = System.currentTimeMillis();
+        center = ring == null || player == null ? null
+                : new RingCenter(ring.getX() + 0.5, ring.getZ() + 0.5, liningSince);
+        planStartTurn(player);
+        if (center != null) {
+            turn = null;
+        }
+        MovementLog.line("start " + target.name + " (" + why + "): " + order.length + " ticks at "
+                + String.format(Locale.ROOT, "%.2f", target.speed) + "x, from " + MovementLog.pos(player)
+                + " looking " + String.format(Locale.ROOT, "%.1f/%.1f", lookYaw, lookPitch) + ", recorded start "
+                + MovementLog.pos(first) + " looking " + String.format(Locale.ROOT, "%.1f/%.1f", first.yaw + yawShift,
+                first.pitch) + (center != null ? ", walking to the centre of the ring first"
+                : turn == null ? ", no turn needed" : String.format(Locale.ROOT, ", turning over %.0fms",
+                turn.totalMs())) + ", server ticks "
+                + (serverTick < 0L ? "not available" : "last seen " + quietMillis() + "ms ago"));
+    }
+
+    private static void planStartTurn(LocalPlayer player) {
+        MoveFrame first = playing.frames.get(schedule[0]);
         float yaw = player == null ? first.yaw : player.getYRot();
         float pitch = player == null ? first.pitch : player.getXRot();
         yawShift = 360.0f * Math.round((yaw - first.yaw) / 360.0f);
-        turn = HumanTurn.plan(yaw, pitch, first.yaw + yawShift, first.pitch);
-        lining = true;
-        liningSince = System.currentTimeMillis();
+        CheatConfig cfg = CheatConfigManager.get();
+        turn = HumanTurn.plan(yaw, pitch, first.yaw + yawShift, first.pitch, cfg.movementTurnSpeed,
+                cfg.movementTurnOvershoot, cfg.movementOvershootDegrees);
         lookYaw = yaw;
         lookPitch = pitch;
-        MovementLog.line("start " + target.name + " (" + why + "): " + order.length + " ticks at "
-                + String.format(Locale.ROOT, "%.2f", target.speed) + "x, from " + MovementLog.pos(player)
-                + " looking " + String.format(Locale.ROOT, "%.1f/%.1f", yaw, pitch) + ", recorded start "
-                + MovementLog.pos(first) + " looking " + String.format(Locale.ROOT, "%.1f/%.1f", first.yaw + yawShift,
-                first.pitch) + (turn == null ? ", no turn needed" : String.format(Locale.ROOT, ", turning over %.0fms",
-                turn.totalMs())) + ", server ticks "
-                + (serverTick < 0L ? "not available" : "last seen " + quietMillis() + "ms ago"));
     }
 
     private static boolean lineUp(Minecraft client, LocalPlayer player) {
         MoveFrame first = playing.frames.get(schedule[0]);
         holdStill(client, first.held(MoveFrame.SNEAK));
         long now = System.currentTimeMillis();
+        if (center != null) {
+            if (!center.tick(client, player, now)) {
+                return false;
+            }
+            center = null;
+            planStartTurn(player);
+            liningSince = now;
+        }
         boolean turned = turn == null || turn.done(System.nanoTime());
         boolean stopped = player.onGround() && player.getDeltaMovement().horizontalDistance() < STOPPED;
         long limit = SETTLE_MS + (turn == null ? 0L : Math.round(turn.totalMs()));
@@ -864,7 +877,50 @@ public final class MovementCopier {
         look(player, yaw, pitch);
         lookYaw = yaw;
         lookPitch = pitch;
+        if (holdBack(player, frame)) {
+            for (int i = 0; i < 4; i++) {
+                ((KeyMappingAccessor) held[i]).qzaSetDown(false);
+            }
+        }
         return fixed;
+    }
+
+    private static boolean holdBack(LocalPlayer player, MoveFrame frame) {
+        if (!CheatConfigManager.get().movementMatchSpeed || applied < 0 || !player.onGround()
+                || step + 1 >= schedule.length) {
+            return false;
+        }
+        double recorded = playing.speedAt(schedule[step]);
+        if (recorded <= 0.0 || playerSpeed(player) <= recorded) {
+            return false;
+        }
+        int left = (frame.held(MoveFrame.LEFT) ? 1 : 0) - (frame.held(MoveFrame.RIGHT) ? 1 : 0);
+        int forward = (frame.held(MoveFrame.FORWARD) ? 1 : 0) - (frame.held(MoveFrame.BACK) ? 1 : 0);
+        MoveFrame next = playing.frames.get(schedule[step + 1]);
+        if ((left == 0 && forward == 0) || next.teleports != frame.teleports) {
+            return false;
+        }
+        Vec3 motion = player.getDeltaMovement();
+        double vx = motion.horizontalDistanceSqr() < STILL_SQ ? 0.0 : motion.x;
+        double vz = motion.horizontalDistanceSqr() < STILL_SQ ? 0.0 : motion.z;
+        float friction = player.level().getBlockState(player.getBlockPosBelowThatAffectsMyMovement()).getBlock()
+                .getFriction();
+        double push = player.getSpeed() * (0.21600002f / (friction * friction * friction));
+        Vec2 move = new Vec2(left, forward).normalized().scale(0.98f);
+        if (frame.held(MoveFrame.SNEAK)) {
+            move = move.scale((float) player.getAttributeValue(Attributes.SNEAKING_SPEED));
+        }
+        move = RingCenter.squared(move);
+        float rad = player.getYRot() * (float) (Math.PI / 180.0);
+        float sin = Mth.sin(rad);
+        float cos = Mth.cos(rad);
+        double mx = move.x * push;
+        double mz = move.y * push;
+        double ax = (mx * cos) - (mz * sin);
+        double az = (mz * cos) + (mx * sin);
+        double tx = next.x + offX - player.getX();
+        double tz = next.z + offZ - player.getZ();
+        return Math.hypot(vx - tx, vz - tz) < Math.hypot(vx + ax - tx, vz + az - tz);
     }
 
     private static float[] aimAt(LocalPlayer player, float[] aim, float baseYaw, float basePitch) {
@@ -904,8 +960,9 @@ public final class MovementCopier {
             return;
         }
         if (lining) {
-            if (turn != null) {
-                mouseTowards(client, player, turn.at(System.nanoTime()));
+            HumanTurn active = center != null ? center.turn() : turn;
+            if (active != null) {
+                mouseTowards(client, player, active.at(System.nanoTime()));
             }
             return;
         }
@@ -917,9 +974,13 @@ public final class MovementCopier {
         look(player, Mth.lerp(t, lookYaw, to.yaw + yawShift), Mth.lerp(t, lookPitch, to.pitch));
     }
 
-    private static void mouseTowards(Minecraft client, LocalPlayer player, double[] want) {
+    static double mouseSens(Minecraft client) {
         double feel = (client.options.sensitivity().get() * 0.6) + 0.2;
-        double sens = feel * feel * feel * 8.0;
+        return feel * feel * feel * 8.0;
+    }
+
+    static void mouseTowards(Minecraft client, LocalPlayer player, double[] want) {
+        double sens = mouseSens(client);
         double perPixel = sens * 0.15;
         long dx = Math.round((want[0] - player.getYRot()) / perPixel);
         long dy = Math.round((Mth.clamp(want[1], -90.0, 90.0) - player.getXRot()) / perPixel);
@@ -953,6 +1014,7 @@ public final class MovementCopier {
         frozen = false;
         waiting = null;
         lining = false;
+        center = null;
         turn = null;
         releaseKeys(client);
         MovementLog.flush();

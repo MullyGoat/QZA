@@ -7,6 +7,7 @@ import java.util.concurrent.ThreadLocalRandom;
 final class HumanTurn {
     private static final double MIN_TURN = 0.5;
     private static final double OVERSHOOT_FROM = 6.0;
+    private static final double MAX_PAST_SHARE = 0.5;
 
     private final List<Leg> legs = new ArrayList<>();
     private final long startNanos;
@@ -16,7 +17,8 @@ final class HumanTurn {
         this.startNanos = startNanos;
     }
 
-    static HumanTurn plan(float fromYaw, float fromPitch, float toYaw, float toPitch) {
+    static HumanTurn plan(float fromYaw, float fromPitch, float toYaw, float toPitch, double speed,
+                          boolean overshoot, double pastDegrees) {
         double dYaw = toYaw - fromYaw;
         double dPitch = toPitch - fromPitch;
         double distance = Math.hypot(dYaw, dPitch);
@@ -25,15 +27,18 @@ final class HumanTurn {
         }
         ThreadLocalRandom random = ThreadLocalRandom.current();
         HumanTurn turn = new HumanTurn(System.nanoTime());
-        double react = 60.0 + (random.nextDouble() * 90.0);
+        double pace = Math.max(0.1, speed);
+        double react = (60.0 + (random.nextDouble() * 90.0)) / pace;
         double time = (95.0 + (120.0 * Math.log(1.0 + (distance / 2.5)) / Math.log(2.0)))
-                * (0.85 + (random.nextDouble() * 0.3));
+                * (0.85 + (random.nextDouble() * 0.3)) / pace;
         double side = random.nextBoolean() ? 1.0 : -1.0;
 
-        if (distance > OVERSHOOT_FROM) {
+        if (overshoot && distance > OVERSHOOT_FROM) {
             double ux = dYaw / distance;
             double uy = dPitch / distance;
-            double along = distance * (random.nextDouble() < 0.7
+            double along = pastDegrees > 0.0
+                    ? Math.min(pastDegrees, distance * MAX_PAST_SHARE)
+                    : distance * (random.nextDouble() < 0.7
                     ? 0.02 + (random.nextDouble() * 0.05)
                     : -(0.02 + (random.nextDouble() * 0.04)));
             double across = distance * random.nextGaussian() * 0.012;
@@ -42,8 +47,9 @@ final class HumanTurn {
             double main = time * 0.78;
             turn.leg(fromYaw, fromPitch, missYaw, missPitch, react, main,
                     side * distance * (0.03 + (random.nextDouble() * 0.06)));
-            double settle = 15.0 + (random.nextDouble() * 45.0);
-            turn.leg(missYaw, missPitch, toYaw, toPitch, react + main + settle, Math.max(70.0, time * 0.3), 0.0);
+            double settle = (15.0 + (random.nextDouble() * 45.0)) / pace;
+            turn.leg(missYaw, missPitch, toYaw, toPitch, react + main + settle,
+                    Math.max(70.0 / pace, time * 0.3), 0.0);
         } else {
             turn.leg(fromYaw, fromPitch, toYaw, toPitch, react, time,
                     side * distance * (0.02 + (random.nextDouble() * 0.05)));
