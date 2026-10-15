@@ -3,7 +3,9 @@
   "minVersion": "0.8",
   "package": "com.qza.compat.mixin",
   "compatibilityLevel": "JAVA_25",
-  "client": [],
+  "client": [
+    "ProtectDropMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

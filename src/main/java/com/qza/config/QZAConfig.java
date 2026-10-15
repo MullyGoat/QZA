@@ -58,6 +58,10 @@ public class QZAConfig {
 
     public boolean terminalTrackerEnabled = false;
 
+    public boolean terminalDoneAlert = true;
+
+    public boolean terminalDoneParty = true;
+
     public double terminalTrackerX = 0.9;
 
     public double terminalTrackerY = 0.82;
@@ -73,6 +77,8 @@ public class QZAConfig {
     public boolean score300Party = true;
 
     public boolean scoreBonusAnnounce = false;
+
+    public boolean scoreDebugLog = false;
 
     public boolean scoreHudEnabled = false;
 
@@ -287,6 +293,18 @@ public class QZAConfig {
     public boolean noLoadingScreen = false;
 
     public boolean noLoadingScreenServersOnly = true;
+
+    public boolean itemProtectionEnabled = false;
+
+    public String itemProtectionKey = "";
+
+    public boolean itemProtectionMessages = true;
+
+    public boolean itemProtectionStar = true;
+
+    public String itemProtectionCorner = "top_right";
+
+    public List<String> protectedItems = new ArrayList<>();
 
     public boolean itemStarCount = false;
 

@@ -20,6 +20,7 @@ import com.qza.gui.CommandShortcutScreen;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.WaypointScreen;
+import com.qza.inventory.ItemProtection;
 import com.qza.inventory.StoragePreview;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.itemlist.ItemRepo;
@@ -354,6 +355,30 @@ public final class SettingsRegistry {
                     cfg.terminalTrackerEnabled = v;
                     ConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(f7, "Terminal Tracker", "Section Done Alert",
+                Component.literal("When a section's terminals, levers and device are all done, shows ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("S1 Done!").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" (up to S4) on screen and plays a ding")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.terminalDoneAlert,
+                v -> {
+                    cfg.terminalDoneAlert = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalTrackerEnabled));
+
+        settings.add(new ToggleSetting(f7, "Terminal Tracker", "Tell Party",
+                Component.literal("Also says ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("S1 Done!").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(" and so on in party chat").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.terminalDoneParty,
+                v -> {
+                    cfg.terminalDoneParty = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalTrackerEnabled && cfg.terminalDoneAlert));
 
         settings.add(new ToggleSetting(f7, "PY Timer", "PY Timer",
                 Component.literal("Updated Timer for PY in Storm Phase")
@@ -803,6 +828,19 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        settings.add(new ToggleSetting(notify, "Dungeon Score", "Debug Log",
+                Component.literal("Writes the score and everything it's worked out from every second, next to "
+                                + "NoammAddons' score if you have it, to ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("config/qza/debug").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(", so a score that's off can be tracked down")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.scoreDebugLog,
+                v -> {
+                    cfg.scoreDebugLog = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.scoreHudEnabled || cfg.score300Alert));
+
         settings.add(new ToggleSetting(notify, "Party", "Party Invite Alert",
                 Component.literal("Displays party invite notification on screen")
                         .withStyle(ChatFormatting.GRAY),
@@ -1199,6 +1237,64 @@ public final class SettingsRegistry {
                     cfg.hideShieldSlot = v;
                     ConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(misc, "Item Protection", "Item Protection",
+                Component.literal("Stops the items you protect from being dropped, sold to NPCs, salvaged, traded, "
+                                + "auctioned or put in item frames, and marks them with a pink star. Press the ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Protect Key").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" on an item or use ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("/qza protect").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                () -> cfg.itemProtectionEnabled,
+                v -> {
+                    cfg.itemProtectionEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ActionSetting(misc, "Item Protection", "Protect Key",
+                Component.literal("Protects or unprotects the item you're holding, or the one you hover in your "
+                                + "inventory or storage. ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Delete").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" clears it and ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("esc").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" cancels").withStyle(ChatFormatting.GRAY)),
+                () -> ItemProtection.capturing() ? "Press a key..." : ItemProtection.keyLabel(),
+                ItemProtection::startCapture)
+                .visibleWhen(() -> cfg.itemProtectionEnabled));
+
+        settings.add(new ToggleSetting(misc, "Item Protection", "Show Star",
+                Component.literal("Marks protected items with a pink star. Turn it off to hide the stars, and "
+                        + "your items stay protected").withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemProtectionStar,
+                v -> {
+                    cfg.itemProtectionStar = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemProtectionEnabled));
+
+        settings.add(new DropdownSetting(misc, "Item Protection", "Star Corner",
+                Component.literal("Which corner of the item the star sits in").withStyle(ChatFormatting.GRAY),
+                () -> ItemProtection.CORNERS,
+                () -> cfg.itemProtectionCorner,
+                v -> {
+                    cfg.itemProtectionCorner = v;
+                    ConfigManager.save();
+                },
+                ItemProtection::cornerLabel,
+                null,
+                "Top Right",
+                100)
+                .visibleWhen(() -> cfg.itemProtectionEnabled && cfg.itemProtectionStar));
+
+        settings.add(new ToggleSetting(misc, "Item Protection", "Chat Messages",
+                Component.literal("Says in chat when you protect or unprotect an item, and when a protected item "
+                        + "is stopped").withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemProtectionMessages,
+                v -> {
+                    cfg.itemProtectionMessages = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemProtectionEnabled));
 
         settings.add(new ToggleSetting(misc, "No Loading Screen", "No Loading Screen",
                 Component.literal("Skips the loading terrain screen when you switch islands or servers, so you see "

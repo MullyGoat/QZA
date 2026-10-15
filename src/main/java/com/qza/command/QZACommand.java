@@ -12,6 +12,7 @@ import com.qza.gui.GuiEditScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.QZAScreen;
 import com.qza.gui.WaypointScreen;
+import com.qza.inventory.ItemProtection;
 import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.shitter.ShitterList;
@@ -59,6 +60,14 @@ public final class QZACommand {
                 }))
                 .then(literal("chat").executes(ctx -> {
                     openChat();
+                    return 1;
+                }))
+                .then(literal("protect").executes(ctx -> {
+                    if (!ItemProtection.enabled()) {
+                        ChatUtil.error("Item Protection is off. Turn it on in /qza under Miscellaneous.");
+                        return 0;
+                    }
+                    ItemProtection.toggleHeld();
                     return 1;
                 }))
                 .then(literal("stats")
@@ -359,6 +368,7 @@ public final class QZACommand {
 
         entry("/qza", "Open the settings GUI");
         entry("/qza chat", "Open QZA Chat");
+        entry("/qza protect", "Protect or unprotect the item you're holding");
         entry("/qza gui", "Open GUI edit mode to move and resize notifications");
         entry("/qza gui reset", "Restore the GUI layout to its default");
         entry("/qza music", "Show what is playing and how many tracks are loaded");

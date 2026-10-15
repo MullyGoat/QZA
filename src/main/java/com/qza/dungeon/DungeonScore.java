@@ -41,8 +41,8 @@ import java.util.regex.Pattern;
 public final class DungeonScore {
     public static final int TARGET = 300;
 
-    private static final int READ_TICKS = 4;
     private static final int BLOOD_FALLBACK_TICKS = 110;
+    private static final int PAIR_TICKS = 40;
     private static final int MAX_CRYPTS = 5;
     private static final int MAX_BATS = 5;
     private static final int UNKNOWN_ROOMS = 36;
@@ -62,7 +62,11 @@ public final class DungeonScore {
     private static final Pattern ROOMS = Pattern.compile("^Completed Rooms: (\\d+)$");
     private static final Pattern TEAM_DEATHS = Pattern.compile("^Team Deaths: (\\d+)$");
     private static final Pattern PUZZLES = Pattern.compile("^Puzzles: \\((\\d+)\\)$");
-    private static final Pattern PUZZLE = Pattern.compile("^(?:\\w+(?: \\w+)*|\\?\\?\\?): \\[([✖✔✦])] ?(?:\\(\\w+\\))?$");
+    private static final Pattern PUZZLE = Pattern.compile("^(\\w+(?: \\w+)*|\\?\\?\\?): \\[([✖✔✦])] ?(?:\\(\\w+\\))?$");
+    private static final Pattern TIC_TAC_TOE = Pattern.compile("^PUZZLE SOLVED! \\w{1,16} tied Tic Tac Toe! Good job!$");
+    private static final Pattern WEIRDOS = Pattern.compile("^PUZZLE SOLVED! \\w{1,16} wasn't fooled by \\w+! Good job!$");
+    private static final Pattern QUIZ = Pattern.compile(
+            "^\\[STATUE] Oruo the Omniscient: \\w{1,16} answered the final question correctly!$");
     private static final Pattern TAB_TIME = Pattern.compile("^Time: (?:(\\d+)h ?)?(?:(\\d+)m ?)?(?:(\\d+)s)?$");
     private static final Pattern CLEARED = Pattern.compile("^Cleared: (\\d+)%");
     private static final Pattern ELAPSED = Pattern.compile(
@@ -85,6 +89,7 @@ public final class DungeonScore {
             "bat dead", "bat killed", "bat slain", "$skytils-dungeon-score-bat$"};
 
     private static final Set<String> batKillers = new HashSet<>();
+    private static final Set<String> chatPuzzles = new HashSet<>();
     private static boolean started;
     private static boolean inBoss;
     private static boolean watcherDone;
@@ -100,7 +105,12 @@ public final class DungeonScore {
     private static int bloodIn = -1;
     private static int clearedPercent = -1;
     private static int roomsAtWatcher = -1;
-    private static int readIn;
+    private static int lastRooms = -1;
+    private static int lastCleared = -1;
+    private static int roomsChangedAt;
+    private static int clearedChangedAt;
+    private static int clock;
+    private static double heldTotal = -1;
     private static Snapshot last;
     private static Breakdown lastBreakdown;
 
@@ -114,7 +124,7 @@ public final class DungeonScore {
     public record Snapshot(int floor, boolean master, double secretPercent, int secretsFound, int completedRooms,
                            int clearedPercent, boolean bloodDone, boolean inBoss, int puzzles, int puzzlesDone,
                            int deaths, boolean firstDeathSpirit, int crypts, boolean mimic, boolean prince,
-                           int bats, boolean paul, int seconds) {
+                           int bats, boolean paul, int seconds, double roomTotal) {
     }
 
     public record Breakdown(int skill, int explore, int speed, int bonus, int total) {
@@ -122,6 +132,10 @@ public final class DungeonScore {
 
     public static int score() {
         return lastBreakdown == null ? 0 : lastBreakdown.total();
+    }
+
+    public static Snapshot last() {
+        return last;
     }
 
     public static void onChatMessage(String raw) {
@@ -132,50 +146,63 @@ public final class DungeonScore {
         if (message.isEmpty()) {
             return;
         }
+        if (handle(message) && started) {
+            update(Minecraft.getInstance());
+        }
+    }
 
+    private static boolean handle(String message) {
         if (MORT.matcher(message).matches()) {
-            if (!started) {
-                started = true;
-                refreshElection();
-            }
-            return;
+            begin();
+            return true;
+        }
+        if (TIC_TAC_TOE.matcher(message).matches()) {
+            return chatPuzzles.add("Tic Tac Toe");
+        }
+        if (WEIRDOS.matcher(message).matches()) {
+            return chatPuzzles.add("Three Weirdos");
+        }
+        if (QUIZ.matcher(message).matches()) {
+            return chatPuzzles.add("Quiz");
         }
         if (message.equals(WATCHER_DONE)) {
             if (!watcherDone) {
                 watcherDone = true;
                 bloodIn = BLOOD_FALLBACK_TICKS;
             }
-            return;
+            return true;
         }
         if (message.startsWith("[BOSS] ") && !message.startsWith("[BOSS] The Watcher")) {
+            boolean was = inBoss;
             inBoss = true;
+            return !was;
         }
         Matcher death = DEATH.matcher(message);
         if (death.matches()) {
             onDeath(death.group(1));
-            return;
+            return true;
         }
         if (message.equalsIgnoreCase(PRINCE_SCORE)) {
             if (!princeKilled) {
                 princeKilled = true;
                 announce("Prince Killed");
             }
-            return;
+            return true;
         }
         if (message.equalsIgnoreCase(BAT_SCORE)) {
             if (batKillers.size() < MAX_BATS && batKillers.add(selfName())) {
                 announce("Bat Killed");
             }
-            return;
+            return true;
         }
         if (CHARM_MIMIC.matcher(message).matches()) {
             onMimicKilled();
-            return;
+            return true;
         }
 
         Matcher party = PARTY.matcher(message);
         if (!party.matches()) {
-            return;
+            return false;
         }
         String name = party.group(1);
         String body = party.group(2).toLowerCase(Locale.ROOT);
@@ -191,6 +218,14 @@ public final class DungeonScore {
         }
         if (!self && contains(body, BAT_WORDS) && batKillers.size() < MAX_BATS) {
             batKillers.add(name.toLowerCase(Locale.ROOT));
+        }
+        return true;
+    }
+
+    private static void begin() {
+        if (!started) {
+            started = true;
+            refreshElection();
         }
     }
 
@@ -253,17 +288,35 @@ public final class DungeonScore {
     }
 
     public static void tick(Minecraft client) {
-        if (!started || client.level == null) {
+        if (client.level == null || !DungeonState.inDungeon()) {
+            return;
+        }
+        if (!started && runTimerStarted()) {
+            begin();
+        }
+        if (!started) {
             return;
         }
         if (bloodIn > 0 && --bloodIn == 0) {
             bloodDone = true;
         }
-        if (--readIn > 0) {
-            return;
+        clock++;
+        update(client);
+        ScoreLog.tick(last, lastBreakdown);
+    }
+
+    private static boolean runTimerStarted() {
+        for (String line : DungeonState.sidebarLines()) {
+            Matcher m = ELAPSED.matcher(line);
+            if (m.find() && seconds(m) > 0) {
+                return true;
+            }
         }
-        readIn = READ_TICKS;
-        if (!DungeonState.inDungeon()) {
+        return false;
+    }
+
+    private static void update(Minecraft client) {
+        if (client.level == null) {
             return;
         }
         Snapshot snapshot = read(client);
@@ -289,7 +342,7 @@ public final class DungeonScore {
         int rooms = 0;
         int teamDeaths = -1;
         int puzzles = 0;
-        int puzzlesDone = 0;
+        Set<String> solved = new HashSet<>(chatPuzzles);
         int tabSeconds = -1;
         ClientPacketListener connection = client.getConnection();
         if (connection != null) {
@@ -314,8 +367,8 @@ public final class DungeonScore {
                     puzzles = Integer.parseInt(m.group(1));
                 } else if ((m = TAB_TIME.matcher(line)).matches()) {
                     tabSeconds = seconds(m);
-                } else if ((m = PUZZLE.matcher(line)).matches() && m.group(1).equals("✔")) {
-                    puzzlesDone++;
+                } else if ((m = PUZZLE.matcher(line)).matches() && m.group(2).equals("✔")) {
+                    solved.add(m.group(1));
                 }
             }
         }
@@ -340,12 +393,39 @@ public final class DungeonScore {
                 bloodDone = true;
             }
         }
+        double roomTotal = roomTotal(rooms, clearedPercent);
 
         return new Snapshot(floor, DungeonState.catacombsMaster(), secretPercent, secretsFound, rooms,
-                Math.max(0, clearedPercent), bloodDone, inBoss, puzzles, Math.min(puzzles, puzzlesDone),
+                Math.max(0, clearedPercent), bloodDone, inBoss, puzzles, Math.min(puzzles, solved.size()),
                 Math.max(teamDeaths, chatDeaths), firstDeadSpirit == null || firstDeadSpirit,
                 crypts, mimicKilled, princeKilled, batKillers.size(), paul,
-                seconds >= 0 ? seconds : Math.max(0, tabSeconds));
+                seconds >= 0 ? seconds : Math.max(0, tabSeconds), roomTotal);
+    }
+
+    private static double roomTotal(int rooms, int cleared) {
+        if (rooms != lastRooms) {
+            lastRooms = rooms;
+            roomsChangedAt = clock;
+        }
+        if (cleared != lastCleared) {
+            lastCleared = cleared;
+            clearedChangedAt = clock;
+        }
+        int newer = Math.max(roomsChangedAt, clearedChangedAt);
+        int older = Math.min(roomsChangedAt, clearedChangedAt);
+        boolean waiting = clock - newer < PAIR_TICKS && newer - older > PAIR_TICKS;
+        if (waiting && heldTotal > 0) {
+            return Math.max(heldTotal, rooms);
+        }
+        if (rooms <= 0 || cleared <= 0) {
+            return -1;
+        }
+        heldTotal = estimateRooms(rooms, cleared);
+        return heldTotal;
+    }
+
+    static double estimateRooms(int completed, int cleared) {
+        return Math.floor(completed / (cleared / 100.0) + 0.4);
     }
 
     public static int calculate(Snapshot s) {
@@ -373,17 +453,16 @@ public final class DungeonScore {
 
         int extraRooms = (s.bloodDone() ? 0 : 1) + (entrance || s.inBoss() ? 0 : 1);
         int effectiveRooms = s.completedRooms() + extraRooms;
-        double totalRooms = s.completedRooms() > 0 && s.clearedPercent() > 0
-                ? Math.floor(s.completedRooms() / (s.clearedPercent() / 100.0) + 0.4) : UNKNOWN_ROOMS;
+        double totalRooms = totalRooms(s);
         double ratio = totalRooms <= 0 ? 0 : effectiveRooms / totalRooms;
 
         double needed = secretsNeeded(s.floor(), s.master());
-        double secretsShare;
+        double secretsShare = s.secretPercent() / 100.0 / needed;
         if (s.secretsFound() > 0 && s.secretPercent() > 0) {
             double totalSecrets = Math.floor((100.0 / s.secretPercent() * s.secretsFound()) + 0.5);
-            secretsShare = totalSecrets <= 0 ? 0 : s.secretsFound() / (totalSecrets * needed);
-        } else {
-            secretsShare = s.secretPercent() / 100.0 / needed;
+            if (totalSecrets > 0) {
+                secretsShare = Math.max(secretsShare, s.secretsFound() / (totalSecrets * needed));
+            }
         }
         int secretsScore = (int) clamp(Math.floor((secretsShare * 40.0) + ROUNDING), 0, 40);
         int roomScore = (int) clamp(Math.floor((ratio * 60.0) + ROUNDING), 0, 60);
@@ -400,6 +479,16 @@ public final class DungeonScore {
             bonus = (int) Math.round(bonus * ENTRANCE_SCALE);
         }
         return new Breakdown(skill, explore, speed, bonus, skill + explore + speed + bonus);
+    }
+
+    private static double totalRooms(Snapshot s) {
+        if (s.roomTotal() > 0) {
+            return Math.max(s.roomTotal(), s.completedRooms());
+        }
+        if (s.completedRooms() > 0 && s.clearedPercent() > 0) {
+            return estimateRooms(s.completedRooms(), s.clearedPercent());
+        }
+        return UNKNOWN_ROOMS;
     }
 
     private static int deathPenalty(Snapshot s) {
@@ -492,7 +581,7 @@ public final class DungeonScore {
             return lines(cfg, last, lastBreakdown);
         }
         Snapshot example = new Snapshot(7, true, 100, 45, 28, 100, true, true, 3, 3, 1, true,
-                5, true, false, 1, false, 312);
+                5, true, false, 1, false, 312, -1);
         return lines(cfg, example, breakdown(example));
     }
 
@@ -661,10 +750,17 @@ public final class DungeonScore {
         chatDeaths = 0;
         firstDead = null;
         firstDeadSpirit = null;
+        chatPuzzles.clear();
         bloodIn = -1;
         clearedPercent = -1;
         roomsAtWatcher = -1;
-        readIn = 0;
+        lastRooms = -1;
+        lastCleared = -1;
+        roomsChangedAt = 0;
+        clearedChangedAt = 0;
+        clock = 0;
+        heldTotal = -1;
+        ScoreLog.end();
         last = null;
         lastBreakdown = null;
     }

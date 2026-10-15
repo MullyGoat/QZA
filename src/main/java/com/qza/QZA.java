@@ -19,6 +19,7 @@ import com.qza.dungeon.StarredMobs;
 import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
 import com.qza.inventory.Equipment;
+import com.qza.inventory.ItemProtection;
 import com.qza.inventory.StoragePreview;
 import com.qza.itemlist.ItemList;
 import com.qza.media.MusicOverlay;
@@ -73,6 +74,7 @@ public class QZA implements ClientModInitializer {
         Equipment.init();
         StoragePreview.init();
         MarketSearch.init();
+        ItemProtection.init();
         MusicOverlay.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),

@@ -1,13 +1,19 @@
 package com.qza.dungeon;
 
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.util.ChatUtil;
 import com.qza.util.DungeonState;
 import com.qza.util.IgnUtil;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -43,6 +49,7 @@ public final class TerminalTracker {
     private static final int[] terminals = new int[SECTIONS];
     private static final int[] levers = new int[SECTIONS];
     private static final boolean[] devices = new boolean[SECTIONS];
+    private static final boolean[] finished = new boolean[SECTIONS];
     private static final int[] totals = TOTALS.clone();
     private static int lastCount;
     private static int lastTotal;
@@ -86,6 +93,7 @@ public final class TerminalTracker {
             if (movedByCount) {
                 movedByCount = false;
             } else if (section < LAST) {
+                sectionDone(section);
                 section++;
             }
         }
@@ -99,10 +107,34 @@ public final class TerminalTracker {
             default -> devices[deviceSection(name)] = true;
         }
 
-        if (section < LAST && done(section) >= totals[section]) {
-            section++;
-            movedByCount = true;
+        if (done(section) >= totals[section]) {
+            sectionDone(section);
+            if (section < LAST) {
+                section++;
+                movedByCount = true;
+            }
         }
+    }
+
+    private static void sectionDone(int s) {
+        if (finished[s]) {
+            return;
+        }
+        finished[s] = true;
+        QZAConfig cfg = ConfigManager.get();
+        if (!cfg.terminalTrackerEnabled || !cfg.terminalDoneAlert) {
+            return;
+        }
+        String text = doneText(s);
+        Mc.showTitle(Component.literal(text).withStyle(ChatFormatting.GREEN), 0, 30, 10);
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0f));
+        if (cfg.terminalDoneParty) {
+            ChatUtil.sendCommand("pc " + text);
+        }
+    }
+
+    public static String doneText(int s) {
+        return "S" + (s + 1) + " Done!";
     }
 
     private static int deviceSection(String name) {
@@ -179,6 +211,7 @@ public final class TerminalTracker {
             terminals[i] = 0;
             levers[i] = 0;
             devices[i] = false;
+            finished[i] = false;
             totals[i] = TOTALS[i];
         }
         lastCount = 0;
