@@ -205,7 +205,7 @@ public final class AutoClicker {
                 : String.format(Locale.ROOT, "%.1f", cps);
     }
 
-    private static String identify(ItemStack stack) {
+    public static String identify(ItemStack stack) {
         if (stack.isEmpty()) {
             ChatUtil.error("You aren't holding anything.");
             return null;

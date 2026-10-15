@@ -32,6 +32,7 @@ public class CheatAddon implements QZAAddon {
         MelodyAim.reset();
         MovementCopier.reset();
         AutoClicker.reset();
+        BloodClick.reset();
     }
 
     @Override
@@ -125,6 +126,56 @@ public class CheatAddon implements QZAAddon {
                     cfg.starredMobEsp = v;
                     CheatConfigManager.save();
                 }));
+
+        settings.add(new ToggleSetting(CATEGORY, "BloodCamp Triggerbot", "BloodCamp Triggerbot",
+                Component.literal("Left clicks 1-3 ticks after a blood mob spawns, but only while it's still in "
+                        + "the air and you're looking at it. Clicks sooner if the mob would fall out of your "
+                        + "crosshair or hit the floor first, and never once it's on the floor")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.bloodClickEnabled,
+                v -> {
+                    cfg.bloodClickEnabled = v;
+                    if (!v) {
+                        BloodClick.reset();
+                    }
+                    CheatConfigManager.save();
+                }));
+
+        settings.add(new SliderSetting(CATEGORY, "BloodCamp Triggerbot", "Range",
+                Component.literal("How far away a blood mob you're looking at can be and still get clicked")
+                        .withStyle(ChatFormatting.GRAY),
+                BloodClick.MIN_RANGE, BloodClick.MAX_RANGE, 1, " blocks",
+                () -> cfg.bloodClickRange,
+                v -> {
+                    cfg.bloodClickRange = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodClickEnabled));
+
+        settings.add(new ToggleSetting(CATEGORY, "BloodCamp Triggerbot", "Only Whitelisted Items",
+                Component.literal("Only clicks while you're holding one of the items you add below, so "
+                        + "anything else in your hand never clicks").withStyle(ChatFormatting.GRAY),
+                () -> cfg.bloodClickWhitelist,
+                v -> {
+                    cfg.bloodClickWhitelist = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodClickEnabled));
+
+        settings.add(new ActionSetting(CATEGORY, "BloodCamp Triggerbot", "Held Item",
+                Component.literal("Adds the item in your hand to the whitelist, or takes it off. It goes by the "
+                        + "item's own SkyBlock id, so another copy of the same item won't click")
+                        .withStyle(ChatFormatting.GRAY),
+                BloodClick::heldLabel,
+                BloodClick::toggleHeld)
+                .visibleWhen(() -> cfg.bloodClickEnabled && cfg.bloodClickWhitelist));
+
+        settings.add(new ActionSetting(CATEGORY, "BloodCamp Triggerbot", "Items",
+                Component.literal("See the whitelisted items, or take one off the list")
+                        .withStyle(ChatFormatting.GRAY),
+                "Open",
+                () -> Mc.setScreen(new BloodClickScreen(new QZAScreen())))
+                .visibleWhen(() -> cfg.bloodClickEnabled && cfg.bloodClickWhitelist));
 
         addAutoClicker(settings, cfg);
         addMovementCopier(settings, cfg);

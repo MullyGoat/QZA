@@ -18,6 +18,14 @@ public class CheatConfig {
 
     public boolean melodyAimEnabled = false;
 
+    public boolean bloodClickEnabled = false;
+
+    public double bloodClickRange = 20.0;
+
+    public boolean bloodClickWhitelist = false;
+
+    public Map<String, String> bloodClickItems = new LinkedHashMap<>();
+
     public boolean starredMobEsp = false;
 
     public boolean movementCopierEnabled = false;
