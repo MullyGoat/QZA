@@ -1,12 +1,16 @@
 package com.qza.cheat;
 
 import com.mojang.authlib.properties.Property;
+import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.cheat.click.AutoClicker;
 import com.qza.cheat.mixin.KeyMappingAccessor;
 import com.qza.cheat.movement.DungeonBoss;
 import com.qza.compat.Mc;
+import com.qza.timer.ServerTickClock;
 import com.qza.util.ChatUtil;
 import com.qza.util.DungeonState;
+import com.qza.util.IgnUtil;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -23,6 +27,7 @@ import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -30,8 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -76,14 +81,28 @@ public final class BloodClick {
             "7de7bbbdf22bfe17980d4e20687e386f11d59ee1db6f8b4762391b79a5ac532d",
             "c1007c5b7114abec734206d4fc613da4f3a0e99f71ff949cedadc99079135a0b");
 
+    private static final Set<String> NAMES = Set.of("Revoker", "Psycho", "Reaper", "Cannibal", "Mute", "Ooze",
+            "Putrid", "Freak", "Leech", "Tear", "Parasite", "Flamer", "Skull", "Mr. Dead", "Vader", "Frost", "Walker",
+            "Wandering Soul", "WanderingSoul", "Bonzo", "Scarf", "Livid", "Spirit Bear", "Giant");
+
     private static final Pattern TEXTURE = Pattern.compile("/texture/([0-9a-f]+)");
+    private static final String WATCHER_MOVES = "[BOSS] The Watcher: Let's see how you can handle this.";
     private static final double WATCHER_RANGE_SQ = 20.0 * 20.0;
-    private static final double MOVED_SQ = 1.0E-4;
-    private static final double SPAWN_FLAT_SQ = 3.0 * 3.0;
-    private static final double SPAWN_HIGH = 4.0;
-    private static final int FLIGHT_TICKS = 20;
-    private static final int FIRST_TICK = 1;
-    private static final int LAST_TICK = 3;
+    private static final double MOB_RANGE_SQ = 32.0 * 32.0;
+    private static final double SKULL_NEAR_SQ = 4.0 * 4.0;
+    private static final double MOVED_SQ = 1.0E-6;
+    private static final long SPAWN_TICKS = 38L;
+    private static final long FIRST_WAVE_TICKS = 40L;
+    private static final long PRE_FIRE_TICKS = 1L;
+    private static final double FLIGHT = 11.9;
+    private static final double FIRST_FLIGHT = 16.1;
+    private static final double BOX_BOTTOM = 1.5;
+    private static final double BOX_TOP = 2.5;
+    private static final double BOX_HALF = 0.5;
+    private static final double BOX_SLACK = 0.1;
+    private static final int TIMER_SHIELD = 0;
+    private static final int AGAIN_MIN = 4;
+    private static final int AGAIN_MAX = 6;
     public static final double MIN_RANGE = 1.0;
     public static final double MAX_RANGE = 60.0;
     private static final double AIR_GAP = 0.05;
@@ -92,23 +111,57 @@ public final class BloodClick {
     private static final double DRAG = 0.98;
 
     private static final class Skull {
+        final boolean first;
         Vec3 last;
-        int movedAt = -1;
-        boolean used;
+        Vec3 start;
+        double sx;
+        double sy;
+        double sz;
+        long startTick = -1L;
+        boolean fired;
 
-        Skull(Vec3 at) {
-            last = at;
+        Skull(Vec3 at, boolean first) {
+            this.last = at;
+            this.first = first;
+        }
+
+        Vec3 end() {
+            double length = Math.sqrt((sx * sx) + (sy * sy) + (sz * sz));
+            if (start == null || length < 1.0E-9) {
+                return null;
+            }
+            double flight = (first ? FIRST_FLIGHT : FLIGHT) / length;
+            return start.add(sx * flight, sy * flight, sz * flight);
+        }
+
+        long due() {
+            return startTick + SPAWN_TICKS + (first ? FIRST_WAVE_TICKS : 0L);
         }
     }
 
-    private record Spawn(Entity mob, int at, int delay) {
+    private static final class Mob {
+        final int seen;
+        int nextAt;
+        int clicks;
+        boolean air;
+        boolean aimed;
+
+        Mob(int seen) {
+            this.seen = seen;
+            this.nextAt = seen;
+        }
     }
 
+    private static final Map<Integer, Mob> mobs = new HashMap<>();
     private static final Map<Integer, Skull> skulls = new HashMap<>();
-    private static final List<Spawn> spawns = new ArrayList<>();
     private static final Map<String, String> hashes = new HashMap<>();
     private static int watcherId = -1;
     private static int clock;
+    private static int timerClickAt = Integer.MIN_VALUE;
+    private static boolean firstWave = true;
+    private static boolean clickedThisTick;
+    private static InputConstants.Key pressed;
+    private static boolean wasActive;
 
     private BloodClick() {
     }
@@ -118,9 +171,19 @@ public final class BloodClick {
     }
 
     public static void reset() {
+        mobs.clear();
         skulls.clear();
-        spawns.clear();
         watcherId = -1;
+        firstWave = true;
+        wasActive = false;
+        BloodLog.flush();
+    }
+
+    public static void onChat(String message) {
+        if (WATCHER_MOVES.equals(IgnUtil.stripCodes(message).trim()) && firstWave) {
+            firstWave = false;
+            BloodLog.line("the Watcher moved, later spawns take " + SPAWN_TICKS + " ticks");
+        }
     }
 
     private static boolean active(Minecraft client) {
@@ -128,37 +191,57 @@ public final class BloodClick {
                 && !DungeonBoss.inBoss();
     }
 
+    private static long now() {
+        return ServerTickClock.isAvailable() ? ServerTickClock.ticks() : clock;
+    }
+
     public static void onStartTick(Minecraft client) {
         clock++;
+        clickedThisTick = false;
+        release(client);
         if (!active(client)) {
-            if (watcherId != -1 || !skulls.isEmpty() || !spawns.isEmpty()) {
+            if (wasActive) {
+                BloodLog.line("stopped watching: dungeon " + DungeonState.inDungeon() + ", boss " + DungeonBoss.inBoss());
+            }
+            if (wasActive || watcherId != -1 || !mobs.isEmpty() || !skulls.isEmpty()) {
                 reset();
             }
             return;
         }
-        track(client.level);
-        clickSpawns(client, client.player, client.level);
+        if (!wasActive) {
+            wasActive = true;
+            BloodLog.line("watching for blood mobs, server ticks " + (ServerTickClock.isAvailable() ? "on" : "off"));
+        }
+        Entity watcher = findWatcher(client.level);
+        trackSkulls(client, client.player, client.level, watcher);
+        trackMobs(client.player, client.level, watcher);
+        clickMobs(client, client.player, client.level);
     }
 
-    private static void track(ClientLevel level) {
+    private static Entity findWatcher(ClientLevel level) {
         Entity watcher = watcherId == -1 ? null : level.getEntity(watcherId);
-        if (watcher == null || !watcher.isAlive()) {
-            watcherId = -1;
-            watcher = null;
-            for (Entity entity : level.entitiesForRendering()) {
-                if (entity instanceof Zombie zombie && WATCHER.contains(hash(zombie.getItemBySlot(EquipmentSlot.HEAD)))) {
-                    watcherId = zombie.getId();
-                    watcher = zombie;
-                    break;
-                }
+        if (watcher != null && watcher.isAlive()) {
+            return watcher;
+        }
+        if (watcherId != -1) {
+            BloodLog.line("lost the Watcher");
+        }
+        watcherId = -1;
+        for (Entity entity : level.entitiesForRendering()) {
+            if (entity instanceof Zombie zombie && WATCHER.contains(hash(zombie.getItemBySlot(EquipmentSlot.HEAD)))) {
+                watcherId = zombie.getId();
+                BloodLog.line("found the Watcher at " + BloodLog.pos(zombie.position()));
+                return zombie;
             }
         }
-        skulls.keySet().removeIf(id -> level.getEntity(id) == null);
-        if (watcher == null) {
-            return;
-        }
+        return null;
+    }
+
+    private static void trackSkulls(Minecraft client, LocalPlayer player, ClientLevel level, Entity watcher) {
+        long now = now();
         for (Entity entity : level.entitiesForRendering()) {
-            if (!(entity instanceof ArmorStand stand) || stand.distanceToSqr(watcher) > WATCHER_RANGE_SQ) {
+            if (!(entity instanceof ArmorStand stand)
+                    || (watcher != null && stand.distanceToSqr(watcher) > WATCHER_RANGE_SQ)) {
                 continue;
             }
             Skull skull = skulls.get(stand.getId());
@@ -166,67 +249,188 @@ public final class BloodClick {
                 if (!SKULLS.contains(hash(stand.getItemBySlot(EquipmentSlot.HEAD)))) {
                     continue;
                 }
-                skull = new Skull(stand.position());
+                skull = new Skull(stand.position(), firstWave);
                 skulls.put(stand.getId(), skull);
             }
-            Vec3 now = stand.position();
-            if (skull.movedAt < 0 && now.distanceToSqr(skull.last) > MOVED_SQ) {
-                skull.movedAt = clock;
-            }
-            skull.last = now;
-        }
-    }
-
-    public static void onEntityLoad(Entity entity, ClientLevel level) {
-        Minecraft client = Minecraft.getInstance();
-        if (!(entity instanceof LivingEntity) || entity instanceof ArmorStand || entity == client.player
-                || !active(client)) {
-            return;
-        }
-        if (entity instanceof Player player && player.getUUID().version() == 4) {
-            return;
-        }
-        Vec3 at = entity.position();
-        for (Skull skull : skulls.values()) {
-            if (skull.used || skull.movedAt < 0 || clock - skull.movedAt < FLIGHT_TICKS) {
-                continue;
-            }
+            Vec3 at = stand.position();
             double dx = at.x - skull.last.x;
+            double dy = at.y - skull.last.y;
             double dz = at.z - skull.last.z;
-            if ((dx * dx) + (dz * dz) <= SPAWN_FLAT_SQ && Math.abs(at.y - skull.last.y) <= SPAWN_HIGH) {
-                skull.used = true;
-                int delay = FIRST_TICK + ThreadLocalRandom.current().nextInt((LAST_TICK - FIRST_TICK) + 1);
-                spawns.add(new Spawn(entity, clock, delay));
-                return;
+            if ((dx * dx) + (dy * dy) + (dz * dz) > MOVED_SQ) {
+                if (skull.startTick < 0L) {
+                    skull.startTick = now;
+                    skull.start = skull.last;
+                    BloodLog.line(String.format(Locale.ROOT, "skull %d started flying%s, timer hits 0 in %d ticks",
+                            stand.getId(), skull.first ? " (first wave)" : "", skull.due() - now));
+                }
+                skull.sx += dx;
+                skull.sy += dy;
+                skull.sz += dz;
+                skull.last = at;
             }
+        }
+        skulls.entrySet().removeIf(entry -> {
+            Skull skull = entry.getValue();
+            boolean gone = level.getEntity(entry.getKey()) == null;
+            if (!skull.fired && skull.startTick >= 0L && (gone || now >= skull.due() - PRE_FIRE_TICKS)) {
+                fire(client, player, level, entry.getKey(), skull, gone);
+            }
+            return gone;
+        });
+    }
+
+    private static void fire(Minecraft client, LocalPlayer player, ClientLevel level, int id, Skull skull, boolean gone) {
+        if (clickedThisTick) {
+            return;
+        }
+        skull.fired = true;
+        Vec3 end = skull.end();
+        if (end == null || Mc.screen() != null) {
+            return;
+        }
+        AABB box = new AABB(end.x - BOX_HALF, end.y + BOX_BOTTOM, end.z - BOX_HALF,
+                end.x + BOX_HALF, end.y + BOX_TOP, end.z + BOX_HALF).inflate(BOX_SLACK);
+        double away = Math.sqrt(box.getCenter().distanceToSqr(player.getEyePosition()));
+        if (!lookingAt(player, level, box)) {
+            BloodLog.line(String.format(Locale.ROOT, "skull %d about to spawn%s, not aimed at its spawn box %s (%.1f away)",
+                    id, gone ? " (skull gone)" : "", BloodLog.pos(end), away));
+            return;
+        }
+        if (!heldAllowed(player)) {
+            BloodLog.line("skull " + id + " about to spawn, not clicking, "
+                    + player.getMainHandItem().getHoverName().getString() + " isn't whitelisted");
+            return;
+        }
+        press(client);
+        timerClickAt = clock;
+        BloodLog.line(String.format(Locale.ROOT, "pre-fired skull %d's spawn box 1 tick before timer 0%s, %.1f away",
+                id, gone ? " (skull gone)" : "", away));
+    }
+
+    private static boolean bloodMob(Entity entity) {
+        if ("giant".equals(entity.getType().toShortString())) {
+            return true;
+        }
+        return entity instanceof Player other && other.getUUID().version() != 4
+                && NAMES.contains(IgnUtil.stripCodes(entity.getName().getString()).trim());
+    }
+
+    private static void trackMobs(LocalPlayer player, ClientLevel level, Entity watcher) {
+        mobs.keySet().removeIf(id -> {
+            Entity entity = level.getEntity(id);
+            if (entity == null || !entity.isAlive()) {
+                Mob mob = mobs.get(id);
+                BloodLog.line("mob " + id + " gone after " + (clock - mob.seen) + " ticks, clicked " + mob.clicks + "x");
+                return true;
+            }
+            return false;
+        });
+        if (watcher == null && skulls.isEmpty()) {
+            return;
+        }
+        for (Entity entity : level.entitiesForRendering()) {
+            if (!(entity instanceof LivingEntity) || entity == player || !entity.isAlive()
+                    || mobs.containsKey(entity.getId()) || !bloodMob(entity) || !nearBlood(entity, watcher)) {
+                continue;
+            }
+            mobs.put(entity.getId(), new Mob(clock));
+            BloodLog.line(String.format(Locale.ROOT, "new blood mob %d '%s' at %s, %s, %.2f above the floor, %.1f from you",
+                    entity.getId(), entity.getName().getString().trim(), BloodLog.pos(entity.position()),
+                    inAir(level, entity) ? "in the air" : "on the floor", entity.getY() - floor(level, entity),
+                    Math.sqrt(entity.distanceToSqr(player.getEyePosition()))));
         }
     }
 
-    private static void clickSpawns(Minecraft client, LocalPlayer player, ClientLevel level) {
-        boolean clicked = false;
-        Iterator<Spawn> it = spawns.iterator();
-        while (it.hasNext()) {
-            Spawn spawn = it.next();
-            Entity mob = spawn.mob;
-            int age = clock - spawn.at;
-            if (mob.isRemoved() || !mob.isAlive() || age > LAST_TICK) {
-                it.remove();
-                continue;
-            }
-            if (clicked || age < FIRST_TICK || Mc.screen() != null || !inAir(level, mob) || !heldAllowed(player)) {
-                continue;
-            }
-            AABB box = mob.getBoundingBox().inflate(mob.getPickRadius());
-            if (!lookingAt(player, level, box)) {
-                continue;
-            }
-            if (age >= spawn.delay || age >= LAST_TICK || leavingNextTick(player, level, mob, box)) {
-                KeyMappingAccessor attack = (KeyMappingAccessor) client.options.keyAttack;
-                attack.qzaSetClickCount(attack.qzaClickCount() + 1);
-                clicked = true;
-                it.remove();
+    private static boolean nearBlood(Entity entity, Entity watcher) {
+        if (watcher != null && entity.distanceToSqr(watcher) <= MOB_RANGE_SQ) {
+            return true;
+        }
+        for (Skull skull : skulls.values()) {
+            if (entity.position().distanceToSqr(skull.last) <= SKULL_NEAR_SQ) {
+                return true;
             }
         }
+        return false;
+    }
+
+    private static void clickMobs(Minecraft client, LocalPlayer player, ClientLevel level) {
+        if (Mc.screen() != null || mobs.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<Integer, Mob> entry : mobs.entrySet()) {
+            Entity entity = level.getEntity(entry.getKey());
+            Mob mob = entry.getValue();
+            if (entity == null) {
+                continue;
+            }
+            boolean air = inAir(level, entity);
+            if (air != mob.air) {
+                mob.air = air;
+                BloodLog.line("mob " + entity.getId() + (air ? " is in the air" : " is on the floor") + " at "
+                        + BloodLog.pos(entity.position()));
+            }
+            if (!air) {
+                continue;
+            }
+            AABB box = entity.getBoundingBox().inflate(entity.getPickRadius());
+            boolean looking = lookingAt(player, level, box);
+            if (looking != mob.aimed) {
+                mob.aimed = looking;
+                BloodLog.line(String.format(Locale.ROOT, "mob %d %s, %d ticks old, %.1f blocks away", entity.getId(),
+                        looking ? "aimed at" : "not aimed at any more", clock - mob.seen,
+                        Math.sqrt(entity.distanceToSqr(player.getEyePosition()))));
+            }
+            if (!looking || clickedThisTick) {
+                continue;
+            }
+            boolean leaving = leavingNextTick(player, level, entity, box);
+            if (clock < mob.nextAt && !leaving) {
+                continue;
+            }
+            if (mob.clicks == 0 && clock - timerClickAt <= TIMER_SHIELD) {
+                mob.nextAt = timerClickAt + AGAIN_MIN;
+                continue;
+            }
+            if (!heldAllowed(player)) {
+                if (mob.clicks == 0) {
+                    BloodLog.line("not clicking mob " + entity.getId() + ", "
+                            + player.getMainHandItem().getHoverName().getString() + " isn't whitelisted");
+                }
+                mob.nextAt = clock + AGAIN_MAX;
+                continue;
+            }
+            press(client);
+            mob.clicks++;
+            mob.nextAt = clock + AGAIN_MIN + ThreadLocalRandom.current().nextInt((AGAIN_MAX - AGAIN_MIN) + 1);
+            HitResult target = client.hitResult;
+            boolean onMob = target instanceof EntityHitResult hit && hit.getEntity() == entity;
+            BloodLog.line(String.format(Locale.ROOT, "clicked mob %d, %d ticks old%s, %.1f blocks away, crosshair %s "
+                            + "(reach %.1f)", entity.getId(), clock - mob.seen,
+                    leaving ? " (about to leave the crosshair)" : "",
+                    Math.sqrt(entity.distanceToSqr(player.getEyePosition())),
+                    onMob ? "on it" : "past reach (" + (target == null ? "none" : target.getType()) + ")",
+                    player.entityInteractionRange()));
+        }
+    }
+
+    private static void press(Minecraft client) {
+        InputConstants.Key key = ((KeyMappingAccessor) client.options.keyAttack).qzaKey();
+        KeyMapping.set(key, true);
+        KeyMapping.click(key);
+        pressed = key;
+        clickedThisTick = true;
+    }
+
+    private static void release(Minecraft client) {
+        if (pressed == null) {
+            return;
+        }
+        boolean held = pressed.getType() == InputConstants.Type.MOUSE
+                && pressed.getValue() == InputConstants.MOUSE_BUTTON_LEFT && client.mouseHandler.isLeftPressed();
+        if (!held) {
+            KeyMapping.set(pressed, false);
+        }
+        pressed = null;
     }
 
     private static boolean inAir(ClientLevel level, Entity mob) {

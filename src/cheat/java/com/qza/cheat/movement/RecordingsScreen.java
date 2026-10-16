@@ -7,13 +7,16 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RecordingsScreen extends CopierScreen {
     private static final int HEADER_H = 52;
     private static final int COLUMNS_H = 16;
     private static final int ROW_H = 22;
     private static final int GAP = 6;
+    private static final int SPEED_W = 44;
     private static final int LENGTH_W = 70;
     private static final int BLOCK_W = 110;
     private static final int EDIT_W = 36;
@@ -22,6 +25,7 @@ public class RecordingsScreen extends CopierScreen {
     private static final long CONFIRM_MS = 3000L;
 
     private final Screen parent;
+    private final Map<Recording, Integer> speeds = new HashMap<>();
     private double scroll;
     private Recording confirming;
     private long confirmUntil;
@@ -48,8 +52,9 @@ public class RecordingsScreen extends CopierScreen {
         listX = panelX + 12;
         listY = panelY + HEADER_H;
         listH = Math.max(ROW_H, (panelY + panelH - 10) - listY);
-        int fixed = LENGTH_W + BLOCK_W + EDIT_W + PLAY_W + DELETE_W + (GAP * 5);
+        int fixed = SPEED_W + LENGTH_W + BLOCK_W + EDIT_W + PLAY_W + DELETE_W + (GAP * 6);
         nameW = Math.max(60, (panelW - 24) - fixed);
+        speeds.clear();
         clampScroll();
     }
 
@@ -57,8 +62,16 @@ public class RecordingsScreen extends CopierScreen {
         return Recordings.all();
     }
 
-    private int lengthX() {
+    private int speedX() {
         return listX + nameW + GAP;
+    }
+
+    private int lengthX() {
+        return speedX() + SPEED_W + GAP;
+    }
+
+    private int speed(Recording recording) {
+        return speeds.computeIfAbsent(recording, Recording::shownSpeed);
     }
 
     private int blockX() {
@@ -116,6 +129,7 @@ public class RecordingsScreen extends CopierScreen {
         graphics.fill(panelX + 8, panelY + HEADER_H - 6, panelX + panelW - 8, panelY + HEADER_H - 5, DIVIDER);
 
         graphics.text(this.font, "NAME", listX, listY + 2, TEXT_FAINT);
+        graphics.text(this.font, "SPEED", speedX(), listY + 2, TEXT_FAINT);
         graphics.text(this.font, "PLAYS FOR", lengthX(), listY + 2, TEXT_FAINT);
         graphics.text(this.font, "BLOCK", blockX(), listY + 2, TEXT_FAINT);
 
@@ -135,6 +149,9 @@ public class RecordingsScreen extends CopierScreen {
             Recording recording = rows.get(i);
             boolean live = MovementCopier.current() == recording;
             graphics.text(this.font, trim(recording.name, nameW - 4), listX, y + 4, live ? 0xFF55FF55 : TEXT);
+            int speed = speed(recording);
+            graphics.text(this.font, speed > 0 ? String.valueOf(speed) : "?", speedX(), y + 4,
+                    speed > 0 ? TEXT_DIM : TEXT_FAINT);
             graphics.text(this.font, seconds(recording.playSeconds()), lengthX(), y + 4, TEXT_DIM);
             graphics.text(this.font, recording.placed() ? recording.blockText() : "Not placed", blockX(), y + 4,
                     recording.placed() ? TEXT_DIM : TEXT_FAINT);

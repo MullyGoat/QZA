@@ -128,9 +128,10 @@ public class CheatAddon implements QZAAddon {
                 }));
 
         settings.add(new ToggleSetting(CATEGORY, "BloodCamp Triggerbot", "BloodCamp Triggerbot",
-                Component.literal("Left clicks 1-3 ticks after a blood mob spawns, but only while it's still in "
-                        + "the air and you're looking at it. Clicks sooner if the mob would fall out of your "
-                        + "crosshair or hit the floor first, and never once it's on the floor")
+                Component.literal("Pre-fires a left click 1 tick (0.05s) before Odin's and NoammAddons' blood "
+                        + "camp timer hits 0 if you're aiming at the spawn box, so the mob dies as it spawns. Clicks "
+                        + "again on the tick the blood mob appears if you're on it while it's in the air. Never "
+                        + "clicks a mob on the floor, and only clicks the Watcher's mobs. It's a real left click")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.bloodClickEnabled,
                 v -> {
@@ -176,6 +177,19 @@ public class CheatAddon implements QZAAddon {
                 "Open",
                 () -> Mc.setScreen(new BloodClickScreen(new QZAScreen())))
                 .visibleWhen(() -> cfg.bloodClickEnabled && cfg.bloodClickWhitelist));
+
+        settings.add(new ToggleSetting(CATEGORY, "BloodCamp Triggerbot", "Debug Log",
+                Component.literal("Writes what it sees in blood (the Watcher, skulls, each mob, where you aim and "
+                                + "every click) to ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("config/qza/debug").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(", so a run where it didn't click can be tracked down")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.bloodClickDebug,
+                v -> {
+                    cfg.bloodClickDebug = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodClickEnabled));
 
         addAutoClicker(settings, cfg);
         addMovementCopier(settings, cfg);

@@ -12,7 +12,6 @@ import com.qza.compat.Mc;
 import com.qza.dungeon.StarredMobs;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -32,7 +31,6 @@ public class QZACheat implements ClientModInitializer {
             AutoClicker.onStartTick(client);
             BloodClick.onStartTick(client);
         });
-        ClientEntityEvents.ENTITY_LOAD.register(BloodClick::onEntityLoad);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             DeathBow.tick();
             MelodyAim.tick(Mc.screen());
@@ -46,6 +44,7 @@ public class QZACheat implements ClientModInitializer {
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (!overlay) {
                 DungeonBoss.onChatMessage(message.getString());
+                BloodClick.onChat(message.getString());
             }
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {

@@ -42,6 +42,7 @@ public final class MovementCopier {
 
     public static final String WAIT_LAG = "waiting for the server";
     public static final String WAIT_TELEPORT = "waiting for the teleport";
+    public static final String WAIT_MENU = "waiting for the menu to close";
 
     public static final int MAX_FRAMES = 20 * 60 * 10;
 
@@ -58,6 +59,8 @@ public final class MovementCopier {
     private static final double AIM_RANGE = 64.0;
     private static final double AIM_DRIFT = 0.01;
     private static final float MAX_AIM_FIX = 30.0f;
+    private static final int AIM_AHEAD = 6;
+    private static final float AIM_EASE = 0.35f;
     private static final double MAX_DRIFT = 4.0;
     private static final double NEAR_BELOW = 0.3;
     private static final double SAME_START = 2.0;
@@ -99,6 +102,8 @@ public final class MovementCopier {
     private static int heldDelay;
     private static float lookYaw;
     private static float lookPitch;
+    private static float aimYaw;
+    private static float aimPitch;
     private static int aimFixes;
     private static double offX;
     private static double offY;
@@ -118,6 +123,8 @@ public final class MovementCopier {
     private static long liningSince;
     private static float yawShift;
     private static boolean walkStart;
+    private static boolean menuPaused;
+    private static long menuSince;
     private static RingCenter center;
 
     private static final Set<Recording> insideRings = new HashSet<>();
@@ -244,7 +251,8 @@ public final class MovementCopier {
         }
         boolean recordKey = enabled() && hasKey()
                 && InputConstants.getKey(event).getName().equals(CheatConfigManager.get().movementCopierKey);
-        if (!recordKey && client.options.keyTogglePerspective.matches(event)) {
+        if (!recordKey && (client.options.keyTogglePerspective.matches(event)
+                || client.options.keyInventory.matches(event))) {
             return false;
         }
 
@@ -638,12 +646,15 @@ public final class MovementCopier {
         frozen = false;
         waiting = null;
         aimFixes = 0;
+        aimYaw = 0.0f;
+        aimPitch = 0.0f;
         stopText = null;
         offX = 0.0;
         offY = 0.0;
         offZ = 0.0;
         walkStart = walkedIn;
-        BlockPos ring = walkedIn && DungeonBoss.inBoss() ? target.blockPos() : null;
+        menuPaused = false;
+        BlockPos ring = walkedIn ? target.blockPos() : null;
         state = State.PLAYING;
 
         MoveFrame first = target.frames.get(order[0]);
@@ -740,8 +751,11 @@ public final class MovementCopier {
             return;
         }
         if (Mc.screen() != null) {
-            stopPlayback("Stopped " + playing.name + " because a menu opened.");
+            pauseForMenu(client);
             return;
+        }
+        if (menuPaused) {
+            resumeAfterMenu(player);
         }
         if (lining && !lineUp(client, player)) {
             return;
@@ -781,6 +795,41 @@ public final class MovementCopier {
             freezeServer(client, lagTestSeconds);
             lagTestSeconds = 0;
         }
+    }
+
+    private static void pauseForMenu(Minecraft client) {
+        if (!menuPaused) {
+            menuPaused = true;
+            menuSince = System.currentTimeMillis();
+            MovementLog.line("pause at tick " + played + ", a menu opened");
+        }
+        if (frozen) {
+            frozen = false;
+            ((MinecraftAccessor) client).qzaSetRightClickDelay(heldDelay);
+        }
+        waiting = WAIT_MENU;
+        holdStill(client, false);
+    }
+
+    private static void resumeAfterMenu(LocalPlayer player) {
+        menuPaused = false;
+        waiting = null;
+        long open = System.currentTimeMillis() - menuSince;
+        if (lining) {
+            if (center == null) {
+                planStartTurn(player);
+            }
+            liningSince = System.currentTimeMillis();
+            MovementLog.line("menu closed after " + open + "ms, turning to the start again");
+            return;
+        }
+        int skipped = 0;
+        while (step < schedule.length && playing.frames.get(schedule[step]).screen) {
+            step++;
+            skipped++;
+        }
+        MovementLog.line("resume at tick " + played + " after a menu was open for " + open + "ms"
+                + (skipped > 0 ? ", skipping " + skipped + " ticks the recording spent in a menu" : ""));
     }
 
     private static double drift(LocalPlayer player, MoveFrame frame) {
@@ -861,19 +910,34 @@ public final class MovementCopier {
         float yaw = frame.yaw + yawShift;
         float pitch = frame.pitch;
         boolean fixed = false;
+        float wantYaw = 0.0f;
+        float wantPitch = 0.0f;
+        boolean exact = false;
         if (drift > AIM_DRIFT) {
             float[] aim = frame.aim;
-            if (aim == null && step + 1 < schedule.length) {
-                aim = playing.frames.get(schedule[step + 1]).aim;
+            exact = aim != null;
+            for (int ahead = 1; aim == null && ahead <= AIM_AHEAD && step + ahead < schedule.length; ahead++) {
+                aim = playing.frames.get(schedule[step + ahead]).aim;
             }
             float[] fix = aim == null ? null : aimAt(player, aim, yaw, pitch);
             if (fix != null) {
-                yaw = fix[0];
-                pitch = fix[1];
+                wantYaw = fix[0] - yaw;
+                wantPitch = fix[1] - pitch;
                 fixed = true;
                 aimFixes++;
+            } else {
+                exact = false;
             }
         }
+        if (exact) {
+            aimYaw = wantYaw;
+            aimPitch = wantPitch;
+        } else {
+            aimYaw += (wantYaw - aimYaw) * AIM_EASE;
+            aimPitch += (wantPitch - aimPitch) * AIM_EASE;
+        }
+        yaw += aimYaw;
+        pitch = Mth.clamp(pitch + aimPitch, -90.0f, 90.0f);
         look(player, yaw, pitch);
         lookYaw = yaw;
         lookPitch = pitch;
@@ -971,7 +1035,8 @@ public final class MovementCopier {
         }
         MoveFrame to = playing.frames.get(schedule[step]);
         float t = Mth.clamp(client.getDeltaTracker().getGameTimeDeltaPartialTick(true), 0.0f, 1.0f);
-        look(player, Mth.lerp(t, lookYaw, to.yaw + yawShift), Mth.lerp(t, lookPitch, to.pitch));
+        look(player, Mth.lerp(t, lookYaw, to.yaw + yawShift + aimYaw),
+                Mth.lerp(t, lookPitch, Mth.clamp(to.pitch + aimPitch, -90.0f, 90.0f)));
     }
 
     static double mouseSens(Minecraft client) {
@@ -1014,6 +1079,7 @@ public final class MovementCopier {
         frozen = false;
         waiting = null;
         lining = false;
+        menuPaused = false;
         center = null;
         turn = null;
         releaseKeys(client);

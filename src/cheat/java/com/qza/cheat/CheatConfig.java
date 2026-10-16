@@ -24,6 +24,8 @@ public class CheatConfig {
 
     public boolean bloodClickWhitelist = false;
 
+    public boolean bloodClickDebug = false;
+
     public Map<String, String> bloodClickItems = new LinkedHashMap<>();
 
     public boolean starredMobEsp = false;
