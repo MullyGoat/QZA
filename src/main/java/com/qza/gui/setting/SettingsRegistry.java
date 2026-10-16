@@ -35,6 +35,7 @@ import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
 import com.qza.timer.ClockDisplay;
 import com.qza.tweaks.CommandShortcuts;
+import com.qza.tweaks.FullBright;
 import com.qza.tweaks.ItemStars;
 import com.qza.tweaks.PlayerSize;
 import com.qza.tweaks.TooltipScale;
@@ -1314,6 +1315,41 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.noLoadingScreen));
+
+        settings.add(new ToggleSetting(misc, "Full Bright", "Full Bright",
+                Component.literal("Lights up everything around you, even caves and dark rooms, without touching "
+                        + "your brightness setting").withStyle(ChatFormatting.GRAY),
+                () -> cfg.fullBright,
+                v -> {
+                    cfg.fullBright = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new DropdownSetting(misc, "Full Bright", "Mode",
+                Component.literal("Ambient Light lights every block fully. Brightness turns your brightness far "
+                        + "past the max, which looks about the same. Night Vision looks like the Night Vision effect, "
+                        + "a little dimmer, without giving it to you").withStyle(ChatFormatting.GRAY),
+                () -> FullBright.MODES,
+                () -> cfg.fullBrightMode,
+                v -> {
+                    cfg.fullBrightMode = v;
+                    ConfigManager.save();
+                },
+                FullBright::modeLabel,
+                null,
+                "Ambient Light",
+                100)
+                .visibleWhen(() -> cfg.fullBright));
+
+        settings.add(new ToggleSetting(misc, "Full Bright", "Hide Night Vision",
+                Component.literal("Ignores a real Night Vision effect on you while Full Bright is on, so its "
+                        + "brighter fog and the flicker when it runs out go away").withStyle(ChatFormatting.GRAY),
+                () -> cfg.fullBrightHideNightVision,
+                v -> {
+                    cfg.fullBrightHideNightVision = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.fullBright));
 
         settings.add(new ToggleSetting(misc, "Hide Crafting", "Hide Crafting",
                 Component.literal("Removes the crafting grid, its arrow, the output slot and the Crafting text "

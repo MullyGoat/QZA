@@ -11,10 +11,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(AbstractContainerScreen.class)
 public class MusicControlsMixin {
 
-    @Inject(method = "extractRenderState", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/screens/inventory/AbstractContainerScreen;extractCarriedItem(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V"))
-    private void qzaMusicControls(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta,
-                                  CallbackInfo ci) {
+    @Inject(method = "extractCarriedItem", at = @At("HEAD"))
+    private void qzaMusicControls(GuiGraphicsExtractor graphics, int mouseX, int mouseY, CallbackInfo ci) {
         MusicOverlay.renderScreen((AbstractContainerScreen<?>) (Object) this, graphics, mouseX, mouseY);
     }
 }

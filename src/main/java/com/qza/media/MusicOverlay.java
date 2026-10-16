@@ -33,6 +33,7 @@ public final class MusicOverlay {
     private static final long POLL_MS = 750L;
     private static final long FAST_POLL_MS = 250L;
     private static final int FAST_POLLS = 4;
+    private static final int NO_LENGTH_FAST_POLLS = 20;
     private static final long IDLE_MS = 1000L;
     private static final long ERROR_MS = 5000L;
     private static final int[] THUMBNAIL_POLLS = {0, 2, 5};
@@ -230,6 +231,13 @@ public final class MusicOverlay {
         boolean playing = track.status() == WindowsMedia.PLAYING;
         long length = Math.max(0L, (track.endTicks() - track.startTicks()) / TICKS_PER_MS);
         long position = Math.max(0L, (track.positionTicks() - track.startTicks()) / TICKS_PER_MS);
+        State before = state;
+        boolean held = length <= 0 && position <= 0 && before != null && before.key().equals(track.key())
+                && before.lengthMs() > 0;
+        if (held) {
+            length = before.lengthMs();
+            position = before.position(now);
+        }
         if (position != seenPosition) {
             seenPosition = position;
             seenAt = now;
@@ -237,7 +245,7 @@ public final class MusicOverlay {
         long anchor = seenAt;
         long updated = track.updatedTicks() > FILETIME_EPOCH
                 ? (track.updatedTicks() - FILETIME_EPOCH) / TICKS_PER_MS : -1L;
-        if (updated >= 0) {
+        if (updated >= 0 && !held) {
             long age = now - updated;
             if (age >= 0 && age <= MAX_UPDATE_AGE_MS && (length <= 0 || position + age <= length + POLL_MS)) {
                 anchor = updated;
@@ -268,6 +276,9 @@ public final class MusicOverlay {
         String subtitle = track.artist().isBlank() ? appName(track.app()) : track.artist();
         state = new State(track.app(), track.key(), track.title(), subtitle, playing, controls,
                 track.startTicks(), track.updatedTicks(), length, position, anchor, coverVersion, cover);
+        if (length <= 0 && keyPolls < NO_LENGTH_FAST_POLLS) {
+            fastPolls = Math.max(fastPolls, 1);
+        }
     }
 
     private static boolean wantThumbnail(WindowsMedia.Track track) {

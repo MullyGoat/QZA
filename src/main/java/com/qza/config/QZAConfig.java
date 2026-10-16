@@ -294,6 +294,12 @@ public class QZAConfig {
 
     public boolean noLoadingScreenServersOnly = true;
 
+    public boolean fullBright = false;
+
+    public String fullBrightMode = "ambient";
+
+    public boolean fullBrightHideNightVision = false;
+
     public boolean itemProtectionEnabled = false;
 
     public String itemProtectionKey = "";
