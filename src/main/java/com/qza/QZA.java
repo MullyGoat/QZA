@@ -29,6 +29,7 @@ import com.qza.notify.NotificationHud;
 import com.qza.party.PartyNotification;
 import com.qza.party.PartyFinderQueue;
 import com.qza.party.PartyState;
+import com.qza.price.PriceTooltip;
 import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterAutoKick;
 import com.qza.shitter.ShitterList;
@@ -44,6 +45,7 @@ import com.qza.waypoint.WaypointRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -74,6 +76,7 @@ public class QZA implements ClientModInitializer {
         Equipment.init();
         StoragePreview.init();
         MarketSearch.init();
+        ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> PriceTooltip.append(stack, lines));
         ItemProtection.init();
         MusicOverlay.init();
 

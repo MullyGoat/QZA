@@ -30,6 +30,7 @@ import com.qza.music.MusicLibrary;
 import com.qza.music.MusicManager;
 import com.qza.notify.NotificationGate;
 import com.qza.party.PartyNotification;
+import com.qza.price.PriceTooltip;
 import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
@@ -1117,6 +1118,59 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.tooltipScaleEnabled && TooltipScale.CUSTOM.equals(cfg.tooltipScaleMode)));
+
+        settings.add(new ToggleSetting(misc, "Item Prices", "Item Prices",
+                Component.literal("Adds Bazaar, Lowest BIN, average BIN and estimated value lines to SkyBlock "
+                        + "item tooltips").withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemPricesEnabled,
+                v -> {
+                    cfg.itemPricesEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "Item Prices", "Bazaar Price",
+                Component.literal("Instant buy and instant sell price for Bazaar items").withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemPriceBazaar,
+                v -> {
+                    cfg.itemPriceBazaar = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemPricesEnabled));
+
+        settings.add(new ToggleSetting(misc, "Item Prices", "Lowest BIN",
+                Component.literal("Cheapest Buy It Now auction for the item right now").withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemPriceLowestBin,
+                v -> {
+                    cfg.itemPriceLowestBin = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemPricesEnabled));
+
+        settings.add(new DropdownSetting(misc, "Item Prices", "Average BIN",
+                Component.literal("Average Lowest BIN over the last day, the last 3 days or both")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> PriceTooltip.AVERAGES,
+                () -> cfg.itemPriceAverage,
+                v -> {
+                    cfg.itemPriceAverage = v;
+                    ConfigManager.save();
+                },
+                PriceTooltip::averageLabel,
+                null,
+                "(none)",
+                100)
+                .visibleWhen(() -> cfg.itemPricesEnabled));
+
+        settings.add(new ToggleSetting(misc, "Item Prices", "Estimated Item Value",
+                Component.literal("What the item is worth with its enchants, stars, gems, reforge, recomb, books "
+                        + "and other upgrades added. Pets are valued by level, held item and skin.")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemPriceValue,
+                v -> {
+                    cfg.itemPriceValue = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemPricesEnabled));
 
         settings.add(new ToggleSetting(misc, "Command Keybinds", "Command Keybinds",
                 Component.literal("Keybinds that run a command or send a chat message when you press them")

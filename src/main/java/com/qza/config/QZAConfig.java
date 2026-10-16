@@ -256,6 +256,16 @@ public class QZAConfig {
 
     public double tooltipScale = 1.0;
 
+    public boolean itemPricesEnabled = false;
+
+    public boolean itemPriceBazaar = true;
+
+    public boolean itemPriceLowestBin = true;
+
+    public String itemPriceAverage = "three_day";
+
+    public boolean itemPriceValue = true;
+
     public boolean commandKeybindsEnabled = false;
 
     public boolean commandKeybindsInMenus = false;

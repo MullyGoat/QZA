@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -73,8 +74,14 @@ public final class ItemRepo {
 
     record Data(List<RepoItem> items, Map<String, RepoItem> byId,
                 Map<String, List<Recipe>> recipes, Map<String, List<Recipe>> usages,
-                Map<String, String> bazaarStocks, Set<String> starable) {
-        static final Data EMPTY = new Data(List.of(), Map.of(), Map.of(), Map.of(), Map.of(), Set.of());
+                Map<String, String> bazaarStocks, Set<String> starable, Constants constants) {
+        static final Data EMPTY = new Data(List.of(), Map.of(), Map.of(), Map.of(), Map.of(), Set.of(),
+                Constants.EMPTY);
+    }
+
+    public record Constants(Map<String, String> stockById, Map<String, String> reforgeStones,
+                            Map<String, String> shardsByName, Map<String, String> shardsById, JsonObject pets) {
+        static final Constants EMPTY = new Constants(Map.of(), Map.of(), Map.of(), Map.of(), new JsonObject());
     }
 
     private ItemRepo() {
@@ -94,6 +101,10 @@ public final class ItemRepo {
 
     public static RepoItem item(String id) {
         return id == null ? null : data.byId().get(id);
+    }
+
+    public static Constants constants() {
+        return data.constants();
     }
 
     public static List<Recipe> recipesFor(String id) {
@@ -239,6 +250,9 @@ public final class ItemRepo {
         JsonObject pets = new JsonObject();
         Map<String, String> bazaarStocks = new HashMap<>();
         Set<String> starable = new HashSet<>();
+        Map<String, String> reforgeStones = new HashMap<>();
+        Map<String, String> shardsByName = new HashMap<>();
+        Map<String, String> shardsById = new HashMap<>();
         try (ZipFile file = new ZipFile(zip.toFile())) {
             Enumeration<? extends ZipEntry> entries = file.entries();
             while (entries.hasMoreElements()) {
@@ -277,6 +291,19 @@ public final class ItemRepo {
                                     }
                                 }
                             }
+                        }
+                    } catch (Exception e) {
+                        QZA.LOGGER.debug("Skipping {}: {}", path, e.toString());
+                    }
+                    continue;
+                }
+                if (path.equals("constants/reforgestones.json") || path.equals("constants/attribute_shards.json")) {
+                    try (Reader reader = new InputStreamReader(file.getInputStream(entry), StandardCharsets.UTF_8)) {
+                        JsonElement json = JsonParser.parseReader(reader);
+                        if (path.endsWith("reforgestones.json")) {
+                            readReforgeStones(json, reforgeStones);
+                        } else {
+                            readShards(json, shardsByName, shardsById);
                         }
                     } catch (Exception e) {
                         QZA.LOGGER.debug("Skipping {}: {}", path, e.toString());
@@ -332,8 +359,51 @@ public final class ItemRepo {
             }
         }
 
+        Map<String, String> stockById = new HashMap<>();
+        bazaarStocks.forEach((stock, id) -> stockById.putIfAbsent(id, stock));
+        Constants constants = new Constants(Map.copyOf(stockById), Map.copyOf(reforgeStones),
+                Map.copyOf(shardsByName), Map.copyOf(shardsById), pets);
         return new Data(Collections.unmodifiableList(items), Collections.unmodifiableMap(byId),
-                freeze(recipes), freeze(usages), Map.copyOf(bazaarStocks), Set.copyOf(starable));
+                freeze(recipes), freeze(usages), Map.copyOf(bazaarStocks), Set.copyOf(starable), constants);
+    }
+
+    private static void readReforgeStones(JsonElement json, Map<String, String> out) {
+        if (!json.isJsonObject()) {
+            return;
+        }
+        for (Map.Entry<String, JsonElement> stone : json.getAsJsonObject().entrySet()) {
+            if (stone.getValue().isJsonObject()) {
+                String reforge = string(stone.getValue().getAsJsonObject(), "reforgeName", "");
+                if (!reforge.isEmpty()) {
+                    out.putIfAbsent(reforge.toLowerCase(Locale.ROOT).replace(' ', '_'), stone.getKey());
+                }
+            }
+        }
+    }
+
+    private static void readShards(JsonElement json, Map<String, String> byName, Map<String, String> byId) {
+        if (!json.isJsonObject() || !json.getAsJsonObject().has("attributes")
+                || !json.getAsJsonObject().get("attributes").isJsonArray()) {
+            return;
+        }
+        for (JsonElement shard : json.getAsJsonObject().getAsJsonArray("attributes")) {
+            if (!shard.isJsonObject()) {
+                continue;
+            }
+            JsonObject entry = shard.getAsJsonObject();
+            String bazaar = string(entry, "bazaarName", "");
+            if (bazaar.isEmpty()) {
+                continue;
+            }
+            String name = string(entry, "displayName", "");
+            String id = string(entry, "internalName", "");
+            if (!name.isEmpty()) {
+                byName.putIfAbsent(name.toLowerCase(Locale.ROOT), bazaar);
+            }
+            if (!id.isEmpty()) {
+                byId.putIfAbsent(id, bazaar);
+            }
+        }
     }
 
     private static Map<String, List<Recipe>> freeze(Map<String, List<Recipe>> map) {
