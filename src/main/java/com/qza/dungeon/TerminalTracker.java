@@ -87,6 +87,7 @@ public final class TerminalTracker {
 
     static void onProgress(String name, String type, int count, int total) {
         boolean fresh = lastTotal > 0 && (total != lastTotal || count < lastCount);
+        boolean repeated = lastTotal > 0 && total == lastTotal && count == lastCount;
         lastCount = count;
         lastTotal = total;
         if (fresh) {
@@ -101,13 +102,22 @@ public final class TerminalTracker {
             totals[section] = total;
         }
 
+        if (repeated) {
+            if ("device".equals(type)) {
+                int other = otherDevice(name);
+                if (other >= 0) {
+                    devices[other] = true;
+                }
+            }
+            return;
+        }
         switch (type) {
             case "terminal" -> terminals[section]++;
             case "lever" -> levers[section]++;
-            default -> devices[deviceSection(name)] = true;
+            default -> devices[section] = true;
         }
 
-        if (done(section) >= totals[section]) {
+        if (count >= total) {
             sectionDone(section);
             if (section < LAST) {
                 section++;
@@ -137,14 +147,14 @@ public final class TerminalTracker {
         return "S" + (s + 1) + " Done!";
     }
 
-    private static int deviceSection(String name) {
+    private static int otherDevice(String name) {
         Vec3 pos = positionOf(name);
         if (pos != null) {
             int nearest = -1;
             double best = DEVICE_RANGE_SQ;
             for (int i = 0; i < SECTIONS; i++) {
                 double distance = pos.distanceToSqr(DEVICES[i]);
-                if (!devices[i] && distance < best) {
+                if (i != section && !devices[i] && distance < best) {
                     nearest = i;
                     best = distance;
                 }
@@ -153,25 +163,15 @@ public final class TerminalTracker {
                 return nearest;
             }
         }
-        if (section == 0) {
-            String dungeonClass = LeapNotification.classOf(name);
-            if ("Berserk".equals(dungeonClass) && !devices[I4]) {
-                return I4;
-            }
-            if (!devices[0]) {
-                return 0;
-            }
-            return devices[I4] ? 0 : I4;
-        }
-        if (!devices[section]) {
-            return section;
+        if (section < I4 && !devices[I4]) {
+            return I4;
         }
         for (int i = section + 1; i < SECTIONS; i++) {
             if (!devices[i]) {
                 return i;
             }
         }
-        return section;
+        return -1;
     }
 
     private static Vec3 positionOf(String name) {
@@ -193,10 +193,6 @@ public final class TerminalTracker {
         for (AbstractClientPlayer player : client.level.players()) {
             lastSeen.put(player.getGameProfile().name().toLowerCase(Locale.ROOT), player.position());
         }
-    }
-
-    private static int done(int s) {
-        return terminals[s] + levers[s] + (devices[s] ? 1 : 0);
     }
 
     private static void start() {
