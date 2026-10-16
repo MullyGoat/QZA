@@ -45,8 +45,11 @@ public final class ChatHistory {
 
     private static final Map<String, Integer> revisions = new LinkedHashMap<>();
 
+    private static final char OFFLINE_UUID_VERSION = '3';
+
     private static String account;
     private static String accountName = "";
+    private static boolean offline;
 
     private static Account viewing;
     private static final Map<String, ChatConversation> viewed = new LinkedHashMap<>();
@@ -85,6 +88,7 @@ public final class ChatHistory {
     public static void load() {
         account = null;
         accountName = "";
+        offline = false;
         conversations.clear();
         revisions.clear();
         stopViewing();
@@ -106,10 +110,14 @@ public final class ChatHistory {
 
         account = id;
         accountName = user.getName() == null ? "" : user.getName();
+        offline = offline(id);
         conversations.clear();
         revisions.clear();
         stopViewing();
 
+        if (offline) {
+            return;
+        }
         if (!persists()) {
             delete(file(id));
             delete(legacyFile());
@@ -124,6 +132,10 @@ public final class ChatHistory {
 
     private static String id(UUID uuid) {
         return uuid.toString().replace("-", "").toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean offline(String id) {
+        return id.length() == 32 && id.charAt(12) == OFFLINE_UUID_VERSION;
     }
 
     private static void fill(Map<String, ChatConversation> into, List<ChatConversation> list,
@@ -190,7 +202,7 @@ public final class ChatHistory {
     }
 
     private static boolean write() {
-        if (!persists() || account == null) {
+        if (!persists() || account == null || offline) {
             return false;
         }
         Store store = new Store();
@@ -259,7 +271,7 @@ public final class ChatHistory {
             for (Path path : files) {
                 String name = path.getFileName().toString();
                 String id = name.substring(0, name.length() - ".json".length());
-                if (!id.matches("[0-9a-f]{32}") || id.equals(account)) {
+                if (!id.matches("[0-9a-f]{32}") || id.equals(account) || offline(id)) {
                     continue;
                 }
                 Store store = read(path);
