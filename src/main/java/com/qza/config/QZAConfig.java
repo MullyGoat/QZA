@@ -62,6 +62,10 @@ public class QZAConfig {
 
     public boolean terminalDoneParty = true;
 
+    public double terminalDoneSeconds = 2.0;
+
+    public boolean terminalGateAlert = true;
+
     public double terminalTrackerX = 0.9;
 
     public double terminalTrackerY = 0.82;
@@ -151,6 +155,16 @@ public class QZAConfig {
     public boolean starredMobsFels = false;
 
     public String starredMobsFelColour = "pink";
+
+    public boolean bloodTrackerEnabled = false;
+
+    public boolean bloodTrackerLine = true;
+
+    public boolean bloodTrackerTimer = true;
+
+    public boolean bloodTrackerWatcherTimer = true;
+
+    public boolean bloodTrackerKillAlert = true;
 
     public boolean partyInviteNotifyEnabled = false;
 
@@ -296,6 +310,28 @@ public class QZAConfig {
 
     public boolean musicOverlayCover = true;
 
+    public boolean musicOverlayHideBackground = false;
+
+    public boolean itemGlowEnabled = false;
+
+    public String itemGlowStyle = "aura";
+
+    public String itemGlowColour = "magenta";
+
+    public boolean itemGlowStatic = false;
+
+    public double itemGlowSpeed = 1.0;
+
+    public double itemGlowBrightness = 100.0;
+
+    public boolean itemGlowOffhand = false;
+
+    public boolean swordBlockEnabled = false;
+
+    public boolean swordBlockThirdPerson = true;
+
+    public boolean swordBlockOthers = true;
+
     public boolean hideShieldSlot = false;
 
     public boolean hideCrafting = false;
@@ -327,6 +363,34 @@ public class QZAConfig {
     public String itemStarColour = "magenta";
 
     public double itemStarScale = 100.0;
+
+    public boolean terminatorIndicatorEnabled = false;
+
+    public String terminatorIndicatorShow = "both";
+
+    public String terminatorDotCorner = "top_left";
+
+    public String terminatorSoulEaterDot = "red";
+
+    public String terminatorDuplexDot = "aqua";
+
+    public String terminatorSoulEaterName = "";
+
+    public String terminatorSoulEaterColour = "";
+
+    public String terminatorSoulEaterUuid = "";
+
+    public String terminatorDuplexName = "";
+
+    public String terminatorDuplexColour = "";
+
+    public String terminatorDuplexUuid = "";
+
+    public double terminatorHudX = 0.5;
+
+    public double terminatorHudY = 0.72;
+
+    public double terminatorHudScale = 1.0;
 
     @SerializedName(value = "commandShortcutsEnabled", alternate = "dungeonWarpShortcut")
     public boolean commandShortcutsEnabled = false;

@@ -128,9 +128,9 @@ public class CheatAddon implements QZAAddon {
                 }));
 
         settings.add(new ToggleSetting(CATEGORY, "BloodCamp Triggerbot", "BloodCamp Triggerbot",
-                Component.literal("Pre-fires a left click 1 tick (0.05s) before Odin's and NoammAddons' blood "
-                        + "camp timer hits 0 if you're aiming at the spawn box, so the mob dies as it spawns. Clicks "
-                        + "again on the tick the blood mob appears if you're on it while it's in the air. Never "
+                Component.literal("Left clicks a blood mob 1 tick after it spawns if you're aiming at it while "
+                        + "it's in the air, so it dies right away, and clicks again a few ticks later if it's "
+                        + "still alive. Never "
                         + "clicks a mob on the floor, and only clicks the Watcher's mobs. It's a real left click")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.bloodClickEnabled,

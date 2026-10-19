@@ -1,18 +1,15 @@
 package com.qza.dungeon;
 
-import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.util.ChatUtil;
 import com.qza.util.DungeonState;
 import com.qza.util.IgnUtil;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.phys.Vec3;
 
@@ -29,6 +26,8 @@ public final class TerminalTracker {
             "^\\[BOSS] Goldor: Who dares trespass into my domain\\?$"
                     + "|^\\[BOSS] Storm: I should have known that I stood no chance\\.$");
     private static final Pattern CORE = Pattern.compile("^The Core entrance is opening!$");
+    private static final Pattern GATE = Pattern.compile("^The gate has been destroyed!$");
+    public static final String GATE_TEXT = "Gate Destroyed";
     private static final Pattern PROGRESS = Pattern.compile(
             "^(\\w{1,16}) (?:activated|completed) a (terminal|device|lever)! \\((\\d+)/(\\d+)\\)(?:\\s.*)?$");
 
@@ -43,6 +42,9 @@ public final class TerminalTracker {
             new Vec3(0.5, 120.5, 77.5),
             new Vec3(63.5, 127.5, 35.5)};
     private static final double DEVICE_RANGE_SQ = 12.0 * 12.0;
+    public static final double MIN_ALERT_SECONDS = 0.5;
+    public static final double MAX_ALERT_SECONDS = 5.0;
+    private static final long ALERT_FADE_MS = 500L;
 
     private static boolean active;
     private static int section;
@@ -55,6 +57,49 @@ public final class TerminalTracker {
     private static int lastTotal;
     private static boolean movedByCount;
     private static final Map<String, Vec3> lastSeen = new HashMap<>();
+    private static final Alert DONE_ALERT = new Alert(0x55FF55, 4.0f, 48);
+    private static final Alert GATE_ALERT = new Alert(0xFF5555, 3.0f, 88);
+
+    private static final class Alert {
+        private final int colour;
+        private final float scale;
+        private final int bottomAboveCentre;
+        private String text;
+        private long until;
+        private long fade;
+
+        Alert(int colour, float scale, int bottomAboveCentre) {
+            this.colour = colour;
+            this.scale = scale;
+            this.bottomAboveCentre = bottomAboveCentre;
+        }
+
+        void show(String shown, double seconds) {
+            long shownFor = Math.round(Math.max(MIN_ALERT_SECONDS, Math.min(MAX_ALERT_SECONDS, seconds)) * 1000.0);
+            text = shown;
+            until = System.currentTimeMillis() + shownFor;
+            fade = Math.min(ALERT_FADE_MS, shownFor / 2);
+        }
+
+        String showing() {
+            return text != null && System.currentTimeMillis() < until ? text : null;
+        }
+
+        void render(GuiGraphicsExtractor graphics, Font font) {
+            String shown = showing();
+            if (shown == null) {
+                return;
+            }
+            long left = until - System.currentTimeMillis();
+            float alpha = left >= fade ? 1.0f : Math.max(0.0f, left / (float) fade);
+            int argb = (Math.max(4, Math.round(alpha * 255)) << 24) | colour;
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(graphics.guiWidth() / 2.0f, (graphics.guiHeight() / 2.0f) - bottomAboveCentre);
+            graphics.pose().scale(scale, scale);
+            graphics.text(font, shown, -font.width(shown) / 2, -font.lineHeight, argb);
+            graphics.pose().popMatrix();
+        }
+    }
 
     private TerminalTracker() {
     }
@@ -75,6 +120,13 @@ public final class TerminalTracker {
         }
         if (CORE.matcher(message).matches()) {
             reset();
+            return;
+        }
+        if (GATE.matcher(message).matches()) {
+            QZAConfig cfg = ConfigManager.get();
+            if (cfg.terminalTrackerEnabled && cfg.terminalGateAlert) {
+                GATE_ALERT.show(GATE_TEXT, cfg.terminalDoneSeconds);
+            }
             return;
         }
         Matcher progress = PROGRESS.matcher(message);
@@ -136,7 +188,7 @@ public final class TerminalTracker {
             return;
         }
         String text = doneText(s);
-        Mc.showTitle(Component.literal(text).withStyle(ChatFormatting.GREEN), 0, 30, 10);
+        DONE_ALERT.show(text, cfg.terminalDoneSeconds);
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0f));
         if (cfg.terminalDoneParty) {
             ChatUtil.sendCommand("pc " + text);
@@ -222,6 +274,19 @@ public final class TerminalTracker {
 
     public static int section() {
         return section;
+    }
+
+    public static String alertShowing() {
+        return DONE_ALERT.showing();
+    }
+
+    public static String gateShowing() {
+        return GATE_ALERT.showing();
+    }
+
+    public static void renderAlert(GuiGraphicsExtractor graphics, Font font) {
+        DONE_ALERT.render(graphics, font);
+        GATE_ALERT.render(graphics, font);
     }
 
     public static void renderHud(GuiGraphicsExtractor graphics, Font font) {

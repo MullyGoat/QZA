@@ -4,6 +4,9 @@
   "package": "com.qza.compat.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "GlowPipelinesAccessor",
+    "GlowRenderTypeInvoker",
+    "ItemGlowLayerMixin",
     "ProtectDropMixin"
   ],
   "injectors": {

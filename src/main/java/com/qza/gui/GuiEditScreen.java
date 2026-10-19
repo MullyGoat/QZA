@@ -14,6 +14,7 @@ import com.qza.dungeon.StormTimer;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
+import com.qza.inventory.TerminatorIndicator;
 import com.qza.media.MusicOverlay;
 import com.qza.notify.NotificationBox;
 import com.qza.party.PartyNotification;
@@ -68,6 +69,7 @@ public class GuiEditScreen extends Screen {
         CrystalTimer.resetPlacement();
         NecronLeap.resetPlacement();
         ClockDisplay.resetPlacement();
+        TerminatorIndicator.resetPlacement();
         ConfigManager.save();
     }
 
@@ -229,6 +231,18 @@ public class GuiEditScreen extends Screen {
                     cfg.clockY = y;
                 },
                 s -> cfg.clockScale = s));
+
+        targets.add(new Target(
+                true,
+                TerminatorIndicator.previewText(),
+                TerminatorIndicator.previewColour(),
+                () -> cfg.terminatorIndicatorEnabled && TerminatorIndicator.showsGui(),
+                () -> cfg.terminatorHudX, () -> cfg.terminatorHudY, () -> cfg.terminatorHudScale,
+                (x, y) -> {
+                    cfg.terminatorHudX = x;
+                    cfg.terminatorHudY = y;
+                },
+                s -> cfg.terminatorHudScale = s));
     }
 
     @Override

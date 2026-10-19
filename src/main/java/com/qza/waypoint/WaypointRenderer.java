@@ -6,14 +6,11 @@ import com.qza.render.WorldDraw;
 import com.qza.util.DungeonState;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,12 +18,9 @@ import java.util.List;
 public final class WaypointRenderer {
     private static final float FILL_ALPHA = 0.25f;
     private static final double GROW = 0.002;
-    private static final int LIGHT = 0xF000F0;
     private static final int BACKDROP = 0x60000000;
     private static final float TEXT_SCALE = 0.025f;
     private static final float LINE_WIDTH = 1.0f;
-
-    private static final PoseStack IDENTITY = new PoseStack();
 
     private WaypointRenderer() {
     }
@@ -109,41 +103,10 @@ public final class WaypointRenderer {
             return;
         }
 
-        Font font = Minecraft.getInstance().font;
-        if (font == null || cameraState.orientation == null) {
-            return;
-        }
-
         double x = (group.minX() + group.maxX()) / 2.0;
         double y = group.maxY() + 0.35;
         double z = (group.minZ() + group.maxZ()) / 2.0;
-
-        Matrix4f matrix = new Matrix4f()
-                .translate((float) (x - camera.x), (float) (y - camera.y),
-                        (float) (z - camera.z))
-                .rotate(cameraState.orientation)
-                .scale(TEXT_SCALE, -TEXT_SCALE, TEXT_SCALE);
-
-        Font.PreparedText prepared = font.prepareText(name,
-                -font.width(name) / 2.0f, 0.0f, group.argb(), false, BACKDROP);
-
-        prepared.visit(new Font.GlyphVisitor() {
-            @Override
-            public void acceptGlyph(TextRenderable.Styled glyph) {
-                submit(glyph);
-            }
-
-            @Override
-            public void acceptEffect(TextRenderable effect) {
-                submit(effect);
-            }
-
-            private void submit(TextRenderable renderable) {
-                collector.submitCustomGeometry(IDENTITY,
-                        renderable.renderType(Font.DisplayMode.NORMAL),
-                        (pose, consumer) -> renderable.render(matrix, consumer, LIGHT, false));
-            }
-        });
+        WorldDraw.text(collector, cameraState, new Vec3(x, y, z), name, group.argb(), TEXT_SCALE, BACKDROP);
     }
 
     private static AABB box(Waypoint waypoint, Vec3 camera) {

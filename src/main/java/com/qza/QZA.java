@@ -8,6 +8,7 @@ import com.qza.command.QZACommand;
 import com.qza.command.ShitterCommand;
 import com.qza.config.ConfigManager;
 import com.qza.discord.PartyFullAlert;
+import com.qza.dungeon.BloodCampTracker;
 import com.qza.dungeon.CrystalTimer;
 import com.qza.dungeon.DungeonScore;
 import com.qza.dungeon.LeapNotification;
@@ -71,6 +72,7 @@ public class QZA implements ClientModInitializer {
         WaypointList.load();
         WaypointRenderer.init();
         StarredMobs.init();
+        BloodCampTracker.init();
         WaypointEditor.init();
         ItemList.init();
         Equipment.init();
@@ -104,6 +106,7 @@ public class QZA implements ClientModInitializer {
             SplitTimers.onChatMessage(plain);
             DungeonScore.onChatMessage(plain);
             TerminalTracker.onChatMessage(plain);
+            BloodCampTracker.onChatMessage(plain);
             LeapNotification.onChatMessage(plain);
             PYTimer.onChatMessage(plain);
             StormTimer.onChatMessage(plain);
@@ -125,6 +128,7 @@ public class QZA implements ClientModInitializer {
             SplitTimers.tick();
             DungeonScore.tick(client);
             TerminalTracker.tick(client);
+            BloodCampTracker.tick(client);
             ChatCleaner.tick();
             ChannelHistory.tick();
 
@@ -138,6 +142,7 @@ public class QZA implements ClientModInitializer {
                 SplitTimers.reset();
                 DungeonScore.reset();
                 TerminalTracker.reset();
+                BloodCampTracker.reset();
                 LeapNotification.reset();
                 PYTimer.reset();
                 StormTimer.reset();
@@ -154,6 +159,7 @@ public class QZA implements ClientModInitializer {
             SplitTimers.reset();
             DungeonScore.reset();
             TerminalTracker.reset();
+            BloodCampTracker.reset();
             LeapNotification.reset();
             PYTimer.reset();
             StormTimer.reset();

@@ -2,13 +2,19 @@ package com.qza.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 public final class WorldDraw {
     private static final PoseStack IDENTITY = new PoseStack();
+    private static final int LIGHT = 0xF000F0;
 
     private WorldDraw() {
     }
@@ -48,6 +54,54 @@ public final class WorldDraw {
                              float nx, float ny, float nz, int argb, float width) {
         buffer.addVertex(pose, ax, ay, az).setColor(argb).setNormal(pose, nx, ny, nz).setLineWidth(width);
         buffer.addVertex(pose, bx, by, bz).setColor(argb).setNormal(pose, nx, ny, nz).setLineWidth(width);
+    }
+
+    public static void line(VertexConsumer buffer, PoseStack.Pose pose, Vec3 from, Vec3 to,
+                            int fromArgb, int toArgb, float width) {
+        float dx = (float) (to.x - from.x);
+        float dy = (float) (to.y - from.y);
+        float dz = (float) (to.z - from.z);
+        float length = (float) Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
+        if (length < 1.0E-6f) {
+            return;
+        }
+        float nx = dx / length;
+        float ny = dy / length;
+        float nz = dz / length;
+        buffer.addVertex(pose, (float) from.x, (float) from.y, (float) from.z).setColor(fromArgb)
+                .setNormal(pose, nx, ny, nz).setLineWidth(width);
+        buffer.addVertex(pose, (float) to.x, (float) to.y, (float) to.z).setColor(toArgb)
+                .setNormal(pose, nx, ny, nz).setLineWidth(width);
+    }
+
+    public static void text(SubmitNodeCollector collector, CameraRenderState camera, Vec3 at, String text,
+                            int argb, float scale, int backdrop) {
+        Font font = Minecraft.getInstance().font;
+        if (font == null || camera == null || camera.pos == null || camera.orientation == null
+                || text == null || text.isEmpty()) {
+            return;
+        }
+        Matrix4f matrix = new Matrix4f()
+                .translate((float) (at.x - camera.pos.x), (float) (at.y - camera.pos.y), (float) (at.z - camera.pos.z))
+                .rotate(camera.orientation)
+                .scale(scale, -scale, scale);
+        Font.PreparedText prepared = font.prepareText(text, -font.width(text) / 2.0f, 0.0f, argb, false, backdrop);
+        prepared.visit(new Font.GlyphVisitor() {
+            @Override
+            public void acceptGlyph(TextRenderable.Styled glyph) {
+                submit(glyph);
+            }
+
+            @Override
+            public void acceptEffect(TextRenderable effect) {
+                submit(effect);
+            }
+
+            private void submit(TextRenderable renderable) {
+                collector.submitCustomGeometry(IDENTITY, renderable.renderType(Font.DisplayMode.NORMAL),
+                        (pose, consumer) -> renderable.render(matrix, consumer, LIGHT, false));
+            }
+        });
     }
 
     public static void fill(VertexConsumer buffer, PoseStack.Pose pose, AABB box, int argb) {

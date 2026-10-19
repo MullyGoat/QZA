@@ -597,11 +597,13 @@ public final class MusicOverlay {
         graphics.pose().translate(x, y);
         graphics.pose().scale(scale, scale);
 
-        graphics.fill(0, 0, w, h, BACKGROUND);
-        graphics.fill(0, 0, w, 1, BORDER);
-        graphics.fill(0, h - 1, w, h, BORDER);
-        graphics.fill(0, 1, 1, h - 1, BORDER);
-        graphics.fill(w - 1, 1, w, h - 1, BORDER);
+        if (!ConfigManager.get().musicOverlayHideBackground) {
+            graphics.fill(0, 0, w, h, BACKGROUND);
+            graphics.fill(0, 0, w, 1, BORDER);
+            graphics.fill(0, h - 1, w, h, BORDER);
+            graphics.fill(0, 1, 1, h - 1, BORDER);
+            graphics.fill(w - 1, 1, w, h - 1, BORDER);
+        }
 
         if (layout.cover()) {
             int coverW = layout.coverW();

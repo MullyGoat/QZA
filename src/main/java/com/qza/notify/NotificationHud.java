@@ -11,6 +11,7 @@ import com.qza.dungeon.StormTimer;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
+import com.qza.inventory.TerminatorIndicator;
 import com.qza.media.MusicOverlay;
 import com.qza.party.PartyNotification;
 import com.qza.timer.ClockDisplay;
@@ -32,6 +33,7 @@ public final class NotificationHud implements HudElement {
         SplitTimers.renderHud(graphics, client.font);
         DungeonScore.renderHud(graphics, client.font);
         TerminalTracker.renderHud(graphics, client.font);
+        TerminalTracker.renderAlert(graphics, client.font);
         LeapNotification.renderHud(graphics, client.font);
         PYTimer.renderHud(graphics, client.font);
         StormTimer.renderHud(graphics, client.font);
@@ -39,5 +41,6 @@ public final class NotificationHud implements HudElement {
         NecronLeap.renderHud(graphics, client.font);
         ClockDisplay.renderHud(graphics, client.font);
         MusicOverlay.renderHud(graphics, client.font);
+        TerminatorIndicator.renderHud(graphics, client.font);
     }
 }

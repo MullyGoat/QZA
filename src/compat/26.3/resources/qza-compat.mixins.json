@@ -4,6 +4,7 @@
   "package": "com.qza.compat.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "ItemGlowLayerMixin",
     "ProtectDropMixin"
   ],
   "injectors": {

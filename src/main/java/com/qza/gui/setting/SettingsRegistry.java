@@ -14,6 +14,7 @@ import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
 import com.qza.dungeon.StormTimer;
+import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
 import com.qza.gui.CommandKeybindScreen;
 import com.qza.gui.CommandShortcutScreen;
@@ -22,6 +23,8 @@ import com.qza.gui.QZAChatScreen;
 import com.qza.gui.WaypointScreen;
 import com.qza.inventory.ItemProtection;
 import com.qza.inventory.StoragePreview;
+import com.qza.inventory.TerminatorIndicator;
+import com.qza.gui.TerminatorScreen;
 import com.qza.gui.setting.NumberSetting.Field;
 import com.qza.itemlist.ItemRepo;
 import com.qza.media.MusicOverlay;
@@ -31,6 +34,7 @@ import com.qza.music.MusicManager;
 import com.qza.notify.NotificationGate;
 import com.qza.party.PartyNotification;
 import com.qza.price.PriceTooltip;
+import com.qza.render.ItemGlow;
 import com.qza.search.MarketSearch;
 import com.qza.shitter.ShitterListPage;
 import com.qza.stats.DungeonFloor;
@@ -66,6 +70,7 @@ public final class SettingsRegistry {
             "Chat",
             "Auto Check Stats",
             "Notifications",
+            "Inventory",
             "Miscellaneous"));
 
     private static final Map<String, String> CARDS = Map.ofEntries(
@@ -382,6 +387,33 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.terminalTrackerEnabled && cfg.terminalDoneAlert));
 
+        settings.add(new ToggleSetting(f7, "Terminal Tracker", "Gate Destroyed Alert",
+                Component.literal("Shows ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Gate Destroyed").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" on screen every time a P3 gate is destroyed")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.terminalGateAlert,
+                v -> {
+                    cfg.terminalGateAlert = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalTrackerEnabled));
+
+        settings.add(new SliderSetting(f7, "Terminal Tracker", "Alert Duration",
+                Component.literal("How long ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("S1 Done!").withStyle(ChatFormatting.GREEN))
+                        .append(Component.literal(", ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Gate Destroyed").withStyle(ChatFormatting.RED))
+                        .append(Component.literal(" and the other alerts stay on screen")
+                                .withStyle(ChatFormatting.GRAY)),
+                TerminalTracker.MIN_ALERT_SECONDS, TerminalTracker.MAX_ALERT_SECONDS, 0.25, "s",
+                () -> cfg.terminalDoneSeconds,
+                v -> {
+                    cfg.terminalDoneSeconds = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.terminalTrackerEnabled && (cfg.terminalDoneAlert || cfg.terminalGateAlert)));
+
         settings.add(new ToggleSetting(f7, "PY Timer", "PY Timer",
                 Component.literal("Updated Timer for PY in Storm Phase")
                         .withStyle(ChatFormatting.GRAY),
@@ -498,6 +530,56 @@ public final class SettingsRegistry {
         settings.add(colourSetting(f7, "Starred Mobs", "Fel Colour", "Colour of the box around Fels",
                 () -> cfg.starredMobsFelColour, v -> cfg.starredMobsFelColour = v)
                 .visibleWhen(() -> cfg.starredMobsEnabled && cfg.starredMobsFels));
+
+        settings.add(new ToggleSetting(f7, "Blood Camp Tracker", "Blood Camp Tracker",
+                Component.literal("Boxes where each blood mob will land and counts down until it spawns")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.bloodTrackerEnabled,
+                v -> {
+                    cfg.bloodTrackerEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(f7, "Blood Camp Tracker", "Flight Line",
+                Component.literal("Draws a line from each flying skull to where its mob will land")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.bloodTrackerLine,
+                v -> {
+                    cfg.bloodTrackerLine = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodTrackerEnabled));
+
+        settings.add(new ToggleSetting(f7, "Blood Camp Tracker", "Spawn Timer",
+                Component.literal("Shows the seconds left until the mob spawns above its box")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.bloodTrackerTimer,
+                v -> {
+                    cfg.bloodTrackerTimer = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodTrackerEnabled));
+
+        settings.add(new ToggleSetting(f7, "Blood Camp Tracker", "Watcher Move Timer",
+                Component.literal("Counts down above the Watcher until it moves, starting from its greeting")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.bloodTrackerWatcherTimer,
+                v -> {
+                    cfg.bloodTrackerWatcherTimer = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodTrackerEnabled));
+
+        settings.add(new ToggleSetting(f7, "Blood Camp Tracker", "Kill Mobs Alert",
+                Component.literal("Shows ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Kill Mobs").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" 20 seconds after the Watcher's greeting").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.bloodTrackerKillAlert,
+                v -> {
+                    cfg.bloodTrackerKillAlert = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodTrackerEnabled));
 
         String chat = "Chat";
 
@@ -1007,8 +1089,9 @@ public final class SettingsRegistry {
         }
 
         String misc = "Miscellaneous";
+        String inventory = "Inventory";
 
-        settings.add(new ToggleSetting(misc, "Item List", "Item List",
+        settings.add(new ToggleSetting(inventory, "Item List", "Item List",
                 Component.literal("Shows every SkyBlock item on the right of your inventory. Click an item to see its recipe, right-click to see its uses")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.itemListEnabled,
@@ -1020,7 +1103,7 @@ public final class SettingsRegistry {
                     }
                 }));
 
-        settings.add(new ToggleSetting(misc, "Item List", "Show in Inventory",
+        settings.add(new ToggleSetting(inventory, "Item List", "Show in Inventory",
                 Component.literal("Shows the item list in your normal inventory too, not just in menus")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.itemListInventory,
@@ -1074,7 +1157,7 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.clockEnabled));
 
-        settings.add(new ToggleSetting(misc, "Hotbar Scroll Lock", "Hotbar Scroll Lock",
+        settings.add(new ToggleSetting(inventory, "Hotbar Scroll Lock", "Hotbar Scroll Lock",
                 Component.literal("Stops the hotbar jumping from the first slot to the last when you "
                         + "scroll past it, and back").withStyle(ChatFormatting.GRAY),
                 () -> cfg.hotbarScrollLock,
@@ -1083,7 +1166,7 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(new ToggleSetting(misc, "Tooltip Scale", "Tooltip Scale",
+        settings.add(new ToggleSetting(inventory, "Tooltip Scale", "Tooltip Scale",
                 Component.literal("Changes the size of item tooltips").withStyle(ChatFormatting.GRAY),
                 () -> cfg.tooltipScaleEnabled,
                 v -> {
@@ -1091,7 +1174,7 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(new DropdownSetting(misc, "Tooltip Scale", "Scale Mode",
+        settings.add(new DropdownSetting(inventory, "Tooltip Scale", "Scale Mode",
                 Component.literal("Dynamic shrinks tooltips that are too big so they always fit on "
                         + "screen. Custom scales every tooltip by Custom Scale.").withStyle(ChatFormatting.GRAY),
                 () -> TooltipScale.MODES,
@@ -1106,7 +1189,7 @@ public final class SettingsRegistry {
                 170)
                 .visibleWhen(() -> cfg.tooltipScaleEnabled));
 
-        settings.add(new SliderSetting(misc, "Tooltip Scale", "Custom Scale",
+        settings.add(new SliderSetting(inventory, "Tooltip Scale", "Custom Scale",
                 Component.literal("How big tooltips are in Custom mode (")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("1.00x").withStyle(ChatFormatting.WHITE))
@@ -1119,7 +1202,7 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.tooltipScaleEnabled && TooltipScale.CUSTOM.equals(cfg.tooltipScaleMode)));
 
-        settings.add(new ToggleSetting(misc, "Item Prices", "Item Prices",
+        settings.add(new ToggleSetting(inventory, "Item Prices", "Item Prices",
                 Component.literal("Adds Bazaar, Lowest BIN, average BIN and estimated value lines to SkyBlock "
                         + "item tooltips").withStyle(ChatFormatting.GRAY),
                 () -> cfg.itemPricesEnabled,
@@ -1128,7 +1211,7 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(new ToggleSetting(misc, "Item Prices", "Bazaar Price",
+        settings.add(new ToggleSetting(inventory, "Item Prices", "Bazaar Price",
                 Component.literal("Instant buy and instant sell price for Bazaar items").withStyle(ChatFormatting.GRAY),
                 () -> cfg.itemPriceBazaar,
                 v -> {
@@ -1137,7 +1220,7 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.itemPricesEnabled));
 
-        settings.add(new ToggleSetting(misc, "Item Prices", "Lowest BIN",
+        settings.add(new ToggleSetting(inventory, "Item Prices", "Lowest BIN",
                 Component.literal("Cheapest Buy It Now auction for the item right now").withStyle(ChatFormatting.GRAY),
                 () -> cfg.itemPriceLowestBin,
                 v -> {
@@ -1146,7 +1229,7 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.itemPricesEnabled));
 
-        settings.add(new DropdownSetting(misc, "Item Prices", "Average BIN",
+        settings.add(new DropdownSetting(inventory, "Item Prices", "Average BIN",
                 Component.literal("Average Lowest BIN over the last day, the last 3 days or both")
                         .withStyle(ChatFormatting.GRAY),
                 () -> PriceTooltip.AVERAGES,
@@ -1161,7 +1244,7 @@ public final class SettingsRegistry {
                 100)
                 .visibleWhen(() -> cfg.itemPricesEnabled));
 
-        settings.add(new ToggleSetting(misc, "Item Prices", "Estimated Item Value",
+        settings.add(new ToggleSetting(inventory, "Item Prices", "Estimated Item Value",
                 Component.literal("What the item is worth with its enchants, stars, gems, reforge, recomb, books "
                         + "and other upgrades added. Pets are valued by level, held item and skin.")
                         .withStyle(ChatFormatting.GRAY),
@@ -1221,7 +1304,7 @@ public final class SettingsRegistry {
                 () -> cfg.playerSizeZ, v -> cfg.playerSizeZ = v)
                 .visibleWhen(() -> cfg.playerSizeEnabled));
 
-        settings.add(new ToggleSetting(misc, "Equipment in Inventory", "Equipment in Inventory",
+        settings.add(new ToggleSetting(inventory, "Equipment in Inventory", "Equipment in Inventory",
                 Component.literal("Shows your necklace, cloak, belt and gloves to the right of your player in your "
                                 + "inventory, where the shield slot was. Open ")
                         .withStyle(ChatFormatting.GRAY)
@@ -1234,7 +1317,7 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(new ToggleSetting(misc, "Equipment in Inventory", "Rarity Backgrounds",
+        settings.add(new ToggleSetting(inventory, "Equipment in Inventory", "Rarity Backgrounds",
                 Component.literal("Colours the square behind each piece of equipment by its rarity, like ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Legendary").withStyle(ChatFormatting.GOLD))
@@ -1247,7 +1330,7 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.equipmentInInventory));
 
-        settings.add(new ToggleSetting(misc, "Storage Preview", "Storage Preview",
+        settings.add(new ToggleSetting(inventory, "Storage Preview", "Storage Preview",
                 Component.literal("In ").withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("/storage").withStyle(ChatFormatting.LIGHT_PURPLE))
                         .append(Component.literal(", hovering an Ender Chest page or backpack shows what is inside. "
@@ -1261,10 +1344,9 @@ public final class SettingsRegistry {
                 .visibleWhen(StoragePreview::available));
 
         settings.add(new ToggleSetting(misc, "Music Player Overlay", "Music Player Overlay",
-                Component.literal("Shows the song playing in Spotify, Apple Music, YouTube Music or your browser, "
-                                + "with its cover, title, artist, where you are in it and its length. Open your "
-                                + "inventory to pause, skip, go back or click the bar to jump. It reads the "
-                                + "Windows media controls. Move it in ")
+                Component.literal("Shows the songs playing on your computer and displays Cover, Title, Artist, "
+                                + "and length. Open inventory to pause, skip, restart, or click bar to jump to a "
+                                + "certain time. Move it in ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE)),
                 () -> cfg.musicOverlayEnabled,
@@ -1275,8 +1357,7 @@ public final class SettingsRegistry {
                 .visibleWhen(MusicOverlay::available));
 
         settings.add(new ToggleSetting(misc, "Music Player Overlay", "Show Cover",
-                Component.literal("Shows the song's picture. Turn it off to only show the title, artist and length")
-                        .withStyle(ChatFormatting.GRAY),
+                Component.literal("Shows the song's cover").withStyle(ChatFormatting.GRAY),
                 () -> cfg.musicOverlayCover,
                 v -> {
                     cfg.musicOverlayCover = v;
@@ -1284,7 +1365,104 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> MusicOverlay.available() && cfg.musicOverlayEnabled));
 
-        settings.add(new ToggleSetting(misc, "Hide Shield Slot", "Hide Shield Slot",
+        settings.add(new ToggleSetting(misc, "Music Player Overlay", "Hide Background",
+                Component.literal("Hides the background of the overlay").withStyle(ChatFormatting.GRAY),
+                () -> cfg.musicOverlayHideBackground,
+                v -> {
+                    cfg.musicOverlayHideBackground = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> MusicOverlay.available() && cfg.musicOverlayEnabled));
+
+        settings.add(new ToggleSetting(misc, "Item Glow", "Item Glow",
+                Component.literal("Makes the item in your hand glow.").withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemGlowEnabled,
+                v -> {
+                    cfg.itemGlowEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new DropdownSetting(misc, "Item Glow", "Glow Style",
+                Component.literal("Aura").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal(" is a soft glow that breathes. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Shimmer").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" sweeps a shine across the item with sparkles. ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Flame").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" makes flames and embers rise off the item")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> ItemGlow.STYLES,
+                () -> cfg.itemGlowStyle,
+                v -> {
+                    cfg.itemGlowStyle = v;
+                    ConfigManager.save();
+                },
+                ItemGlow::styleLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.itemGlowEnabled));
+
+        settings.add(new DropdownSetting(misc, "Item Glow", "Glow Colour",
+                Component.literal("Colour of the glow. ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Rainbow").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" cycles through every colour. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Rarity").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" matches the item's SkyBlock rarity, like gold for Legendary")
+                                .withStyle(ChatFormatting.GRAY)),
+                ItemGlow::colours,
+                () -> cfg.itemGlowColour,
+                v -> {
+                    cfg.itemGlowColour = v;
+                    ConfigManager.save();
+                },
+                SettingsRegistry::colourLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.itemGlowEnabled));
+
+        settings.add(new ToggleSetting(misc, "Item Glow", "Static Glow",
+                Component.literal("Keeps the glow still instead of moving").withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemGlowStatic,
+                v -> {
+                    cfg.itemGlowStatic = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemGlowEnabled));
+
+        settings.add(new SliderSetting(misc, "Item Glow", "Glow Speed",
+                Component.literal("How fast the glow moves (").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("1.00x").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" is normal)").withStyle(ChatFormatting.GRAY)),
+                ItemGlow.MIN_SPEED, ItemGlow.MAX_SPEED, 0.05, "x",
+                () -> cfg.itemGlowSpeed,
+                v -> {
+                    cfg.itemGlowSpeed = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemGlowEnabled && !cfg.itemGlowStatic));
+
+        settings.add(new SliderSetting(misc, "Item Glow", "Glow Brightness",
+                Component.literal("How bright the glow is").withStyle(ChatFormatting.GRAY),
+                ItemGlow.MIN_BRIGHTNESS, ItemGlow.MAX_BRIGHTNESS, 5, "%",
+                () -> cfg.itemGlowBrightness,
+                v -> {
+                    cfg.itemGlowBrightness = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemGlowEnabled));
+
+        settings.add(new ToggleSetting(misc, "Item Glow", "Glow Offhand",
+                Component.literal("Also makes the item in your offhand glow").withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemGlowOffhand,
+                v -> {
+                    cfg.itemGlowOffhand = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemGlowEnabled));
+
+        settings.add(new ToggleSetting(inventory, "Hide Shield Slot", "Hide Shield Slot",
                 Component.literal("Removes the shield slot from your inventory on SkyBlock, where it does nothing")
                         .withStyle(ChatFormatting.GRAY),
                 () -> cfg.hideShieldSlot,
@@ -1293,7 +1471,7 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(new ToggleSetting(misc, "Item Protection", "Item Protection",
+        settings.add(new ToggleSetting(inventory, "Item Protection", "Item Protection",
                 Component.literal("Stops the items you protect from being dropped, sold to NPCs, salvaged, traded, "
                                 + "auctioned or put in item frames, and marks them with a pink star. Press the ")
                         .withStyle(ChatFormatting.GRAY)
@@ -1306,7 +1484,7 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(new ActionSetting(misc, "Item Protection", "Protect Key",
+        settings.add(new ActionSetting(inventory, "Item Protection", "Protect Key",
                 Component.literal("Protects or unprotects the item you're holding, or the one you hover in your "
                                 + "inventory or storage. ").withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("Delete").withStyle(ChatFormatting.WHITE))
@@ -1317,7 +1495,7 @@ public final class SettingsRegistry {
                 ItemProtection::startCapture)
                 .visibleWhen(() -> cfg.itemProtectionEnabled));
 
-        settings.add(new ToggleSetting(misc, "Item Protection", "Show Star",
+        settings.add(new ToggleSetting(inventory, "Item Protection", "Show Star",
                 Component.literal("Marks protected items with a pink star. Turn it off to hide the stars, and "
                         + "your items stay protected").withStyle(ChatFormatting.GRAY),
                 () -> cfg.itemProtectionStar,
@@ -1327,7 +1505,7 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.itemProtectionEnabled));
 
-        settings.add(new DropdownSetting(misc, "Item Protection", "Star Corner",
+        settings.add(new DropdownSetting(inventory, "Item Protection", "Star Corner",
                 Component.literal("Which corner of the item the star sits in").withStyle(ChatFormatting.GRAY),
                 () -> ItemProtection.CORNERS,
                 () -> cfg.itemProtectionCorner,
@@ -1341,7 +1519,7 @@ public final class SettingsRegistry {
                 100)
                 .visibleWhen(() -> cfg.itemProtectionEnabled && cfg.itemProtectionStar));
 
-        settings.add(new ToggleSetting(misc, "Item Protection", "Chat Messages",
+        settings.add(new ToggleSetting(inventory, "Item Protection", "Chat Messages",
                 Component.literal("Says in chat when you protect or unprotect an item, and when a protected item "
                         + "is stopped").withStyle(ChatFormatting.GRAY),
                 () -> cfg.itemProtectionMessages,
@@ -1350,6 +1528,34 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.itemProtectionEnabled));
+
+        settings.add(new ToggleSetting(misc, "Sword Blocking", "Sword Blocking",
+                Component.literal("Brings back the 1.8 sword blocking animation. Hold right-click with a sword "
+                        + "to block").withStyle(ChatFormatting.GRAY),
+                () -> cfg.swordBlockEnabled,
+                v -> {
+                    cfg.swordBlockEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(misc, "Sword Blocking", "Third Person",
+                Component.literal("Also raises your arm to block in third person").withStyle(ChatFormatting.GRAY),
+                () -> cfg.swordBlockThirdPerson,
+                v -> {
+                    cfg.swordBlockThirdPerson = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.swordBlockEnabled));
+
+        settings.add(new ToggleSetting(misc, "Sword Blocking", "Other Players",
+                Component.literal("Shows other players blocking when they hold right-click with a sword, like "
+                        + "players on 1.8").withStyle(ChatFormatting.GRAY),
+                () -> cfg.swordBlockOthers,
+                v -> {
+                    cfg.swordBlockOthers = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.swordBlockEnabled));
 
         settings.add(new ToggleSetting(misc, "No Loading Screen", "No Loading Screen",
                 Component.literal("Skips the loading terrain screen when you switch islands or servers, so you see "
@@ -1371,8 +1577,7 @@ public final class SettingsRegistry {
                 .visibleWhen(() -> cfg.noLoadingScreen));
 
         settings.add(new ToggleSetting(misc, "Full Bright", "Full Bright",
-                Component.literal("Lights up everything around you, even caves and dark rooms, without touching "
-                        + "your brightness setting").withStyle(ChatFormatting.GRAY),
+                Component.literal("Fully brightens everything around you").withStyle(ChatFormatting.GRAY),
                 () -> cfg.fullBright,
                 v -> {
                     cfg.fullBright = v;
@@ -1405,7 +1610,7 @@ public final class SettingsRegistry {
                 })
                 .visibleWhen(() -> cfg.fullBright));
 
-        settings.add(new ToggleSetting(misc, "Hide Crafting", "Hide Crafting",
+        settings.add(new ToggleSetting(inventory, "Hide Crafting", "Hide Crafting",
                 Component.literal("Removes the crafting grid, its arrow, the output slot and the Crafting text "
                         + "from your inventory on SkyBlock").withStyle(ChatFormatting.GRAY),
                 () -> cfg.hideCrafting,
@@ -1414,7 +1619,7 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(new ToggleSetting(misc, "Item Star Count", "Item Star Count",
+        settings.add(new ToggleSetting(inventory, "Item Star Count", "Item Star Count",
                 Component.literal("Shows how many stars an item has in the bottom right of it. ")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("10").withStyle(ChatFormatting.LIGHT_PURPLE))
@@ -1426,11 +1631,11 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
-        settings.add(colourSetting(misc, "Item Star Count", "Star Count Colour", "Colour of the star number",
+        settings.add(colourSetting(inventory, "Item Star Count", "Star Count Colour", "Colour of the star number",
                 () -> cfg.itemStarColour, v -> cfg.itemStarColour = v)
                 .visibleWhen(() -> cfg.itemStarCount));
 
-        settings.add(new SliderSetting(misc, "Item Star Count", "Star Count Size",
+        settings.add(new SliderSetting(inventory, "Item Star Count", "Star Count Size",
                 Component.literal("Size of the star number (")
                         .withStyle(ChatFormatting.GRAY)
                         .append(Component.literal("100%").withStyle(ChatFormatting.WHITE))
@@ -1442,6 +1647,69 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.itemStarCount));
+
+        settings.add(new ToggleSetting(inventory, "Terminator Indicator", "Terminator Indicator",
+                Component.literal("Shows which Terminator you are holding, your Precise one with Soul Eater or "
+                                + "your Spiritual one with Duplex, so you swap to the right one as Berserk")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.terminatorIndicatorEnabled,
+                v -> {
+                    cfg.terminatorIndicatorEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new DropdownSetting(inventory, "Terminator Indicator", "Show As",
+                Component.literal("GUI").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal(" shows the Terminator's name on your screen while you hold it. ")
+                                .withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Dot").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" puts a coloured dot on the item. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Both").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" does both").withStyle(ChatFormatting.GRAY)),
+                () -> TerminatorIndicator.SHOW,
+                () -> cfg.terminatorIndicatorShow,
+                v -> {
+                    cfg.terminatorIndicatorShow = v;
+                    ConfigManager.save();
+                },
+                TerminatorIndicator::showLabel,
+                null,
+                "Both",
+                100)
+                .visibleWhen(() -> cfg.terminatorIndicatorEnabled));
+
+        settings.add(new ActionSetting(inventory, "Terminator Indicator", "Edit Terminators",
+                Component.literal("Rename the Terminators shown on your screen and change their colour. If QZA "
+                                + "can't tell them apart, pick which one is which here. Move it in ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE)),
+                () -> "Edit",
+                () -> Mc.setScreen(new TerminatorScreen()))
+                .visibleWhen(() -> cfg.terminatorIndicatorEnabled));
+
+        settings.add(new DropdownSetting(inventory, "Terminator Indicator", "Dot Corner",
+                Component.literal("Which corner of the item the dot sits in").withStyle(ChatFormatting.GRAY),
+                () -> ItemProtection.CORNERS,
+                () -> cfg.terminatorDotCorner,
+                v -> {
+                    cfg.terminatorDotCorner = v;
+                    ConfigManager.save();
+                },
+                ItemProtection::cornerLabel,
+                null,
+                "Top Left",
+                100)
+                .visibleWhen(() -> cfg.terminatorIndicatorEnabled && TerminatorIndicator.showsDot()));
+
+        settings.add(colourSetting(inventory, "Terminator Indicator", "Soul Eater Dot",
+                "Colour of the dot on your Soul Eater Terminator",
+                () -> cfg.terminatorSoulEaterDot, v -> cfg.terminatorSoulEaterDot = v)
+                .visibleWhen(() -> cfg.terminatorIndicatorEnabled && TerminatorIndicator.showsDot()));
+
+        settings.add(colourSetting(inventory, "Terminator Indicator", "Duplex Dot",
+                "Colour of the dot on your Duplex Terminator",
+                () -> cfg.terminatorDuplexDot, v -> cfg.terminatorDuplexDot = v)
+                .visibleWhen(() -> cfg.terminatorIndicatorEnabled && TerminatorIndicator.showsDot()));
 
         settings.add(new ToggleSetting(misc, "Command Shortcuts", "Command Shortcuts",
                 Component.literal("Your own short commands that run longer ones, like ")

@@ -55,6 +55,8 @@ public class QZAScreen extends Screen {
 
     private static final int HEADER_H = 56;
     private static final int RAIL_W = 200;
+    private static final int RAIL_STEP = 32;
+    private static final int RAIL_MIN_STEP = 18;
     private static final int ROW_GAP = 6;
     private static final int SECTION_H = 18;
     private static final int CONTROL_PAD = 10;
@@ -634,8 +636,17 @@ public class QZAScreen extends Screen {
             graphics.fill(x - 4, y + 11, x - 4 + lineWidth, y + 12,
                     selected ? ACCENT : RAIL_LINE);
 
-            y += 32;
+            y += railStep();
         }
+    }
+
+    private int railStep() {
+        int count = SettingsRegistry.CATEGORIES.size();
+        if (count < 2) {
+            return RAIL_STEP;
+        }
+        int room = (panelY + panelH - 18) - (panelY + HEADER_H + 14);
+        return Math.max(RAIL_MIN_STEP, Math.min(RAIL_STEP, room / (count - 1)));
     }
 
     private boolean inContent(double mouseX, double mouseY) {
@@ -1150,7 +1161,7 @@ public class QZAScreen extends Screen {
                     rebuildRows();
                     return true;
                 }
-                railY += 32;
+                railY += railStep();
             }
         }
 

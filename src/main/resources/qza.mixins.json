@@ -24,6 +24,7 @@
     "EntityDataMixin",
     "EquipmentRenderMixin",
     "FullBrightMixin",
+    "ItemGlowMixin",
     "ItemListCharMixin",
     "ItemListRecipeBookMixin",
     "ItemListRenderMixin",
@@ -40,6 +41,9 @@
     "ShieldSlotMixin",
     "SkyblockerStarMixin",
     "StoragePreviewMixin",
+    "SwordBlockArmMixin",
+    "SwordBlockItemMixin",
+    "TerminatorDotMixin",
     "TooltipHighlightMixin",
     "TooltipScaleMixin"
   ],
