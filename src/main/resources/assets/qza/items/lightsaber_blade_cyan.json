@@ -1,0 +1,16 @@
+{
+ "model": {
+  "type": "minecraft:model",
+  "model": "qza:item/lightsaber_blade",
+  "tints": [
+   {
+    "type": "minecraft:constant",
+    "value": -14489870
+   },
+   {
+    "type": "minecraft:constant",
+    "value": -4065029
+   }
+  ]
+ }
+}

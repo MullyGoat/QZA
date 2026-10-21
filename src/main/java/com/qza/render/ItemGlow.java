@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.qza.compat.GlowRender;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.custom.CustomItems;
 import com.qza.inventory.Equipment;
 import com.qza.waypoint.WaypointColour;
 import net.minecraft.client.Minecraft;
@@ -105,6 +106,9 @@ public final class ItemGlow {
     }
 
     public static void begin(ItemDisplayContext context) {
+        if (CustomItems.drawingPart()) {
+            return;
+        }
         collecting = wanted(context);
         used = 0;
         if (collecting) {
@@ -138,7 +142,7 @@ public final class ItemGlow {
     }
 
     public static void end(SubmitNodeCollector collector) {
-        if (!collecting) {
+        if (!collecting || CustomItems.drawingPart()) {
             return;
         }
         collecting = false;

@@ -1,0 +1,16 @@
+{
+ "model": {
+  "type": "minecraft:model",
+  "model": "qza:item/lightsaber_crossguard",
+  "tints": [
+   {
+    "type": "minecraft:constant",
+    "value": -863717
+   },
+   {
+    "type": "minecraft:constant",
+    "value": -265537
+   }
+  ]
+ }
+}

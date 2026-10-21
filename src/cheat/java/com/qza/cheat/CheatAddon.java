@@ -120,7 +120,7 @@ public class CheatAddon implements QZAAddon {
                         .append(Component.literal("Starred Mob Highlight")
                                 .withStyle(ChatFormatting.LIGHT_PURPLE))
                         .append(Component.literal(" boxes through walls. Turn the highlight on "
-                                + "under F7 / M7").withStyle(ChatFormatting.GRAY)),
+                                + "under Dungeons").withStyle(ChatFormatting.GRAY)),
                 () -> cfg.starredMobEsp,
                 v -> {
                     cfg.starredMobEsp = v;

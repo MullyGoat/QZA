@@ -11,6 +11,7 @@ import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Enderman;
 
 import java.net.URI;
@@ -69,6 +70,14 @@ public final class Mc {
 
     public static String keyName(int code) {
         return InputConstants.Type.KEYBOARD.getOrCreate(code).getDisplayName().getString();
+    }
+
+    public static boolean swinging(LivingEntity entity) {
+        return entity.isSwinging();
+    }
+
+    public static float attackAnim(LivingEntity entity, float partialTick) {
+        return entity.getSwingAnimation(partialTick);
     }
 
     public static boolean isEnderman(Entity entity) {

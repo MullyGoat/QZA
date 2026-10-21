@@ -11,10 +11,12 @@ import com.qza.discord.PartyFullAlert;
 import com.qza.dungeon.BloodCampTracker;
 import com.qza.dungeon.CrystalTimer;
 import com.qza.dungeon.DungeonScore;
+import com.qza.dungeon.DungeonTeam;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.SplitTimers;
 import com.qza.dungeon.PYTimer;
+import com.qza.dungeon.RelicTimer;
 import com.qza.dungeon.StormTimer;
 import com.qza.dungeon.StarredMobs;
 import com.qza.dungeon.TerminalTracker;
@@ -45,6 +47,7 @@ import com.qza.waypoint.WaypointList;
 import com.qza.waypoint.WaypointRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import com.qza.custom.CustomItems;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -80,6 +83,7 @@ public class QZA implements ClientModInitializer {
         MarketSearch.init();
         ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> PriceTooltip.append(stack, lines));
         ItemProtection.init();
+        CustomItems.init();
         MusicOverlay.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
@@ -102,7 +106,9 @@ public class QZA implements ClientModInitializer {
             MusicManager.get().onChatMessage(plain);
             NecronLeap.onChatMessage(plain);
             CrystalTimer.onChatMessage(plain);
+            RelicTimer.onChatMessage(plain);
             WitherKey.onChatMessage(plain);
+            DungeonTeam.onChatMessage(plain);
             SplitTimers.onChatMessage(plain);
             DungeonScore.onChatMessage(plain);
             TerminalTracker.onChatMessage(plain);
@@ -122,6 +128,7 @@ public class QZA implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             Scheduler.tick();
             WitherKey.tick();
+            DungeonTeam.tick();
             NecronLeap.tick();
             CrystalTimer.tick();
             StormTimer.tick();
@@ -138,7 +145,9 @@ public class QZA implements ClientModInitializer {
                 MusicManager.get().stopNow();
                 NecronLeap.reset();
                 CrystalTimer.reset();
+                RelicTimer.reset();
                 WitherKey.reset();
+                DungeonTeam.reset();
                 SplitTimers.reset();
                 DungeonScore.reset();
                 TerminalTracker.reset();
@@ -155,7 +164,9 @@ public class QZA implements ClientModInitializer {
             ShitterAutoKick.reset();
             NecronLeap.reset();
             CrystalTimer.reset();
+            RelicTimer.reset();
             WitherKey.reset();
+            DungeonTeam.reset();
             SplitTimers.reset();
             DungeonScore.reset();
             TerminalTracker.reset();

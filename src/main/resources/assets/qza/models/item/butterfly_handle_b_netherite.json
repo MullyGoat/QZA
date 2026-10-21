@@ -1,0 +1,6 @@
+{
+ "parent": "minecraft:item/handheld",
+ "textures": {
+  "layer0": "qza:item/butterfly_handle_b_netherite"
+ }
+}

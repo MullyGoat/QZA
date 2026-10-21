@@ -8,16 +8,21 @@ import com.qza.chat.ChatNotification;
 import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.custom.CustomItems;
 import com.qza.discord.DiscordAlert;
 import com.qza.dungeon.CrystalTimer;
+import com.qza.dungeon.LeapMenu;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.PYTimer;
+import com.qza.dungeon.RelicTimer;
 import com.qza.dungeon.StormTimer;
 import com.qza.dungeon.TerminalTracker;
 import com.qza.dungeon.WitherKey;
 import com.qza.gui.CommandKeybindScreen;
 import com.qza.gui.CommandShortcutScreen;
+import com.qza.gui.CustomItemScreen;
+import com.qza.gui.LeapOrderScreen;
 import com.qza.gui.MusicNamesScreen;
 import com.qza.gui.QZAChatScreen;
 import com.qza.gui.WaypointScreen;
@@ -41,6 +46,7 @@ import com.qza.stats.DungeonFloor;
 import com.qza.timer.ClockDisplay;
 import com.qza.tweaks.CommandShortcuts;
 import com.qza.tweaks.FullBright;
+import com.qza.tweaks.ItemInspect;
 import com.qza.tweaks.ItemStars;
 import com.qza.tweaks.PlayerSize;
 import com.qza.tweaks.TooltipScale;
@@ -66,7 +72,7 @@ public final class SettingsRegistry {
 
     public static final List<String> CATEGORIES = withAddons(List.of(
             "Shitter List",
-            "F7 / M7",
+            "Dungeons",
             "Chat",
             "Auto Check Stats",
             "Notifications",
@@ -74,9 +80,9 @@ public final class SettingsRegistry {
             "Miscellaneous"));
 
     private static final Map<String, String> CARDS = Map.ofEntries(
-            Map.entry("F7 / M7/Track Selection", "Terminal Music"),
-            Map.entry("F7 / M7/Music Library", "Terminal Music"),
-            Map.entry("F7 / M7/Music Playback", "Terminal Music"),
+            Map.entry("Dungeons/Track Selection", "Terminal Music"),
+            Map.entry("Dungeons/Music Library", "Terminal Music"),
+            Map.entry("Dungeons/Music Playback", "Terminal Music"),
             Map.entry("Chat/Open Chat", "QZA Chat"),
             Map.entry("Chat/History", "QZA Chat"),
             Map.entry("Auto Check Stats/Stats", "Auto Check Stats"),
@@ -133,7 +139,7 @@ public final class SettingsRegistry {
                     ShitterListPage.print(1);
                 }));
 
-        String f7 = "F7 / M7";
+        String f7 = "Dungeons";
 
         settings.add(new ToggleSetting(f7, "Terminal Music", "Terminal Music Toggle",
                 Component.literal("Plays music during terminal phase").withStyle(ChatFormatting.GRAY),
@@ -276,6 +282,92 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.waypointsEnabled));
+
+        settings.add(new ToggleSetting(f7, "Leap Menu", "Leap Menu",
+                Component.literal("Swaps Hypixel's Spirit Leap and Infinileap menu for four big player boxes. "
+                                + "Click anywhere in a corner of the screen to leap to the player in that corner")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.leapMenuEnabled,
+                v -> {
+                    cfg.leapMenuEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new SliderSetting(f7, "Leap Menu", "Menu Scale",
+                Component.literal("Size of the player boxes").withStyle(ChatFormatting.GRAY),
+                LeapMenu.MIN_SCALE, LeapMenu.MAX_SCALE, 5, "%",
+                () -> cfg.leapMenuScale,
+                v -> {
+                    cfg.leapMenuScale = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.leapMenuEnabled));
+
+        settings.add(new ToggleSetting(f7, "Leap Menu", "Show Last Door Opener",
+                Component.literal("Lights up the box of the player who opened the last Wither door, until the "
+                                + "Blood Room opens").withStyle(ChatFormatting.GRAY),
+                () -> cfg.leapMenuDoorOpener,
+                v -> {
+                    cfg.leapMenuDoorOpener = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.leapMenuEnabled));
+
+        settings.add(new ToggleSetting(f7, "Leap Menu", "Tint Dead Players",
+                Component.literal("Tints the boxes of dead players ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("red").withStyle(ChatFormatting.RED)),
+                () -> cfg.leapMenuTintDead,
+                v -> {
+                    cfg.leapMenuTintDead = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.leapMenuEnabled));
+
+        settings.add(new ToggleSetting(f7, "Leap Menu", "Left Click Only",
+                Component.literal("Only leaps when you left click, so a right or middle click does nothing")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.leapMenuLeftClickOnly,
+                v -> {
+                    cfg.leapMenuLeftClickOnly = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.leapMenuEnabled));
+
+        settings.add(new DropdownSetting(f7, "Leap Menu", "Leap Order",
+                Component.literal("Which corner each player goes in. ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Odin Sorting").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" puts ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Archer").withStyle(ChatFormatting.GOLD))
+                        .append(Component.literal(" top left, ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Berserk").withStyle(ChatFormatting.DARK_RED))
+                        .append(Component.literal(" top right, ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Healer").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" bottom left and ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Mage").withStyle(ChatFormatting.AQUA))
+                        .append(Component.literal(" or ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Tank").withStyle(ChatFormatting.DARK_GREEN))
+                        .append(Component.literal(" bottom right. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Custom Sorting").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" uses your own order").withStyle(ChatFormatting.GRAY)),
+                () -> LeapMenu.ORDERS,
+                () -> cfg.leapMenuOrder,
+                v -> {
+                    cfg.leapMenuOrder = v;
+                    ConfigManager.save();
+                },
+                LeapMenu::label,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.leapMenuEnabled));
+
+        settings.add(new ActionSetting(f7, "Leap Menu", "Custom Order",
+                Component.literal("Previews the leap menu. Pick the class you're playing and drag the others "
+                                + "to where you want them. Each class keeps its own order")
+                        .withStyle(ChatFormatting.GRAY),
+                "Edit",
+                () -> Mc.setScreen(new LeapOrderScreen()))
+                .visibleWhen(() -> cfg.leapMenuEnabled && LeapMenu.ORDER_CUSTOM.equals(cfg.leapMenuOrder)));
 
         settings.add(new ToggleSetting(f7, "Wither Key Pickup", "Wither Key Pickup",
                 Component.literal("Shows ")
@@ -488,6 +580,20 @@ public final class SettingsRegistry {
                 v -> {
                     cfg.necronLeapEnabled = v;
                     NecronLeap.reset();
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ToggleSetting(f7, "Relic Spawn Timer", "Relic Spawn Timer",
+                Component.literal("On M7, shows ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Relics: 3.05s").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" from Necron's death, counting down in tick time to when the relics "
+                                + "spawn. Drag it in ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Edit GUI").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(".").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.relicTimerEnabled,
+                v -> {
+                    cfg.relicTimerEnabled = v;
+                    RelicTimer.reset();
                     ConfigManager.save();
                 }));
 
@@ -1125,6 +1231,18 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 }));
 
+        settings.add(new ToggleSetting(misc, "Open Where Last Closed", "Open Where Last Closed",
+                Component.literal("Makes ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("/qza").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" open on the tab, scroll spot, open cards and search you "
+                                + "closed it on, even after restarting Minecraft. When off, it opens on the first "
+                                + "tab").withStyle(ChatFormatting.GRAY)),
+                () -> cfg.guiReopenLast,
+                v -> {
+                    cfg.guiReopenLast = v;
+                    ConfigManager.save();
+                }));
+
         settings.add(new ToggleSetting(misc, "Clock", "Clock",
                 Component.literal("Shows the current time on screen. Drag it in ")
                         .withStyle(ChatFormatting.GRAY)
@@ -1531,7 +1649,8 @@ public final class SettingsRegistry {
 
         settings.add(new ToggleSetting(misc, "Sword Blocking", "Sword Blocking",
                 Component.literal("Brings back the 1.8 sword blocking animation. Hold right-click with a sword "
-                        + "to block").withStyle(ChatFormatting.GRAY),
+                        + "to block. Only items that are swords in vanilla block, so wands and staffs like the Ice "
+                        + "Spray Wand don't").withStyle(ChatFormatting.GRAY),
                 () -> cfg.swordBlockEnabled,
                 v -> {
                     cfg.swordBlockEnabled = v;
@@ -1556,6 +1675,175 @@ public final class SettingsRegistry {
                     ConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.swordBlockEnabled));
+
+        settings.add(new ToggleSetting(misc, "Inspect Item", "Inspect Item",
+                Component.literal("Press the ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Inspect Key").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" to show off the item in your hand. Swords, pickaxes, bows "
+                                + "and every other item each have 3 animations to pick from")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.itemInspectEnabled,
+                v -> {
+                    cfg.itemInspectEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ActionSetting(misc, "Inspect Item", "Inspect Key",
+                Component.literal("The key that starts the animation. ").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Delete").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" clears it and ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("esc").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" cancels").withStyle(ChatFormatting.GRAY)),
+                () -> ItemInspect.capturing() ? "Press a key..." : ItemInspect.keyLabel(),
+                ItemInspect::startCapture)
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new DropdownSetting(misc, "Inspect Item", "Sword Animation",
+                Component.literal("Animation 1").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal(" twirls the sword around your fingers. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 2").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" raises it in a knight's salute and sweeps it down. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 3").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" flips it into the air spinning and catches it").withStyle(ChatFormatting.GRAY)),
+                () -> ItemInspect.ANIMATIONS,
+                () -> cfg.itemInspectSword,
+                v -> {
+                    cfg.itemInspectSword = v;
+                    ConfigManager.save();
+                },
+                ItemInspect::animationLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new DropdownSetting(misc, "Inspect Item", "Pickaxe Animation",
+                Component.literal("Animation 1").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal(" turns it over, then tosses and catches it. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 2").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" balances it on your fist and spins it like a top. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 3").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" points it forward and revs it like a drill").withStyle(ChatFormatting.GRAY)),
+                () -> ItemInspect.ANIMATIONS,
+                () -> cfg.itemInspectPickaxe,
+                v -> {
+                    cfg.itemInspectPickaxe = v;
+                    ConfigManager.save();
+                },
+                ItemInspect::animationLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new DropdownSetting(misc, "Inspect Item", "Bow Animation",
+                Component.literal("Animation 1").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal(" plucks the string and spins the bow around its length. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 2").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" throws it like a boomerang that loops out and flies back to you. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 3").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" slides the bow onto your wrist and spins it around your arm").withStyle(ChatFormatting.GRAY)),
+                () -> ItemInspect.ANIMATIONS,
+                () -> cfg.itemInspectBow,
+                v -> {
+                    cfg.itemInspectBow = v;
+                    ConfigManager.save();
+                },
+                ItemInspect::animationLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new DropdownSetting(misc, "Inspect Item", "Other Items",
+                Component.literal("Animation 1").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal(" brings it closer and turns it around. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 2").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" juggles it twice. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 3").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" floats it above your hand, spinning like a dropped item").withStyle(ChatFormatting.GRAY)),
+                () -> ItemInspect.ANIMATIONS,
+                () -> cfg.itemInspectOther,
+                v -> {
+                    cfg.itemInspectOther = v;
+                    ConfigManager.save();
+                },
+                ItemInspect::animationLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new DropdownSetting(misc, "Inspect Item", "Karambit Animation",
+                Component.literal("Animation 1").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal(" is the CS:GO inspect, spinning it around your finger by the ring. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 2").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" is the Valorant inspect, spinning it around your finger in a reverse grip. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 3").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" spins it both ways and tosses it up").withStyle(ChatFormatting.GRAY)),
+                () -> ItemInspect.ANIMATIONS,
+                () -> cfg.itemInspectKarambit,
+                v -> {
+                    cfg.itemInspectKarambit = v;
+                    ConfigManager.save();
+                },
+                ItemInspect::animationLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new DropdownSetting(misc, "Inspect Item", "Butterfly Knife Animation",
+                Component.literal("Animation 1").withStyle(ChatFormatting.LIGHT_PURPLE)
+                        .append(Component.literal(" is the CS:GO inspect, flipping it shut and open and spinning it. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 2").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" is the Valorant inspect, fanning it open into a spinning star. ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Animation 3").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" tosses it up with the handles flapping and snaps it open").withStyle(ChatFormatting.GRAY)),
+                () -> ItemInspect.ANIMATIONS,
+                () -> cfg.itemInspectButterfly,
+                v -> {
+                    cfg.itemInspectButterfly = v;
+                    ConfigManager.save();
+                },
+                ItemInspect::animationLabel,
+                null,
+                "(none)",
+                170)
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new ToggleSetting(misc, "Inspect Item", "Show Hand",
+                Component.literal("Shows your arm holding the item during the animation. Turn it off to hide it")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemInspectShowHand,
+                v -> {
+                    cfg.itemInspectShowHand = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new ToggleSetting(misc, "Inspect Item", "Keep Playing While Swinging",
+                Component.literal("Left clicking no longer stops the inspect or equip animation, so you can "
+                                + "swing or mine while it plays. Right clicking still stops it")
+                        .withStyle(ChatFormatting.GRAY),
+                () -> cfg.itemInspectKeepOnSwing,
+                v -> {
+                    cfg.itemInspectKeepOnSwing = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemInspectEnabled));
+
+        settings.add(new SliderSetting(misc, "Inspect Item", "Inspect Speed",
+                Component.literal("How fast the animation plays (").withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("1.00x").withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" is normal)").withStyle(ChatFormatting.GRAY)),
+                ItemInspect.MIN_SPEED, ItemInspect.MAX_SPEED, 0.05, "x",
+                () -> cfg.itemInspectSpeed,
+                v -> {
+                    cfg.itemInspectSpeed = v;
+                    ConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.itemInspectEnabled));
 
         settings.add(new ToggleSetting(misc, "No Loading Screen", "No Loading Screen",
                 Component.literal("Skips the loading terrain screen when you switch islands or servers, so you see "
@@ -1710,6 +1998,29 @@ public final class SettingsRegistry {
                 "Colour of the dot on your Duplex Terminator",
                 () -> cfg.terminatorDuplexDot, v -> cfg.terminatorDuplexDot = v)
                 .visibleWhen(() -> cfg.terminatorIndicatorEnabled && TerminatorIndicator.showsDot()));
+
+        settings.add(new ToggleSetting(inventory, "Custom Items", "Custom Items",
+                Component.literal("Change how your SkyBlock items look, like turning your Hyperion into a ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal("Karambit").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(", ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Butterfly Knife").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(" or ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal("Lightsaber").withStyle(ChatFormatting.LIGHT_PURPLE))
+                        .append(Component.literal(". Only you see it, and the item works the same")
+                                .withStyle(ChatFormatting.GRAY)),
+                () -> cfg.customItemsEnabled,
+                v -> {
+                    cfg.customItemsEnabled = v;
+                    ConfigManager.save();
+                }));
+
+        settings.add(new ActionSetting(inventory, "Custom Items", "Edit Custom Items",
+                Component.literal("Add your items, pick what each one turns into, and open each one's settings to "
+                        + "change its look, equip animation, glow and sword blocking").withStyle(ChatFormatting.GRAY),
+                () -> "Edit",
+                () -> Mc.setScreen(new CustomItemScreen()))
+                .visibleWhen(() -> cfg.customItemsEnabled));
 
         settings.add(new ToggleSetting(misc, "Command Shortcuts", "Command Shortcuts",
                 Component.literal("Your own short commands that run longer ones, like ")

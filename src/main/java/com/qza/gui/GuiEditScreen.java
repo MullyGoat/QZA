@@ -6,6 +6,7 @@ import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.dungeon.CrystalTimer;
+import com.qza.dungeon.RelicTimer;
 import com.qza.dungeon.DungeonScore;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
@@ -67,6 +68,7 @@ public class GuiEditScreen extends Screen {
         PYTimer.resetPlacement();
         StormTimer.resetPlacement();
         CrystalTimer.resetPlacement();
+        RelicTimer.resetPlacement();
         NecronLeap.resetPlacement();
         ClockDisplay.resetPlacement();
         TerminatorIndicator.resetPlacement();
@@ -187,6 +189,18 @@ public class GuiEditScreen extends Screen {
                     cfg.crystalTimerY = y;
                 },
                 s -> cfg.crystalTimerScale = s));
+
+        targets.add(new Target(
+                true,
+                RelicTimer.text(2.35),
+                RelicTimer.COLOUR,
+                () -> cfg.relicTimerEnabled,
+                () -> cfg.relicTimerX, () -> cfg.relicTimerY, () -> cfg.relicTimerScale,
+                (x, y) -> {
+                    cfg.relicTimerX = x;
+                    cfg.relicTimerY = y;
+                },
+                s -> cfg.relicTimerScale = s));
 
         targets.add(new Target(
                 true,

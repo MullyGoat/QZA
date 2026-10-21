@@ -144,6 +144,14 @@ public class QZAConfig {
 
     public double crystalTimerScale = 1.0;
 
+    public boolean relicTimerEnabled = false;
+
+    public double relicTimerX = 0.5;
+
+    public double relicTimerY = 0.42;
+
+    public double relicTimerScale = 1.5;
+
     public boolean starredMobsEnabled = false;
 
     public String starredMobColour = "yellow";
@@ -165,6 +173,22 @@ public class QZAConfig {
     public boolean bloodTrackerWatcherTimer = true;
 
     public boolean bloodTrackerKillAlert = true;
+
+    public boolean leapMenuEnabled = false;
+
+    public double leapMenuScale = 100.0;
+
+    public boolean leapMenuDoorOpener = false;
+
+    public boolean leapMenuTintDead = true;
+
+    public boolean leapMenuLeftClickOnly = false;
+
+    public String leapMenuOrder = "class";
+
+    public List<String> leapMenuCustomOrder = new ArrayList<>();
+
+    public Map<String, List<String>> leapMenuCustomOrders = new LinkedHashMap<>();
 
     public boolean partyInviteNotifyEnabled = false;
 
@@ -254,6 +278,18 @@ public class QZAConfig {
 
     public double guiScale = 100.0;
 
+    public boolean guiReopenLast = false;
+
+    public String guiLastCategory = "";
+
+    public double guiLastScroll = 0.0;
+
+    public List<String> guiLastOpenCards = new ArrayList<>();
+
+    public String guiLastSearch = "";
+
+    public List<String> guiLastSearchCards = new ArrayList<>();
+
     public boolean itemListEnabled = false;
 
     public boolean itemListShown = true;
@@ -331,6 +367,36 @@ public class QZAConfig {
     public boolean swordBlockThirdPerson = true;
 
     public boolean swordBlockOthers = true;
+
+    public boolean itemInspectEnabled = false;
+
+    public String itemInspectKey = "key.keyboard.y";
+
+    public boolean itemInspectShowHand = true;
+
+    public boolean itemInspectKeepOnSwing = false;
+
+    public double itemInspectSpeed = 1.0;
+
+    public String itemInspectSword = "1";
+
+    public String itemInspectPickaxe = "1";
+
+    public String itemInspectBow = "1";
+
+    public String itemInspectOther = "1";
+
+    public String itemInspectKarambit = "1";
+
+    public String itemInspectButterfly = "1";
+
+    public boolean customItemsEnabled = false;
+
+    public Map<String, String> customItems = new LinkedHashMap<>();
+
+    public Map<String, CustomItemEntry> customItemSkins = new LinkedHashMap<>();
+
+    public boolean customItemEquip = true;
 
     public boolean hideShieldSlot = false;
 

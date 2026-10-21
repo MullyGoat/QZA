@@ -1,0 +1,16 @@
+{
+ "model": {
+  "type": "minecraft:model",
+  "model": "qza:item/lightsaber_hilt_vaapad",
+  "tints": [
+   {
+    "type": "minecraft:constant",
+    "value": -12657634
+   },
+   {
+    "type": "minecraft:constant",
+    "value": -3541568
+   }
+  ]
+ }
+}

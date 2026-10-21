@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.chat.ChatKeybind;
 import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
+import com.qza.config.QZAConfig;
 import com.qza.gui.setting.ActionSetting;
 import com.qza.gui.setting.DropdownSetting;
 import com.qza.gui.setting.NumberSetting;
@@ -131,6 +132,26 @@ public class QZAScreen extends Screen {
 
     public QZAScreen() {
         super(Component.literal("QZA"));
+    }
+
+    public static QZAScreen fromCommand() {
+        QZAConfig cfg = ConfigManager.get();
+        expanded.clear();
+        if (!cfg.guiReopenLast) {
+            selectedCategory = SettingsRegistry.CATEGORIES.get(0);
+            scroll = 0;
+            return new QZAScreen();
+        }
+        if (SettingsRegistry.CATEGORIES.contains(cfg.guiLastCategory)) {
+            selectedCategory = cfg.guiLastCategory;
+        }
+        scroll = Math.max(0, cfg.guiLastScroll);
+        expanded.addAll(cfg.guiLastOpenCards);
+        QZAScreen screen = new QZAScreen();
+        screen.lastQuery = cfg.guiLastSearch == null ? "" : cfg.guiLastSearch;
+        screen.searchOpenQuery = screen.lastQuery.trim();
+        screen.searchOpen.addAll(cfg.guiLastSearchCards);
+        return screen;
     }
 
     public static void openCategory(String category) {
@@ -1419,6 +1440,20 @@ public class QZAScreen extends Screen {
         ChatKeybind.cancel();
         ConfigManager.save();
         super.onClose();
+    }
+
+    @Override
+    public void removed() {
+        QZAConfig cfg = ConfigManager.get();
+        if (cfg.guiReopenLast) {
+            cfg.guiLastCategory = selectedCategory;
+            cfg.guiLastScroll = scroll;
+            cfg.guiLastOpenCards = new ArrayList<>(expanded);
+            cfg.guiLastSearch = lastQuery;
+            cfg.guiLastSearchCards = new ArrayList<>(searchOpen);
+            ConfigManager.save();
+        }
+        super.removed();
     }
 
     @Override

@@ -1,0 +1,16 @@
+{
+ "model": {
+  "type": "minecraft:model",
+  "model": "qza:item/lightsaber_hilt_chosen",
+  "tints": [
+   {
+    "type": "minecraft:constant",
+    "value": -2088932
+   },
+   {
+    "type": "minecraft:constant",
+    "value": -605761
+   }
+  ]
+ }
+}

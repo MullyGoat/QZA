@@ -194,7 +194,7 @@ public final class QZACommand {
     }
 
     private static void openSettings() {
-        Scheduler.schedule(1, () -> Mc.setScreen(new QZAScreen()));
+        Scheduler.schedule(1, () -> Mc.setScreen(QZAScreen.fromCommand()));
     }
 
     private static void openEditor() {
@@ -251,7 +251,7 @@ public final class QZACommand {
 
         if (!ConfigManager.get().waypointsEnabled) {
             ChatUtil.info("Waypoints are switched off, so it will not show yet. "
-                    + "Turn them on under F7 / M7 in /qza.");
+                    + "Turn them on under Dungeons in /qza.");
         }
         return 1;
     }
@@ -282,7 +282,7 @@ public final class QZACommand {
 
         if (!ConfigManager.get().waypointsEnabled) {
             ChatUtil.info("Waypoints are switched off, so it will not show yet. "
-                    + "Turn them on under F7 / M7 in /qza.");
+                    + "Turn them on under Dungeons in /qza.");
         }
         return 1;
     }
