@@ -105,7 +105,7 @@ public class CheatAddon implements QZAAddon {
                 })
                 .visibleWhen(() -> cfg.deathBowEnabled && cfg.deathBowRaiderSwap));
 
-        settings.add(new ToggleSetting(CATEGORY, "Melody", "Aim Mouse at Melody Button",
+        settings.add(new ToggleSetting(CATEGORY, "Aim at Melody", "Aim Mouse at Melody Button",
                 Component.literal("Puts cursor on the first melody button as terminal opens. "
                                 + "Nothing is sent to the server")
                         .withStyle(ChatFormatting.GRAY),
@@ -152,6 +152,28 @@ public class CheatAddon implements QZAAddon {
                     CheatConfigManager.save();
                 })
                 .visibleWhen(() -> cfg.bloodClickEnabled));
+
+        settings.add(new ToggleSetting(CATEGORY, "BloodCamp Triggerbot", "PreFire",
+                Component.literal("Also left clicks the spawn box before the blood camp timer hits 0 if you're "
+                        + "aiming at it, so the mob can die the moment it spawns. If it lives, the normal click "
+                        + "follows a few ticks later").withStyle(ChatFormatting.GRAY),
+                () -> cfg.bloodClickPreFire,
+                v -> {
+                    cfg.bloodClickPreFire = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodClickEnabled));
+
+        settings.add(new SliderSetting(CATEGORY, "BloodCamp Triggerbot", "PreFire Timing",
+                Component.literal("How long before the mob spawns the PreFire click happens. Minecraft sends "
+                        + "clicks every 0.05s, so it lands on the closest one").withStyle(ChatFormatting.GRAY),
+                BloodClick.MIN_PRE_FIRE, BloodClick.MAX_PRE_FIRE, 0.01, "s before",
+                () -> cfg.bloodClickPreFireSeconds,
+                v -> {
+                    cfg.bloodClickPreFireSeconds = v;
+                    CheatConfigManager.save();
+                })
+                .visibleWhen(() -> cfg.bloodClickEnabled && cfg.bloodClickPreFire));
 
         settings.add(new ToggleSetting(CATEGORY, "BloodCamp Triggerbot", "Only Whitelisted Items",
                 Component.literal("Only clicks while you're holding one of the items you add below, so "

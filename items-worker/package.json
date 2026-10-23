@@ -1,0 +1,11 @@
+{
+  "name": "qza-items",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared custom items for the QZA mod - lets QZA users see each other's custom items",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  }
+}

@@ -165,6 +165,7 @@ public final class MusicOverlay {
         while (true) {
             try {
                 if (!enabled()) {
+                    MusicDebug.stop();
                     state = null;
                     pending = null;
                     commands.clear();
@@ -187,11 +188,14 @@ public final class MusicOverlay {
                 }
             } catch (LinkageError e) {
                 QZA.LOGGER.warn("QZA Music Overlay is not supported here", e);
+                MusicDebug.error("the overlay is not supported here", e);
+                MusicDebug.stop();
                 unavailable = true;
                 state = null;
                 return;
             } catch (RuntimeException e) {
                 QZA.LOGGER.warn("QZA Music Overlay failed to read the media session", e);
+                MusicDebug.error("reading the media session failed", e);
                 state = null;
                 sleep(ERROR_MS);
             }
@@ -212,15 +216,21 @@ public final class MusicOverlay {
     }
 
     private static void poll() {
+        MusicDebug.sessions();
         WindowsMedia.Snapshot snapshot = WindowsMedia.read(MusicOverlay::wantThumbnail);
-        if (snapshot == null || snapshot.track().status() == WindowsMedia.CLOSED
-                || snapshot.track().title().isBlank()) {
+        String hidden = snapshot == null ? WindowsMedia.problem()
+                : snapshot.track().status() == WindowsMedia.CLOSED ? snapshot.track().app() + " says it's closed"
+                : snapshot.track().title().isBlank() ? snapshot.track().app() + " gives no song title" : null;
+        if (hidden != null) {
+            MusicDebug.state("hidden " + hidden, "overlay hidden: " + hidden);
             state = null;
             return;
         }
         WindowsMedia.Track track = snapshot.track();
         if (snapshot.thumbnail() != null) {
             Cover decoded = decode(snapshot.thumbnail());
+            MusicDebug.cover(snapshot.thumbnail(), decoded == null ? 0 : decoded.width(),
+                    decoded == null ? 0 : decoded.height());
             if (decoded != null && (cover == null || cover.hash() != decoded.hash())) {
                 cover = decoded;
                 coverVersion++;
@@ -230,6 +240,11 @@ public final class MusicOverlay {
         long now = System.currentTimeMillis();
         boolean playing = track.status() == WindowsMedia.PLAYING;
         long length = Math.max(0L, (track.endTicks() - track.startTicks()) / TICKS_PER_MS);
+        String lengthFrom = "EndTime";
+        if (length <= 0 && track.maxSeekTicks() > track.startTicks()) {
+            length = (track.maxSeekTicks() - track.startTicks()) / TICKS_PER_MS;
+            lengthFrom = "MaxSeekTime";
+        }
         long position = Math.max(0L, (track.positionTicks() - track.startTicks()) / TICKS_PER_MS);
         State before = state;
         boolean held = length <= 0 && position <= 0 && before != null && before.key().equals(track.key())
@@ -237,24 +252,29 @@ public final class MusicOverlay {
         if (held) {
             length = before.lengthMs();
             position = before.position(now);
+            lengthFrom = "kept from before";
         }
         if (position != seenPosition) {
             seenPosition = position;
             seenAt = now;
         }
         long anchor = seenAt;
+        String clock = held ? "kept from before" : "from when QZA saw it";
         long updated = track.updatedTicks() > FILETIME_EPOCH
                 ? (track.updatedTicks() - FILETIME_EPOCH) / TICKS_PER_MS : -1L;
         if (updated >= 0 && !held) {
             long age = now - updated;
             if (age >= 0 && age <= MAX_UPDATE_AGE_MS && (length <= 0 || position + age <= length + POLL_MS)) {
                 anchor = updated;
+                clock = "from the app's last update";
             }
         }
 
         Pending hold = pending;
         if (hold != null) {
             if (now > hold.until() || !hold.key().equals(track.key())) {
+                MusicDebug.line(now > hold.until() ? "click: the app didn't confirm it within 10s"
+                        : "click: the song changed");
                 pending = null;
             } else {
                 boolean wanted = hold.playing() != null ? hold.playing() : playing;
@@ -263,22 +283,41 @@ public final class MusicOverlay {
                 boolean refreshed = track.updatedTicks() != hold.updatedTicks()
                         && updated >= hold.at() - REFRESH_SLACK_MS;
                 if (wanted == playing && (refreshed || Math.abs(reported - expected) <= CATCH_UP_MS)) {
+                    MusicDebug.line("click: confirmed, " + (refreshed ? "the app sent a new timeline"
+                            : "the app's time caught up"));
                     pending = null;
                 } else {
                     playing = wanted;
                     position = hold.positionMs();
                     anchor = hold.at();
+                    clock = "waiting for the app to confirm a click";
                 }
             }
         }
 
         int controls = track.controls() == 0 ? ALL_CONTROLS : track.controls();
         String subtitle = track.artist().isBlank() ? appName(track.app()) : track.artist();
-        state = new State(track.app(), track.key(), track.title(), subtitle, playing, controls,
+        State shown = new State(track.app(), track.key(), track.title(), subtitle, playing, controls,
                 track.startTicks(), track.updatedTicks(), length, position, anchor, coverVersion, cover);
+        state = shown;
+        if (MusicDebug.active()) {
+            debug(shown, length > 0 ? lengthFrom : "nothing", clock, now);
+        }
         if (length <= 0 && keyPolls < NO_LENGTH_FAST_POLLS) {
             fastPolls = Math.max(fastPolls, 1);
         }
+    }
+
+    private static void debug(State shown, String lengthFrom, String clock, long now) {
+        String cover = shown.cover() == null ? "no cover" : "cover " + shown.cover().width() + "x"
+                + shown.cover().height();
+        String key = shown.key() + "|" + shown.subtitle() + "|" + shown.playing() + "|" + shown.lengthMs() + "|"
+                + lengthFrom + "|" + shown.controls() + "|" + cover + "|" + clock;
+        MusicDebug.state(key, "overlay: \"" + shown.title() + "\" / \"" + shown.subtitle() + "\" from " + shown.app()
+                + " | " + (shown.playing() ? "Playing " : "Paused ") + MusicDebug.clock(shown.position(now))
+                + (shown.lengthMs() > 0 ? " of " + MusicDebug.clock(shown.lengthMs()) : ", no length")
+                + " (length from " + lengthFrom + ") | time " + clock + " | buttons: "
+                + MusicDebug.controls(shown.controls()) + " | " + cover);
     }
 
     private static boolean wantThumbnail(WindowsMedia.Track track) {

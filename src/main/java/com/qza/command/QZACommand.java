@@ -64,7 +64,7 @@ public final class QZACommand {
                 }))
                 .then(literal("protect").executes(ctx -> {
                     if (!ItemProtection.enabled()) {
-                        ChatUtil.error("Item Protection is off. Turn it on in /qza under Inventory.");
+                        ChatUtil.error("Item Protection is off. Turn it on in /qza under Items.");
                         return 0;
                     }
                     ItemProtection.toggleHeld();

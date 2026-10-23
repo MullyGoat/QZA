@@ -22,6 +22,10 @@ public class CheatConfig {
 
     public double bloodClickRange = 20.0;
 
+    public boolean bloodClickPreFire = false;
+
+    public double bloodClickPreFireSeconds = 0.05;
+
     public boolean bloodClickWhitelist = false;
 
     public boolean bloodClickDebug = false;

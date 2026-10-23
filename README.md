@@ -94,6 +94,20 @@ deletes everything stored about you.
 [discord-worker/README.md](discord-worker/README.md) covers what the relay is
 and the short list of what it keeps.
 
+## Shared Custom Items
+
+Turn on **Shared Custom Items** under **Items** in `/qza` and other QZA users on
+SkyBlock see your custom items (knife skins, lightsabers) when you hold them, and
+you see theirs. It's off until you turn it on.
+
+QZA uploads your Minecraft name and each custom item's look. To prove the upload
+is really from you, it signs it with the chat key Minecraft gets for your account
+at login, so your login token and private key never leave the game. Turning off
+**Share Mine** deletes your entry. While it's on, QZA users also see each other's
+inspect animations as they happen.
+
+[items-worker/README.md](items-worker/README.md) lists exactly what is stored.
+
 ## Files
 
 Settings, the shitter list, your saved DMs and your music live in `config/qza/`, so

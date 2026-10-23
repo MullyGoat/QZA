@@ -1,0 +1,10 @@
+{
+  "origin": [2.5, 13.5],
+  "pivot": [6.0, -0.15],
+  "parts": [
+    {"sweep": {"path": [0.8, 0, 0, 0.8, -0.8, 0, 0, -0.8], "closed": true, "top": 0.24, "depth": 0.36, "exponent": 2.8, "region": "metal", "stations": 32, "segments": 14}},
+    {"sweep": {"path": [0.75, 0, 2.5, 0.05, 4.5, 0.0, 6.0, -0.1], "top": [0, 0.56, 1, 0.6], "bottom": [0, 0.6, 0.5, 0.66, 1, 0.62], "depth": 0.44, "exponent": 4, "region": "grip", "stations": 36}},
+    {"sweep": {"path": [5.6, -0.1, 6.35, -0.12], "smooth": false, "top": 0.64, "depth": 0.46, "exponent": 5, "region": "metal", "stations": 4}},
+    {"blade": {"group": "blade", "spine": [6.2, -0.5, 7.8, -0.45, 9.2, 0.1, 10.2, 1.1, 10.75, 2.45], "edge": [6.2, 0.6, 7.5, 0.8, 8.6, 1.25, 9.7, 1.85, 10.75, 2.45], "thick": [0, 0.14, 0.7, 0.1, 1, 0.02], "grind": 0.38, "hollow": 0.45, "stations": 72}}
+  ]
+}

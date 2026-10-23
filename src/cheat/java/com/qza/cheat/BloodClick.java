@@ -54,11 +54,17 @@ public final class BloodClick {
     private static final double FLIGHT = 11.9;
     private static final double FIRST_FLIGHT = 16.1;
     private static final double MOB_SLACK = 0.2;
+    private static final double BOX_BOTTOM = 1.5;
+    private static final double BOX_TOP = 2.5;
+    private static final double BOX_HALF = 0.5;
+    private static final double BOX_SLACK = 0.1;
     private static final int FIRST_DELAY = 1;
     private static final int AGAIN_MIN = 4;
     private static final int AGAIN_MAX = 6;
     public static final double MIN_RANGE = 1.0;
     public static final double MAX_RANGE = 60.0;
+    public static final double MIN_PRE_FIRE = 0.01;
+    public static final double MAX_PRE_FIRE = 0.5;
     private static final double AIR_GAP = 0.05;
     private static final double FLOOR_SEARCH = 16.0;
     private static final double GRAVITY = 0.08;
@@ -70,6 +76,7 @@ public final class BloodClick {
         Vec3 last;
         long startTick = -1L;
         boolean serverClock;
+        boolean fired;
 
         Skull(Vec3 origin) {
             this.origin = origin;
@@ -116,6 +123,7 @@ public final class BloodClick {
     private static boolean clickedThisTick;
     private static boolean wasActive;
     private static boolean menuLogged;
+    private static int preFiredAt = Integer.MIN_VALUE / 2;
 
     private BloodClick() {
     }
@@ -248,9 +256,56 @@ public final class BloodClick {
                 }
             }
         }
+        if (CheatConfigManager.get().bloodClickPreFire) {
+            double lead = preFireSeconds() + (SECONDS_PER_TICK / 2.0);
+            for (Map.Entry<Integer, Skull> entry : skulls.entrySet()) {
+                Skull skull = entry.getValue();
+                if (!skull.fired && skull.startTick >= 0L && !gone(level, entry.getKey())
+                        && secondsUntil(client, skull) <= lead) {
+                    preFire(client, player, level, entry.getKey(), skull);
+                }
+            }
+        }
         skulls.keySet().removeIf(id -> gone(level, id));
         seenAt.keySet().removeIf(id -> gone(level, id));
         notMobs.removeIf(id -> gone(level, id));
+    }
+
+    private static double preFireSeconds() {
+        return Math.max(MIN_PRE_FIRE, Math.min(MAX_PRE_FIRE, CheatConfigManager.get().bloodClickPreFireSeconds));
+    }
+
+    private static void preFire(Minecraft client, LocalPlayer player, ClientLevel level, int id, Skull skull) {
+        if (clickedThisTick) {
+            return;
+        }
+        skull.fired = true;
+        Vec3 end = skull.end();
+        if (end == null) {
+            return;
+        }
+        if (Mc.screen() != null) {
+            BloodLog.line("skull " + id + " about to spawn, not pre-firing, a menu is open");
+            return;
+        }
+        AABB box = new AABB(end.x - BOX_HALF, end.y + BOX_BOTTOM, end.z - BOX_HALF,
+                end.x + BOX_HALF, end.y + BOX_TOP, end.z + BOX_HALF).inflate(BOX_SLACK);
+        double away = Math.sqrt(box.getCenter().distanceToSqr(player.getEyePosition()));
+        if (!lookingAt(player, level, box)) {
+            BloodLog.line(String.format(Locale.ROOT, "skull %d about to spawn, not aimed at its spawn box %s (%.1f away)",
+                    id, BloodLog.pos(end), away));
+            return;
+        }
+        if (!heldAllowed(player)) {
+            BloodLog.line("skull " + id + " about to spawn, not pre-firing, "
+                    + player.getMainHandItem().getHoverName().getString() + " isn't whitelisted");
+            return;
+        }
+        double early = secondsUntil(client, skull);
+        press(client);
+        preFiredAt = clock;
+        BloodLog.line(String.format(Locale.ROOT, "pre-fired skull %d's spawn box %.2fs before timer 0, %.1f away",
+                id, early, away));
     }
 
     private static boolean bloodMob(Entity entity) {
@@ -334,7 +389,7 @@ public final class BloodClick {
                         looking ? "aimed at" : "not aimed at any more", clock - mob.seen,
                         Math.sqrt(entity.distanceToSqr(player.getEyePosition()))));
             }
-            if (!looking || clickedThisTick || clock - mob.seen < FIRST_DELAY) {
+            if (!looking || clickedThisTick || clock - mob.seen < FIRST_DELAY || clock - preFiredAt < AGAIN_MIN) {
                 continue;
             }
             boolean leaving = leavingNextTick(player, level, entity, box);

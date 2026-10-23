@@ -1,5 +1,6 @@
 package com.qza.mixin;
 
+import com.qza.dungeon.LeapMenu;
 import com.qza.tweaks.ItemInspect;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
@@ -19,7 +20,7 @@ public class ItemInspectKeyMixin {
         if (client.getWindow() == null || window != client.getWindow().handle()) {
             return;
         }
-        if (ItemInspect.onKey(event, action)) {
+        if (LeapMenu.onKey(event, action) || ItemInspect.onKey(event, action)) {
             ci.cancel();
         }
     }

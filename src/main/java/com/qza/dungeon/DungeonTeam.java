@@ -19,8 +19,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class DungeonTeam {
-    private static final Pattern TAB_PLAYER = Pattern.compile(
-            "^\\[\\d+] (?:\\[[^]]+] )*(\\w{1,16}) .*\\((\\w+)(?: \\w+)?\\)$");
+    private static final Pattern TAB_PLAYER = Pattern.compile("^\\[\\d+]\\s+(.+?)\\s*\\((\\w+)(?:\\s+\\w+)?\\)");
+    private static final Pattern WORD = Pattern.compile("[A-Za-z0-9_]{1,16}");
+    private static final Pattern BRACKETS = Pattern.compile("\\[[^]]*]");
     private static final Pattern DOOR_OPENED = Pattern.compile(
             "^(?:\\[[^]]*?] )?(\\w{1,16}) opened a WITHER door!$");
     private static final Pattern WATCHER = Pattern.compile("^\\[BOSS] The Watcher: .+$");
@@ -73,10 +74,14 @@ public final class DungeonTeam {
                 continue;
             }
             Matcher matcher = TAB_PLAYER.matcher(IgnUtil.stripCodes(display.getString()).trim());
-            if (!matcher.matches()) {
+            if (!matcher.find()) {
                 continue;
             }
-            String name = matcher.group(1);
+            Matcher word = WORD.matcher(BRACKETS.matcher(matcher.group(1)).replaceAll(" "));
+            if (!word.find()) {
+                continue;
+            }
+            String name = word.group();
             String key = name.toLowerCase(Locale.ROOT);
             boolean dead = matcher.group(2).equalsIgnoreCase("DEAD");
             String dungeonClass = dead ? null : DungeonClass.of(matcher.group(2));
@@ -92,6 +97,22 @@ public final class DungeonTeam {
             found.putIfAbsent(key, new Teammate(name, dungeonClass, dead));
         }
         team = List.copyOf(new ArrayList<>(found.values()));
+    }
+
+    public static List<String> sampleLines() {
+        List<String> lines = new ArrayList<>();
+        ClientPacketListener connection = Minecraft.getInstance().getConnection();
+        if (connection == null) {
+            return lines;
+        }
+        for (PlayerInfo info : connection.getListedOnlinePlayers()) {
+            Component display = info.getTabListDisplayName();
+            String line = display == null ? "" : IgnUtil.stripCodes(display.getString()).trim();
+            if (line.startsWith("[") && lines.size() < 6) {
+                lines.add(line);
+            }
+        }
+        return lines;
     }
 
     public static List<Teammate> teammates() {

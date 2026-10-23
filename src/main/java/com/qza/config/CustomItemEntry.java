@@ -14,4 +14,16 @@ public class CustomItemEntry {
     public boolean glow = true;
 
     public boolean block = false;
+
+    public String style = "";
+
+    public String finish = "";
+
+    public int seed = 0;
+
+    public String wear = "";
+
+    public String itemId = "";
+
+    public int size = 100;
 }

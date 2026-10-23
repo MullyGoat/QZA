@@ -12,6 +12,7 @@ import com.qza.dungeon.BloodCampTracker;
 import com.qza.dungeon.CrystalTimer;
 import com.qza.dungeon.DungeonScore;
 import com.qza.dungeon.DungeonTeam;
+import com.qza.dungeon.LeapMenu;
 import com.qza.dungeon.LeapNotification;
 import com.qza.dungeon.NecronLeap;
 import com.qza.dungeon.SplitTimers;
@@ -48,6 +49,8 @@ import com.qza.waypoint.WaypointRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import com.qza.custom.CustomItems;
+import com.qza.custom.LiveInspects;
+import com.qza.custom.SharedItems;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -76,6 +79,7 @@ public class QZA implements ClientModInitializer {
         WaypointRenderer.init();
         StarredMobs.init();
         BloodCampTracker.init();
+        CrystalTimer.init();
         WaypointEditor.init();
         ItemList.init();
         Equipment.init();
@@ -84,6 +88,8 @@ public class QZA implements ClientModInitializer {
         ItemTooltipCallback.EVENT.register((stack, context, flag, lines) -> PriceTooltip.append(stack, lines));
         ItemProtection.init();
         CustomItems.init();
+        SharedItems.init();
+        LiveInspects.init();
         MusicOverlay.init();
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "notifications"),
@@ -109,6 +115,7 @@ public class QZA implements ClientModInitializer {
             RelicTimer.onChatMessage(plain);
             WitherKey.onChatMessage(plain);
             DungeonTeam.onChatMessage(plain);
+            LeapMenu.onChatMessage(plain);
             SplitTimers.onChatMessage(plain);
             DungeonScore.onChatMessage(plain);
             TerminalTracker.onChatMessage(plain);

@@ -1,19 +1,28 @@
 package com.qza.dungeon;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import com.qza.QZA;
+import com.qza.chat.ChatKeybind;
+import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
+import com.qza.gui.QZAScreen;
+import com.qza.keybind.CommandKeybinds;
 import com.qza.stats.DungeonClass;
 import com.qza.util.ChatUtil;
 import com.qza.util.DungeonState;
 import com.qza.util.IgnUtil;
 import com.qza.util.PlayerFaces;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -29,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,6 +51,17 @@ public final class LeapMenu {
     public static final String ORDER_ODIN = "odin";
     public static final String ORDER_CUSTOM = "custom";
     public static final List<String> ORDERS = List.of(ORDER_CLASS, ORDER_NAME, ORDER_ODIN, ORDER_CUSTOM);
+    public static final String ANNOUNCE_NAME = "name";
+    public static final String ANNOUNCE_CLASS = "class";
+    public static final List<String> ANNOUNCE_AS = List.of(ANNOUNCE_NAME, ANNOUNCE_CLASS);
+    public static final String ANNOUNCE_MESSAGE = "Leaped to {name}";
+    public static final String ANNOUNCE_PARTY = "party";
+    public static final String ANNOUNCE_SYSTEM = "system";
+    public static final List<String> ANNOUNCE_IN = List.of(ANNOUNCE_PARTY, ANNOUNCE_SYSTEM);
+    public static final String KEYS_CORNERS = "corners";
+    public static final String KEYS_CLASS = "class";
+    public static final List<String> KEY_MODES = List.of(KEYS_CORNERS, KEYS_CLASS);
+    public static final List<String> CORNERS = List.of("Top Left", "Top Right", "Bottom Left", "Bottom Right");
 
     public static final List<String> CLASSES = List.of(DungeonClass.ARCHER, DungeonClass.BERSERK,
             DungeonClass.HEALER, DungeonClass.MAGE, DungeonClass.TANK);
@@ -64,8 +85,14 @@ public final class LeapMenu {
     private static final int UNKNOWN = 0xFFFFFFFF;
     private static final long TEAM_REFRESH_MS = 250L;
     private static final long DRAWN_MS = 250L;
+    private static final long PLAYABLE_MS = 200L;
+    private static final long RETRY_MS = 50L;
+    private static final long LOG_WAIT_MS = 1000L;
 
-    private static final Pattern HEAD_NAME = Pattern.compile("^(?:\\[[^]]+] )?(\\w{1,16})");
+    private static final long ANNOUNCE_MS = 5000L;
+    private static final Pattern TELEPORTED = Pattern.compile("^You have teleported to (\\w{1,16})!$");
+    private static final Pattern WORD = Pattern.compile("[A-Za-z0-9_]{1,16}");
+    private static final Pattern BRACKETS = Pattern.compile("\\[[^]]*]");
 
     public record Entry(String name, String dungeonClass, boolean dead, int slot) {
     }
@@ -78,7 +105,15 @@ public final class LeapMenu {
     private static long teamAt;
     private static Screen drawnScreen;
     private static long drawnAt;
-    private static Screen warnedScreen;
+    private static boolean warned;
+    private static Screen checkedScreen;
+    private static long checkedAt;
+    private static long openedAt;
+    private static boolean playable;
+    private static Screen loggedScreen;
+    private static Entry leapedTo;
+    private static long leapedAt;
+    private static int capturing = -1;
 
     private LeapMenu() {
     }
@@ -88,10 +123,63 @@ public final class LeapMenu {
             return false;
         }
         String title = screen.getTitle().getString().toLowerCase(Locale.ROOT);
-        if (!title.contains("spirit leap") && !title.contains("teleport to player")) {
+        if (!title.contains("spirit leap") && !title.contains("infinileap") && !title.contains("teleport to player")) {
             return false;
         }
-        return DungeonState.inDungeon();
+        return DungeonState.inDungeon() && playable((AbstractContainerScreen<?>) screen);
+    }
+
+    private static boolean playable(AbstractContainerScreen<?> screen) {
+        long now = System.currentTimeMillis();
+        if (screen != checkedScreen) {
+            checkedScreen = screen;
+            openedAt = now;
+            checkedAt = 0L;
+            playable = false;
+        }
+        if (now - checkedAt < (playable ? PLAYABLE_MS : RETRY_MS)) {
+            return playable;
+        }
+        checkedAt = now;
+        refreshTeam(now);
+        List<Entry> entries = entries(screen.getMenu());
+        playable = false;
+        for (Entry entry : entries) {
+            playable |= entry.slot() >= 0;
+        }
+        if (loggedScreen != screen && (playable || now - openedAt > LOG_WAIT_MS)) {
+            loggedScreen = screen;
+            logMenu(screen, entries);
+        }
+        return playable;
+    }
+
+    private static void refreshTeam(long now) {
+        if (now - teamAt > TEAM_REFRESH_MS) {
+            teamAt = now;
+            DungeonTeam.scan();
+        }
+    }
+
+    private static void logMenu(AbstractContainerScreen<?> screen, List<Entry> entries) {
+        AbstractContainerMenu menu = screen.getMenu();
+        List<String> heads = new ArrayList<>();
+        int chestSlots = Math.max(0, menu.slots.size() - 36);
+        for (int i = 0; i < chestSlots; i++) {
+            ItemStack stack = menu.slots.get(i).getItem();
+            if (stack.is(Items.PLAYER_HEAD)) {
+                heads.add(i + "='" + IgnUtil.stripCodes(stack.getHoverName().getString()).trim() + "'");
+            }
+        }
+        List<String> found = new ArrayList<>();
+        for (Entry entry : entries) {
+            found.add(entry.name() + "/" + entry.dungeonClass() + (entry.dead() ? "/dead" : "") + "@" + entry.slot());
+        }
+        QZA.LOGGER.info("QZA Leap Menu '{}': heads {} | players {} | you {} | {}", screen.getTitle().getString(), heads,
+                found, DungeonTeam.selfClass(), playable ? "showing QZA's menu" : "nobody matched, showing Hypixel's menu");
+        if (DungeonTeam.teammates().isEmpty()) {
+            QZA.LOGGER.info("QZA Leap Menu: no teammates read from tab, sample lines {}", DungeonTeam.sampleLines());
+        }
     }
 
     public static boolean drawing(Screen screen) {
@@ -99,10 +187,10 @@ public final class LeapMenu {
     }
 
     public static void covered(Screen screen) {
-        if (warnedScreen == screen) {
+        if (warned) {
             return;
         }
-        warnedScreen = screen;
+        warned = true;
         ChatUtil.error("Another mod's leap menu is drawn over QZA's Leap Menu, so QZA left your click to it. "
                 + "Turn off NoammAddons' or Odin's Leap Menu to use QZA's.");
     }
@@ -111,10 +199,7 @@ public final class LeapMenu {
         long now = System.currentTimeMillis();
         drawnScreen = screen;
         drawnAt = now;
-        if (now - teamAt > TEAM_REFRESH_MS) {
-            teamAt = now;
-            DungeonTeam.scan();
-        }
+        refreshTeam(now);
         QZAConfig cfg = ConfigManager.get();
         String self = DungeonTeam.selfClass();
         Entry[] arranged = arrange(entries(screen.getMenu()), cfg.leapMenuOrder, self == null ? null : preset(self));
@@ -149,29 +234,194 @@ public final class LeapMenu {
 
     public static boolean click(AbstractContainerScreen<?> screen, double mouseX, double mouseY, int button) {
         QZAConfig cfg = ConfigManager.get();
-        if (cfg.leapMenuLeftClickOnly && button != 0) {
-            return true;
-        }
         int q = quadrant(mouseX, mouseY, screen.width, screen.height);
         Entry entry = q < 0 ? null : shown[q];
-        if (entry == null) {
+        boolean ignored = cfg.leapMenuLeftClickOnly && button != InputConstants.MOUSE_BUTTON_LEFT;
+        QZA.LOGGER.info("QZA Leap Menu click: button {} corner {} -> {}{}", button, q,
+                entry == null ? "nobody" : entry.name() + " in slot " + entry.slot(),
+                ignored ? " (ignored, Left Click Only)" : "");
+        if (ignored || entry == null) {
             return true;
         }
+        leap(screen, entry);
+        return true;
+    }
+
+    private static void leap(AbstractContainerScreen<?> screen, Entry entry) {
         if (entry.dead()) {
             ChatUtil.error(entry.name() + " is dead!");
-            return true;
+            return;
         }
         if (entry.slot() < 0) {
             ChatUtil.error(entry.name() + " isn't in the leap menu.");
-            return true;
+            return;
         }
         Minecraft client = Minecraft.getInstance();
         if (client.gameMode == null || client.player == null) {
-            return true;
+            return;
         }
         client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
         client.gameMode.handleContainerInput(screen.getMenu().containerId, entry.slot(), 0, ContainerInput.PICKUP,
                 client.player);
+        leapedTo = entry;
+        leapedAt = System.currentTimeMillis();
+    }
+
+    public static boolean key(AbstractContainerScreen<?> screen, KeyEvent event) {
+        QZAConfig cfg = ConfigManager.get();
+        if (!cfg.leapMenuKeybinds) {
+            return false;
+        }
+        String name = InputConstants.getKey(event).getName();
+        Entry target = null;
+        boolean bound = false;
+        if (KEYS_CLASS.equals(cfg.leapMenuKeybindMode)) {
+            for (String dungeonClass : CLASSES) {
+                if (name.equals(cfg.leapMenuClassKeys.get(dungeonClass))) {
+                    bound = true;
+                    target = withClass(dungeonClass);
+                    break;
+                }
+            }
+        } else {
+            for (int i = 0; i < shown.length && i < cfg.leapMenuCornerKeys.size(); i++) {
+                if (name.equals(cfg.leapMenuCornerKeys.get(i))) {
+                    bound = true;
+                    target = shown[i];
+                    break;
+                }
+            }
+        }
+        if (!bound) {
+            return false;
+        }
+        QZA.LOGGER.info("QZA Leap Menu key: {} -> {}", name, target == null ? "nobody" : target.name());
+        if (target == null) {
+            ChatUtil.error("Nobody to leap to on that key.");
+        } else {
+            leap(screen, target);
+        }
+        return true;
+    }
+
+    private static Entry withClass(String dungeonClass) {
+        Entry dead = null;
+        for (Entry entry : shown) {
+            if (entry != null && dungeonClass.equals(entry.dungeonClass())) {
+                if (!entry.dead()) {
+                    return entry;
+                }
+                dead = entry;
+            }
+        }
+        return dead;
+    }
+
+    public static void onChatMessage(String raw) {
+        if (raw == null) {
+            return;
+        }
+        Matcher m = TELEPORTED.matcher(IgnUtil.stripCodes(raw).trim());
+        if (!m.matches()) {
+            return;
+        }
+        Entry target = leapedTo;
+        boolean recent = target != null && System.currentTimeMillis() - leapedAt <= ANNOUNCE_MS;
+        leapedTo = null;
+        QZAConfig cfg = ConfigManager.get();
+        if (!cfg.leapMenuEnabled || !cfg.leapMenuAnnounce || !DungeonState.inDungeon()) {
+            return;
+        }
+        String name = m.group(1);
+        String dungeonClass = recent && name.equalsIgnoreCase(target.name()) ? target.dungeonClass() : classOf(name);
+        String text = announcement(name, dungeonClass);
+        if (ANNOUNCE_SYSTEM.equals(cfg.leapMenuAnnounceIn)) {
+            ChatUtil.send(Component.literal(text).withStyle(ChatFormatting.WHITE));
+        } else {
+            ChatUtil.sendCommand("pc " + text);
+        }
+    }
+
+    private static String classOf(String name) {
+        for (DungeonTeam.Teammate mate : DungeonTeam.teammates()) {
+            if (mate.name().equalsIgnoreCase(name)) {
+                return mate.dungeonClass();
+            }
+        }
+        return DungeonClass.of(LeapNotification.classOf(name));
+    }
+
+    public static String announcement(String name, String dungeonClass) {
+        QZAConfig cfg = ConfigManager.get();
+        boolean byClass = ANNOUNCE_CLASS.equals(cfg.leapMenuAnnounceAs) && dungeonClass != null;
+        String message = cfg.leapMenuAnnounceMessage == null || cfg.leapMenuAnnounceMessage.isBlank()
+                ? ANNOUNCE_MESSAGE : cfg.leapMenuAnnounceMessage.trim();
+        return message.replace("{name}", byClass ? DungeonClass.label(dungeonClass) : name);
+    }
+
+    public static String announceLabel(String value) {
+        return ANNOUNCE_CLASS.equals(value) ? "Class" : "Name";
+    }
+
+    public static String announceInLabel(String value) {
+        return ANNOUNCE_SYSTEM.equals(value) ? "System Chat" : "Party Chat";
+    }
+
+    public static String keyModeLabel(String value) {
+        return KEYS_CLASS.equals(value) ? "Class" : "Corners";
+    }
+
+    public static void startCapture(int index) {
+        capturing = index;
+    }
+
+    public static String keyLabel(int index) {
+        if (capturing == index) {
+            return "Press a key...";
+        }
+        return CommandKeybinds.keyLabel(keyName(index));
+    }
+
+    private static String keyName(int index) {
+        QZAConfig cfg = ConfigManager.get();
+        if (index < CORNERS.size()) {
+            return index < cfg.leapMenuCornerKeys.size() ? cfg.leapMenuCornerKeys.get(index) : "";
+        }
+        return cfg.leapMenuClassKeys.getOrDefault(CLASSES.get(index - CORNERS.size()), "");
+    }
+
+    private static void setKey(int index, String key) {
+        QZAConfig cfg = ConfigManager.get();
+        if (index < CORNERS.size()) {
+            while (cfg.leapMenuCornerKeys.size() < CORNERS.size()) {
+                cfg.leapMenuCornerKeys.add("");
+            }
+            cfg.leapMenuCornerKeys.set(index, key);
+        } else {
+            cfg.leapMenuClassKeys.put(CLASSES.get(index - CORNERS.size()), key);
+        }
+        ConfigManager.save();
+    }
+
+    public static boolean onKey(KeyEvent event, int action) {
+        if (capturing < 0) {
+            return false;
+        }
+        if (!(Mc.screen() instanceof QZAScreen)) {
+            capturing = -1;
+            return false;
+        }
+        if (action != InputConstants.PRESS) {
+            return false;
+        }
+        int index = capturing;
+        capturing = -1;
+        int code = event.key();
+        if (code != InputConstants.KEY_ESCAPE) {
+            setKey(index, code == InputConstants.KEY_DELETE || code == InputConstants.KEY_BACKSPACE
+                    ? "" : InputConstants.getKey(event).getName());
+        }
+        ChatKeybind.swallowNextChar(event);
         return true;
     }
 
@@ -303,20 +553,40 @@ public final class LeapMenu {
         };
     }
 
+    static String headName(String text, Set<String> teammates, boolean head) {
+        Matcher words = WORD.matcher(BRACKETS.matcher(text).replaceAll(" "));
+        String last = null;
+        while (words.find()) {
+            String word = words.group();
+            if (teammates.contains(word.toLowerCase(Locale.ROOT))) {
+                return word;
+            }
+            if (word.length() >= 3) {
+                last = word;
+            }
+        }
+        return head ? last : null;
+    }
+
     private static List<Entry> entries(AbstractContainerMenu menu) {
+        Set<String> names = new HashSet<>();
+        for (DungeonTeam.Teammate mate : DungeonTeam.teammates()) {
+            names.add(mate.name().toLowerCase(Locale.ROOT));
+        }
         Map<String, Integer> heads = new LinkedHashMap<>();
         Map<String, String> headNames = new HashMap<>();
         int chestSlots = Math.max(0, menu.slots.size() - 36);
         for (int i = 0; i < chestSlots; i++) {
             ItemStack stack = menu.slots.get(i).getItem();
-            if (stack.isEmpty() || !stack.is(Items.PLAYER_HEAD)) {
+            if (stack.isEmpty()) {
                 continue;
             }
-            Matcher m = HEAD_NAME.matcher(IgnUtil.stripCodes(stack.getHoverName().getString()).trim());
-            if (m.find()) {
-                String key = m.group(1).toLowerCase(Locale.ROOT);
+            String name = headName(IgnUtil.stripCodes(stack.getHoverName().getString()).trim(), names,
+                    stack.is(Items.PLAYER_HEAD));
+            if (name != null) {
+                String key = name.toLowerCase(Locale.ROOT);
                 heads.putIfAbsent(key, i);
-                headNames.putIfAbsent(key, m.group(1));
+                headNames.putIfAbsent(key, name);
             }
         }
 

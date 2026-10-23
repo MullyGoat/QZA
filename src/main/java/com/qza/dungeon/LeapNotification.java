@@ -4,6 +4,7 @@ import com.qza.chat.ChatFocus;
 import com.qza.config.ConfigManager;
 import com.qza.config.QZAConfig;
 import com.qza.notify.NotificationBox;
+import com.qza.stats.DungeonClass;
 import com.qza.util.DungeonState;
 import com.qza.util.IgnUtil;
 import net.minecraft.client.Minecraft;
@@ -90,7 +91,8 @@ public final class LeapNotification {
             return;
         }
         Matcher leap = LEAP.matcher(said);
-        boolean leapedToSelf = party && leap.matches() && ChatFocus.isSelf(leap.group(1));
+        boolean leapedToSelf = party && leap.matches() && (ChatFocus.isSelf(leap.group(1))
+                || leap.group(1).equalsIgnoreCase(DungeonClass.label(DungeonTeam.selfClass())));
         boolean named = (inRun || inBoss) && mentionsSelf(said);
         if (!leapedToSelf && !named) {
             return;

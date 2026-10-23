@@ -1,0 +1,6 @@
+{
+ "parent": "minecraft:item/handheld",
+ "textures": {
+  "layer0": "qza:item/ursus_handle_diamond"
+ }
+}

@@ -76,6 +76,7 @@ public final class DungeonScore {
     private static final Pattern CHARM_MIMIC = Pattern.compile(
             "^CHARM You charmed a Mimic and captured (?:its Shard|\\d+ Shards from it)\\.$",
             Pattern.CASE_INSENSITIVE);
+    private static final Pattern TEAM_SCORE = Pattern.compile("Team Score: (\\d+) \\(");
     private static final String PRINCE_SCORE = "A Prince falls. +1 Bonus Score";
     private static final String BAT_SCORE = "A Bat has been slain. +1 Bonus Score";
     private static final String WATCHER_DONE = "[BOSS] The Watcher: You have proven yourself. You may pass.";
@@ -115,6 +116,7 @@ public final class DungeonScore {
     private static Breakdown lastBreakdown;
 
     private static volatile boolean paul;
+    private static volatile boolean jerry;
     private static volatile long electionCheckedAt;
     private static HttpClient http;
 
@@ -144,6 +146,11 @@ public final class DungeonScore {
         }
         String message = IgnUtil.stripCodes(raw).trim();
         if (message.isEmpty()) {
+            return;
+        }
+        Matcher team = TEAM_SCORE.matcher(message);
+        if (team.find()) {
+            learnPaul(Integer.parseInt(team.group(1)));
             return;
         }
         if (handle(message) && started) {
@@ -220,6 +227,32 @@ public final class DungeonScore {
             batKillers.add(name.toLowerCase(Locale.ROOT));
         }
         return true;
+    }
+
+    private static boolean paulBonus() {
+        return ConfigManager.get().scoreForcePaul || paul
+                || (jerry && Perkpocalypse.paulNow(System.currentTimeMillis()));
+    }
+
+    private static void learnPaul(int team) {
+        Snapshot s = last;
+        if (!started || s == null || !jerry || paul || ConfigManager.get().scoreForcePaul || s.floor() <= 0) {
+            return;
+        }
+        int without = calculate(withPaul(s, false));
+        int diff = team - without;
+        QZA.LOGGER.info("QZA Dungeon Score: Hypixel's Team Score {}, QZA's without Paul {}", team, without);
+        if (diff >= 7 && diff <= 13) {
+            Perkpocalypse.learn(System.currentTimeMillis(), true);
+        } else if (Math.abs(diff) <= 3) {
+            Perkpocalypse.learn(System.currentTimeMillis(), false);
+        }
+    }
+
+    static Snapshot withPaul(Snapshot s, boolean paul) {
+        return new Snapshot(s.floor(), s.master(), s.secretPercent(), s.secretsFound(), s.completedRooms(),
+                s.clearedPercent(), s.bloodDone(), s.inBoss(), s.puzzles(), s.puzzlesDone(), s.deaths(),
+                s.firstDeathSpirit(), s.crypts(), s.mimic(), s.prince(), s.bats(), paul, s.seconds(), s.roomTotal());
     }
 
     private static void begin() {
@@ -398,7 +431,7 @@ public final class DungeonScore {
         return new Snapshot(floor, DungeonState.catacombsMaster(), secretPercent, secretsFound, rooms,
                 Math.max(0, clearedPercent), bloodDone, inBoss, puzzles, Math.min(puzzles, solved.size()),
                 Math.max(teamDeaths, chatDeaths), firstDeadSpirit == null || firstDeadSpirit,
-                crypts, mimicKilled, princeKilled, batKillers.size(), paul,
+                crypts, mimicKilled, princeKilled, batKillers.size(), paulBonus(),
                 seconds >= 0 ? seconds : Math.max(0, tabSeconds), roomTotal);
     }
 
@@ -694,6 +727,7 @@ public final class DungeonScore {
                 .thenAccept(response -> {
                     if (response.statusCode() == 200) {
                         paul = hasEzpz(response.body());
+                        jerry = isJerry(response.body());
                     }
                 })
                 .exceptionally(error -> {
@@ -719,6 +753,15 @@ public final class DungeonScore {
             }
             JsonObject minister = mayor.getAsJsonObject("minister");
             return minister != null && isEzpz(minister.get("perk"));
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    static boolean isJerry(String body) {
+        try {
+            JsonObject mayor = JsonParser.parseString(body).getAsJsonObject().getAsJsonObject("mayor");
+            return mayor != null && mayor.has("key") && mayor.get("key").getAsString().equalsIgnoreCase("jerry");
         } catch (RuntimeException e) {
             return false;
         }

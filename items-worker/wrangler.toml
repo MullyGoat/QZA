@@ -1,0 +1,22 @@
+name = "qza-items"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Every player's shared custom items. Create it once with
+#   wrangler kv namespace create ITEMS
+# and paste the id it prints in below. The id is not a secret.
+[[kv_namespaces]]
+binding = "ITEMS"
+id = "e3983e3fd52b46049146dce0cff58eea"
+
+[observability]
+enabled = true
+
+# Relays inspect animations between QZA users who are online. Free plan Durable Objects must be SQLite ones.
+[[durable_objects.bindings]]
+name = "LIVE"
+class_name = "LiveRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["LiveRoom"]

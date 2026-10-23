@@ -6,6 +6,7 @@ import com.qza.config.ConfigManager;
 import com.qza.config.CustomItemEntry;
 import com.qza.config.QZAConfig;
 import com.qza.custom.CustomItems;
+import com.qza.custom.knife.KnifeFinish;
 import com.qza.inventory.ItemProtection;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -43,6 +44,8 @@ public class CustomItemScreen extends Screen {
     private static final int TOGGLE_W = 132;
     private static final int OPTION_W = 120;
     private static final int PREVIEW = 64;
+    private static final int CELL_W = 88;
+    private static final int CELL_H = 58;
     private static final long RESCAN_MS = 500L;
 
     private static final int TYPE = 0;
@@ -52,11 +55,17 @@ public class CustomItemScreen extends Screen {
     private static final int GLOW = 4;
     private static final int BLOCK = 5;
     private static final int REMOVE = 6;
+    private static final int STYLE = 7;
+    private static final int FINISH = 8;
+    private static final int PATTERN = 9;
+    private static final int SIZE = 11;
 
     private enum Mode {
         LIST,
         ADD,
-        EDIT
+        EDIT,
+        TYPES,
+        FINISHES
     }
 
     private final List<Row> rows = new ArrayList<>();
@@ -117,7 +126,7 @@ public class CustomItemScreen extends Screen {
             }
             rows.add(new Row(e.getKey(), e.getValue(), stack));
         }
-        if (mode == Mode.EDIT && edited() == null) {
+        if ((mode == Mode.EDIT || picking()) && edited() == null) {
             show(Mode.LIST);
         }
         scannedAt = System.currentTimeMillis();
@@ -139,6 +148,10 @@ public class CustomItemScreen extends Screen {
 
     private int count() {
         return mode == Mode.ADD ? inventory.size() : rows.size();
+    }
+
+    private boolean picking() {
+        return mode == Mode.TYPES || mode == Mode.FINISHES;
     }
 
     @Override
@@ -165,6 +178,7 @@ public class CustomItemScreen extends Screen {
         switch (mode) {
             case ADD -> drawPicker(graphics, mx, my);
             case EDIT -> drawSettings(graphics, mx, my);
+            case TYPES, FINISHES -> drawGrid(graphics, mx, my);
             default -> drawList(graphics, mx, my);
         }
 
@@ -193,6 +207,8 @@ public class CustomItemScreen extends Screen {
         String title = switch (mode) {
             case ADD -> "ADD A CUSTOM ITEM";
             case EDIT -> "ITEM SETTINGS";
+            case TYPES -> "CHOOSE WHAT IT SHOWS AS";
+            case FINISHES -> "CHOOSE A SKIN";
             default -> "QZA CUSTOM ITEMS";
         };
         graphics.pose().pushMatrix();
@@ -220,8 +236,10 @@ public class CustomItemScreen extends Screen {
             }
         }
         String status = switch (mode) {
-            case ADD -> "Pick an item from your inventory and what it turns into";
+            case ADD -> "Pick an item from your inventory to turn into a knife or lightsaber";
             case EDIT -> "Click a button for the next option, right-click for the one before";
+            case TYPES -> "Click a knife or the lightsaber. Esc or Back keeps the current one";
+            case FINISHES -> "Click a skin. Pattern on the settings page changes it more";
             default -> "Only you see these. Open an item's settings to change how it looks and works";
         };
         if (!CustomItems.enabled()) {
@@ -254,11 +272,73 @@ public class CustomItemScreen extends Screen {
         return new int[]{remove[0] - GAP - SETTINGS_W, remove[1], SETTINGS_W, FIELD_H};
     }
 
-    private int[] pickRect(int row, int option) {
+    private int[] pickRect(int row) {
         int right = panelX + panelW - 12 - 4;
-        int n = CustomItems.SKINS.size();
-        int x = right - (n - option) * PICK_W - (n - 1 - option) * GAP;
-        return new int[]{x, rowY(row) + 5, PICK_W, FIELD_H};
+        return new int[]{right - PICK_W, rowY(row) + 5, PICK_W, FIELD_H};
+    }
+
+    private int gridCols() {
+        return Math.max(1, (panelW - 24) / CELL_W);
+    }
+
+    private int[] cellRect(int index) {
+        int cols = gridCols();
+        int x = panelX + 12 + (index % cols) * CELL_W;
+        int y = listY + 16 + (index / cols) * CELL_H;
+        return new int[]{x, y, CELL_W - GAP, CELL_H - GAP};
+    }
+
+    private List<String> gridOptions() {
+        return mode == Mode.TYPES ? CustomItems.SKINS : KnifeFinish.ids();
+    }
+
+    private CustomItemEntry gridEntry(CustomItemEntry entry, String option) {
+        CustomItemEntry copy = CustomItems.copy(entry);
+        if (mode == Mode.TYPES) {
+            CustomItems.retype(copy, option);
+        } else {
+            copy.finish = option;
+            copy.style = CustomItems.REALISTIC;
+        }
+        return copy;
+    }
+
+    private String gridLabel(String option) {
+        return mode == Mode.TYPES ? CustomItems.skinLabel(option) : KnifeFinish.get(option).label();
+    }
+
+    private void drawGrid(GuiGraphicsExtractor graphics, int mx, int my) {
+        Row row = edited();
+        if (row == null) {
+            return;
+        }
+        CustomItemEntry entry = row.entry();
+        List<String> options = gridOptions();
+        String current = mode == Mode.TYPES ? entry.type : entry.finish;
+        graphics.text(this.font, mode == Mode.TYPES ? "KNIVES AND LIGHTSABER" : "SKINS FOR YOUR "
+                + CustomItems.skinLabel(entry.type).toUpperCase(java.util.Locale.ROOT), panelX + 12, listY, TEXT_FAINT);
+        for (int i = 0; i < options.size(); i++) {
+            String option = options.get(i);
+            int[] r = cellRect(i);
+            if (r[1] + r[3] > panelY + panelH - 6) {
+                break;
+            }
+            boolean on = option.equals(current);
+            boolean over = inside(mx, my, r);
+            graphics.fill(r[0], r[1], r[0] + r[2], r[1] + r[3], on ? 0x55FF55FF : (over ? 0x40FFFFFF : CARD_BG));
+            outline(graphics, r[0], r[1], r[2], r[3], on ? PINK : (over ? 0xFFDDDDDD : 0x40FFFFFF));
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(r[0] + (r[2] - 40) / 2f, r[1] + 2);
+            graphics.pose().scale(2.5f, 2.5f);
+            graphics.item(CustomItems.preview(gridEntry(entry, option)), 0, 0);
+            graphics.pose().popMatrix();
+            String label = this.font.plainSubstrByWidth(gridLabel(option), r[2] - 4);
+            graphics.centeredText(this.font, label, r[0] + r[2] / 2, r[1] + r[3] - 12, on ? TEXT : TEXT_DIM);
+            if (over) {
+                tooltip = Component.literal(mode == Mode.TYPES ? "Show this item as a " + gridLabel(option)
+                        : "Use the " + gridLabel(option) + " skin");
+            }
+        }
     }
 
     private void drawItemRow(GuiGraphicsExtractor graphics, int i, Row row, int textW) {
@@ -296,7 +376,7 @@ public class CustomItemScreen extends Screen {
         }
         if (rows.isEmpty()) {
             graphics.text(this.font, "No custom items yet.", x, listY + 20, TEXT_DIM);
-            graphics.text(this.font, "Click Add Item to turn one of your items into a karambit, butterfly knife or "
+            graphics.text(this.font, "Click Add Item to turn one of your items into a CS:GO style knife or a "
                     + "lightsaber.", x, listY + 32, TEXT_FAINT);
             return;
         }
@@ -339,7 +419,7 @@ public class CustomItemScreen extends Screen {
             int y = rowY(i);
             graphics.fill(x, y, x + panelW - 24, y + ROW_H - 2, CARD_BG);
             graphics.item(stack, x + 4, y + 4);
-            int textW = pickRect(i, 0)[0] - (x + 26) - 8;
+            int textW = pickRect(i)[0] - (x + 26) - 8;
             List<FormattedCharSequence> name = this.font.split(stack.getHoverName(), Math.max(20, textW));
             if (!name.isEmpty()) {
                 graphics.text(this.font, name.get(0), x + 26, y + 4, TEXT);
@@ -348,28 +428,34 @@ public class CustomItemScreen extends Screen {
             String detail = entry == null ? "Looks normal" : "Already shows as " + CustomItems.describe(entry);
             graphics.text(this.font, this.font.plainSubstrByWidth(detail, Math.max(20, textW)), x + 26, y + 14,
                     TEXT_FAINT);
-            for (int o = 0; o < CustomItems.SKINS.size(); o++) {
-                String option = CustomItems.SKINS.get(o);
-                int[] r = pickRect(i, o);
-                boolean on = entry != null && option.equals(entry.type);
-                boolean over = inside(mx, my, r);
-                pinkToggle(graphics, r, on, over);
-                graphics.centeredText(this.font, CustomItems.skinLabel(option), r[0] + (r[2] / 2), r[1] + 4,
-                        on ? TEXT : TEXT_DIM);
-                if (over) {
-                    tooltip = Component.literal("Turn this item into a " + CustomItems.skinLabel(option));
-                }
+            int[] r = pickRect(i);
+            boolean over = inside(mx, my, r);
+            pinkToggle(graphics, r, entry != null, over);
+            graphics.centeredText(this.font, entry == null ? "Customise" : "Settings", r[0] + (r[2] / 2), r[1] + 4,
+                    TEXT);
+            if (over) {
+                tooltip = Component.literal(entry == null ? "Turn this item into a knife or lightsaber, then pick which"
+                        : "Open this item's settings");
             }
         }
         scrollHints(graphics, shown);
     }
 
     private static List<Integer> options(CustomItemEntry entry) {
-        List<Integer> list = new ArrayList<>(List.of(TYPE, LOOK));
+        List<Integer> list = new ArrayList<>(List.of(TYPE));
         boolean saber = CustomItems.LIGHTSABER.equals(entry.type);
+        if (!saber) {
+            list.add(STYLE);
+        }
+        if (CustomItems.realistic(entry)) {
+            list.addAll(List.of(FINISH, PATTERN));
+        } else {
+            list.add(LOOK);
+        }
         if (saber) {
             list.add(COLOUR);
         }
+        list.add(SIZE);
         list.add(EQUIP);
         if (saber) {
             list.add(GLOW);
@@ -383,6 +469,10 @@ public class CustomItemScreen extends Screen {
         boolean saber = CustomItems.LIGHTSABER.equals(entry.type);
         return switch (option) {
             case TYPE -> "Shows As";
+            case STYLE -> "Style";
+            case FINISH -> "Skin";
+            case PATTERN -> "Pattern";
+            case SIZE -> "Size";
             case LOOK -> saber ? "Hilt Style" : "Material";
             case COLOUR -> "Blade Colour";
             case EQUIP -> saber ? "Light Up On Equip" : "Equip Animation";
@@ -395,13 +485,17 @@ public class CustomItemScreen extends Screen {
     private static String optionHelp(CustomItemEntry entry, int option) {
         boolean saber = CustomItems.LIGHTSABER.equals(entry.type);
         return switch (option) {
-            case TYPE -> "What this item turns into";
+            case TYPE -> "What this item turns into. Click to pick from all of them";
+            case STYLE -> "Realistic is a smooth 3D CS:GO style knife. Minecraft is a pixel knife like vanilla tools";
+            case FINISH -> "The knife's skin. Click to pick from all of them";
+            case PATTERN -> "Moves the skin's pattern around, like a CS:GO pattern seed. Click for a new one";
+            case SIZE -> "How big it is in your hand. Click for bigger, right-click for smaller";
             case LOOK -> saber ? "The style of the lightsaber's hilt" : "What the knife is made of";
             case COLOUR -> "The colour of the blade";
             case EQUIP -> saber ? "Lights the blade up when you switch to it"
                     : "Plays the " + CustomItems.skinLabel(entry.type) + " equip animation when you switch to it";
             case GLOW -> "Makes the blade glow around it";
-            case BLOCK -> "Lets it do the 1.8 sword blocking animation. Needs Sword Blocking on in Miscellaneous";
+            case BLOCK -> "Lets it do the 1.8 sword blocking animation. Needs Sword Blocking on in Items";
             default -> "Make this item look normal again";
         };
     }
@@ -409,6 +503,10 @@ public class CustomItemScreen extends Screen {
     private static String optionValue(CustomItemEntry entry, int option) {
         return switch (option) {
             case TYPE -> CustomItems.skinLabel(entry.type);
+            case STYLE -> CustomItems.lookLabel(entry.style);
+            case FINISH -> CustomItems.finishLabel(entry);
+            case PATTERN -> "#" + entry.seed;
+            case SIZE -> entry.size + "%";
             case LOOK -> CustomItems.variantLabel(entry.variant);
             case COLOUR -> CustomItems.colourLabel(entry.colour);
             case EQUIP -> entry.equip ? "On" : "Off";
@@ -551,6 +649,8 @@ public class CustomItemScreen extends Screen {
         if (left && inside(x, y, doneRect())) {
             if (mode == Mode.LIST) {
                 onClose();
+            } else if (picking()) {
+                mode = Mode.EDIT;
             } else {
                 show(Mode.LIST);
                 rescan();
@@ -563,14 +663,29 @@ public class CustomItemScreen extends Screen {
             case ADD -> {
                 int shown = Math.min(inventory.size() - listScroll, rowsShown());
                 for (int i = 0; i < shown; i++) {
-                    for (int o = 0; o < CustomItems.SKINS.size(); o++) {
-                        if (left && inside(x, y, pickRect(i, o))) {
-                            if (CustomItems.add(inventory.get(listScroll + i), CustomItems.SKINS.get(o))) {
-                                show(Mode.LIST);
-                                rescan();
-                            }
-                            return true;
+                    if (left && inside(x, y, pickRect(i))) {
+                        ItemStack stack = inventory.get(listScroll + i);
+                        if (CustomItems.assigned(stack) != null || CustomItems.add(stack, CustomItems.KARAMBIT)) {
+                            editing = ItemProtection.uuid(stack);
+                            rescan();
+                            show(Mode.TYPES);
                         }
+                        return true;
+                    }
+                }
+            }
+            case TYPES, FINISHES -> {
+                Row row = edited();
+                List<String> options = gridOptions();
+                for (int i = 0; row != null && i < options.size(); i++) {
+                    if (left && inside(x, y, cellRect(i))) {
+                        if (mode == Mode.TYPES) {
+                            CustomItems.setType(row.entry(), options.get(i));
+                        } else {
+                            CustomItems.setFinish(row.entry(), options.get(i));
+                        }
+                        mode = Mode.EDIT;
+                        return true;
                     }
                 }
             }
@@ -629,7 +744,23 @@ public class CustomItemScreen extends Screen {
                 continue;
             }
             switch (options.get(i)) {
-                case TYPE -> CustomItems.cycleType(entry, step);
+                case TYPE -> {
+                    if (left) {
+                        mode = Mode.TYPES;
+                    } else {
+                        CustomItems.cycleType(entry, step);
+                    }
+                }
+                case STYLE -> CustomItems.cycleLook(entry, step);
+                case FINISH -> {
+                    if (left) {
+                        mode = Mode.FINISHES;
+                    } else {
+                        CustomItems.cycleFinish(entry, step);
+                    }
+                }
+                case PATTERN -> CustomItems.cycleSeed(entry, step);
+                case SIZE -> CustomItems.cycleSize(entry, step);
                 case LOOK -> CustomItems.cycleVariant(entry, step);
                 case COLOUR -> CustomItems.cycleColour(entry, step);
                 case EQUIP -> {
@@ -669,7 +800,7 @@ public class CustomItemScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         float s = scale();
         double my = (mouseY - offsetY()) / s;
-        if (mode != Mode.EDIT && my >= listY && count() > rowsShown()) {
+        if ((mode == Mode.LIST || mode == Mode.ADD) && my >= listY && count() > rowsShown()) {
             listScroll -= (int) Math.signum(verticalAmount);
             clampList();
             return true;
@@ -679,6 +810,10 @@ public class CustomItemScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (picking() && event.key() == InputConstants.KEY_ESCAPE) {
+            mode = Mode.EDIT;
+            return true;
+        }
         if (mode != Mode.LIST && event.key() == InputConstants.KEY_ESCAPE) {
             show(Mode.LIST);
             rescan();

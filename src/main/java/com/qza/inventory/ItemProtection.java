@@ -113,6 +113,18 @@ public final class ItemProtection {
         return tag == null ? "" : tag.getStringOr("uuid", "");
     }
 
+    public static String skyblockId(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) {
+            return "";
+        }
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        if (data == null) {
+            return "";
+        }
+        CompoundTag tag = ((CustomDataAccessor) (Object) data).qzaTag();
+        return tag == null ? "" : tag.getStringOr("id", "");
+    }
+
     private static Set<String> protectedSet() {
         List<String> list = ConfigManager.get().protectedItems;
         if (list == null) {

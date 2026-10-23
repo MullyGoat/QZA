@@ -82,6 +82,8 @@ public class QZAConfig {
 
     public boolean scoreBonusAnnounce = false;
 
+    public boolean scoreForcePaul = false;
+
     public boolean scoreDebugLog = false;
 
     public boolean scoreHudEnabled = false;
@@ -144,6 +146,8 @@ public class QZAConfig {
 
     public double crystalTimerScale = 1.0;
 
+    public boolean crystalDebugLog = false;
+
     public boolean relicTimerEnabled = false;
 
     public double relicTimerX = 0.5;
@@ -151,6 +155,28 @@ public class QZAConfig {
     public double relicTimerY = 0.42;
 
     public double relicTimerScale = 1.5;
+
+    public boolean packCombinerEnabled = false;
+
+    public String packCombinerBlocks = "none";
+
+    public String packCombinerItems = "none";
+
+    public String packCombinerGui = "none";
+
+    public String packCombinerSky = "none";
+
+    public String packCombinerTheme = "default";
+
+    public boolean packCombinerDiamonds = true;
+
+    public boolean packCombinerHearts = true;
+
+    public boolean packCombinerXpBar = true;
+
+    public boolean packCombinerCrosshair = true;
+
+    public boolean packCombinerGlint = true;
 
     public boolean starredMobsEnabled = false;
 
@@ -189,6 +215,25 @@ public class QZAConfig {
     public List<String> leapMenuCustomOrder = new ArrayList<>();
 
     public Map<String, List<String>> leapMenuCustomOrders = new LinkedHashMap<>();
+
+    public boolean leapMenuAnnounce = false;
+
+    public String leapMenuAnnounceIn = "party";
+
+    public String leapMenuAnnounceAs = "name";
+
+    public String leapMenuAnnounceMessage = "Leaped to {name}";
+
+    public boolean leapMenuKeybinds = false;
+
+    public String leapMenuKeybindMode = "corners";
+
+    public List<String> leapMenuCornerKeys = new ArrayList<>(List.of("key.keyboard.1", "key.keyboard.2",
+            "key.keyboard.3", "key.keyboard.4"));
+
+    public Map<String, String> leapMenuClassKeys = new LinkedHashMap<>(Map.of("archer", "key.keyboard.1",
+            "berserk", "key.keyboard.2", "healer", "key.keyboard.3", "mage", "key.keyboard.4",
+            "tank", "key.keyboard.5"));
 
     public boolean partyInviteNotifyEnabled = false;
 
@@ -280,16 +325,6 @@ public class QZAConfig {
 
     public boolean guiReopenLast = false;
 
-    public String guiLastCategory = "";
-
-    public double guiLastScroll = 0.0;
-
-    public List<String> guiLastOpenCards = new ArrayList<>();
-
-    public String guiLastSearch = "";
-
-    public List<String> guiLastSearchCards = new ArrayList<>();
-
     public boolean itemListEnabled = false;
 
     public boolean itemListShown = true;
@@ -348,6 +383,8 @@ public class QZAConfig {
 
     public boolean musicOverlayHideBackground = false;
 
+    public boolean musicDebugLog = false;
+
     public boolean itemGlowEnabled = false;
 
     public String itemGlowStyle = "aura";
@@ -374,21 +411,11 @@ public class QZAConfig {
 
     public boolean itemInspectShowHand = true;
 
+    public boolean itemInspectThirdPerson = true;
+
     public boolean itemInspectKeepOnSwing = false;
 
     public double itemInspectSpeed = 1.0;
-
-    public String itemInspectSword = "1";
-
-    public String itemInspectPickaxe = "1";
-
-    public String itemInspectBow = "1";
-
-    public String itemInspectOther = "1";
-
-    public String itemInspectKarambit = "1";
-
-    public String itemInspectButterfly = "1";
 
     public boolean customItemsEnabled = false;
 
@@ -397,6 +424,16 @@ public class QZAConfig {
     public Map<String, CustomItemEntry> customItemSkins = new LinkedHashMap<>();
 
     public boolean customItemEquip = true;
+
+    public boolean customItemHand = true;
+
+    public boolean sharedItemsEnabled = false;
+
+    public boolean sharedItemsShare = true;
+
+    public boolean sharedItemsShow = true;
+
+    public boolean sharedItemsUploaded = false;
 
     public boolean hideShieldSlot = false;
 

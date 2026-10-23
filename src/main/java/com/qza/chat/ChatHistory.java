@@ -85,6 +85,11 @@ public final class ChatHistory {
         return !MODE_SESSION.equals(ConfigManager.get().chatHistoryMode);
     }
 
+    public static boolean savesToDisk() {
+        ensure();
+        return persists() && account != null && !offline;
+    }
+
     public static void load() {
         account = null;
         accountName = "";

@@ -3,6 +3,7 @@ package com.qza.mixin;
 import com.qza.dungeon.LeapMenu;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -32,6 +33,14 @@ public class LeapMenuMixin {
             cir.setReturnValue(LeapMenu.click(screen, event.x(), event.y(), event.button()));
         } else {
             LeapMenu.covered(screen);
+        }
+    }
+
+    @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
+    private void qzaLeapMenuKey(KeyEvent event, CallbackInfoReturnable<Boolean> cir) {
+        AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+        if (LeapMenu.active(screen) && LeapMenu.drawing(screen) && LeapMenu.key(screen, event)) {
+            cir.setReturnValue(true);
         }
     }
 

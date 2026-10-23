@@ -75,6 +75,13 @@ public final class HandSpace {
                 .translate(-pivot.x(), -pivot.y(), -pivot.z());
     }
 
+    public static Matrix4f around(Vector3fc pivot, float scale) {
+        return new Matrix4f()
+                .translate(pivot)
+                .scale(scale)
+                .translate(-pivot.x(), -pivot.y(), -pivot.z());
+    }
+
     public static Matrix4f stretch(Vector3fc from, Vector3fc axis, float amount) {
         float k = amount - 1f;
         Matrix4f scale = new Matrix4f(

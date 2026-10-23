@@ -30,13 +30,28 @@ public class ItemInspectMixin {
             return;
         }
         ItemStackRenderState state = (ItemStackRenderState) (Object) this;
+        if (CustomItems.pushThirdPerson(state, displayContext, poseStack)) {
+            qzaHeldPushes++;
+        }
+        if (ItemInspect.pushThirdPerson(state, displayContext, poseStack)) {
+            qzaHeldPushes++;
+        }
         if (CustomItems.pushSwing(state, displayContext, poseStack)) {
             qzaHeldPushes++;
         }
         if (SwordBlock.pushFirstPerson(displayContext, poseStack)) {
             qzaHeldPushes++;
         }
-        if (ItemInspect.push(state, displayContext, poseStack, collector, light)) {
+        if (ItemInspect.pushHand(state, displayContext, poseStack, collector, light)) {
+            qzaHeldPushes++;
+        }
+        if (CustomItems.pushViewmodel(state, displayContext, poseStack)) {
+            qzaHeldPushes++;
+        }
+        if (ItemInspect.pushHeld(poseStack)) {
+            qzaHeldPushes++;
+        }
+        if (CustomItems.pushHook(state, displayContext, poseStack)) {
             qzaHeldPushes++;
         }
         if (CustomItems.push(state, displayContext, poseStack, collector, light, overlay, outline)) {
@@ -49,6 +64,9 @@ public class ItemInspectMixin {
                             int outline, CallbackInfo ci) {
         for (; qzaHeldPushes > 0; qzaHeldPushes--) {
             poseStack.popPose();
+        }
+        if (!CustomItems.drawingPart()) {
+            CustomItems.end();
         }
     }
 }

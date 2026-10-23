@@ -10,10 +10,15 @@ import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.EnderMan;
+import org.joml.Quaternionf;
 
+import java.io.InputStream;
 import java.net.URI;
 
 public final class Mc {
@@ -81,5 +86,13 @@ public final class Mc {
 
     public static boolean isEnderman(Entity entity) {
         return entity instanceof EnderMan;
+    }
+
+    public static Quaternionf cameraRotation() {
+        return Minecraft.getInstance().gameRenderer.getMainCamera().rotation();
+    }
+
+    public static IoSupplier<InputStream> vanillaResource(Identifier id) {
+        return Minecraft.getInstance().getVanillaPackResources().getResource(PackType.CLIENT_RESOURCES, id);
     }
 }

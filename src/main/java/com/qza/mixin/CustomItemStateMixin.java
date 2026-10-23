@@ -16,6 +16,12 @@ public class CustomItemStateMixin implements CustomItemState {
     @Unique
     private String qzaUuid;
 
+    @Unique
+    private int qzaSize = 100;
+
+    @Unique
+    private int qzaOwner = -1;
+
     @Override
     public String qzaSkin() {
         return qzaSkin;
@@ -24,6 +30,26 @@ public class CustomItemStateMixin implements CustomItemState {
     @Override
     public String qzaUuid() {
         return qzaUuid;
+    }
+
+    @Override
+    public int qzaSize() {
+        return qzaSize;
+    }
+
+    @Override
+    public void qzaSetSize(int size) {
+        qzaSize = size;
+    }
+
+    @Override
+    public int qzaOwner() {
+        return qzaOwner;
+    }
+
+    @Override
+    public void qzaSetOwner(int owner) {
+        qzaOwner = owner;
     }
 
     @Override
@@ -36,5 +62,7 @@ public class CustomItemStateMixin implements CustomItemState {
     private void qzaClearSkin(CallbackInfo ci) {
         qzaSkin = null;
         qzaUuid = null;
+        qzaSize = 100;
+        qzaOwner = -1;
     }
 }

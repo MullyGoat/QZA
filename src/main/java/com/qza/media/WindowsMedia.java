@@ -13,6 +13,9 @@ import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.function.Predicate;
 
 final class WindowsMedia {
@@ -31,6 +34,8 @@ final class WindowsMedia {
     private static final int RO_INIT_MULTITHREADED = 1;
     private static final int ASYNC_STARTED = 0;
     private static final int ASYNC_COMPLETED = 1;
+    private static final int ASYNC_CANCELED = 2;
+    private static final int ASYNC_ERROR = 3;
     private static final long ASYNC_TIMEOUT_MS = 3000L;
     private static final int MAX_THUMBNAIL_BYTES = 8 * 1024 * 1024;
     private static final int READ_CHUNK = 256 * 1024;
@@ -62,6 +67,8 @@ final class WindowsMedia {
     private static final int PROPS_THUMBNAIL = 15;
     private static final int TIMELINE_START = 6;
     private static final int TIMELINE_END = 7;
+    private static final int TIMELINE_MIN_SEEK = 8;
+    private static final int TIMELINE_MAX_SEEK = 9;
     private static final int TIMELINE_POSITION = 10;
     private static final int TIMELINE_UPDATED = 11;
     private static final int PLAYBACK_CONTROLS = 6;
@@ -73,6 +80,7 @@ final class WindowsMedia {
     private static final int VECTOR_GET_AT = 6;
     private static final int VECTOR_SIZE = 7;
     private static final int ASYNC_INFO_STATUS = 7;
+    private static final int ASYNC_INFO_ERROR_CODE = 8;
     private static final int ASYNC_INFO_CANCEL = 9;
     private static final int ASYNC_OPERATION_RESULTS = 8;
     private static final int ASYNC_PROGRESS_RESULTS = 10;
@@ -89,12 +97,23 @@ final class WindowsMedia {
     private static Function roGetActivationFactory;
     private static Pointer manager;
     private static Pointer bufferFactory;
+    private static String problem = "";
+    private static String failure = "";
 
     record Track(String app, String title, String artist, String album, int status, int controls,
-                 long startTicks, long endTicks, long positionTicks, long updatedTicks) {
+                 long startTicks, long endTicks, long minSeekTicks, long maxSeekTicks, long positionTicks,
+                 long updatedTicks) {
         String key() {
             return app + "\n" + title + "\n" + artist + "\n" + album;
         }
+
+        Track named(String newTitle, String newArtist, String newAlbum) {
+            return new Track(app, newTitle, newArtist, newAlbum, status, controls, startTicks, endTicks,
+                    minSeekTicks, maxSeekTicks, positionTicks, updatedTicks);
+        }
+    }
+
+    record Listed(Track track, String problem) {
     }
 
     private WindowsMedia() {
@@ -129,40 +148,21 @@ final class WindowsMedia {
     static Snapshot read(Predicate<Track> wantThumbnail) {
         Pointer session = pick();
         if (session == null) {
+            problem = "Windows has no media session";
             return null;
         }
         try {
-            String app = string(session, SESSION_APP_ID);
-            int status = CLOSED;
-            int controls = 0;
-            Pointer playback = out(session, SESSION_PLAYBACK_INFO);
-            if (playback != null) {
-                status = integer(playback, PLAYBACK_STATUS, CLOSED);
-                controls = controls(playback);
-                release(playback);
-            }
-
-            long start = 0;
-            long end = 0;
-            long position = 0;
-            long updated = 0;
-            Pointer timeline = out(session, SESSION_TIMELINE);
-            if (timeline != null) {
-                start = int64(timeline, TIMELINE_START);
-                end = int64(timeline, TIMELINE_END);
-                position = int64(timeline, TIMELINE_POSITION);
-                updated = int64(timeline, TIMELINE_UPDATED);
-                release(timeline);
-            }
-
+            Track base = track(session);
             Pointer props = await(out(session, SESSION_MEDIA_PROPERTIES_ASYNC), ASYNC_OPERATION_RESULTS);
             if (props == null) {
+                problem = base.app() + " didn't give its song: " + failure;
                 return null;
             }
             try {
-                Track track = new Track(app, string(props, PROPS_TITLE), string(props, PROPS_ARTIST),
-                        string(props, PROPS_ALBUM), status, controls, start, end, position, updated);
+                Track track = base.named(string(props, PROPS_TITLE), string(props, PROPS_ARTIST),
+                        string(props, PROPS_ALBUM));
                 byte[] thumbnail = wantThumbnail.test(track) ? thumbnail(props) : null;
+                problem = "";
                 return new Snapshot(track, thumbnail);
             } finally {
                 release(props);
@@ -172,15 +172,54 @@ final class WindowsMedia {
         }
     }
 
+    static String problem() {
+        return problem;
+    }
+
+    private static Track track(Pointer session) {
+        String app = string(session, SESSION_APP_ID);
+        int status = CLOSED;
+        int controls = 0;
+        Pointer playback = out(session, SESSION_PLAYBACK_INFO);
+        if (playback != null) {
+            status = integer(playback, PLAYBACK_STATUS, CLOSED);
+            controls = controls(playback);
+            release(playback);
+        }
+
+        long start = 0;
+        long end = 0;
+        long minSeek = 0;
+        long maxSeek = 0;
+        long position = 0;
+        long updated = 0;
+        Pointer timeline = out(session, SESSION_TIMELINE);
+        if (timeline != null) {
+            start = int64(timeline, TIMELINE_START);
+            end = int64(timeline, TIMELINE_END);
+            minSeek = int64(timeline, TIMELINE_MIN_SEEK);
+            maxSeek = int64(timeline, TIMELINE_MAX_SEEK);
+            position = int64(timeline, TIMELINE_POSITION);
+            updated = int64(timeline, TIMELINE_UPDATED);
+            release(timeline);
+        }
+        return new Track(app, "", "", "", status, controls, start, end, minSeek, maxSeek, position, updated);
+    }
+
     record Snapshot(Track track, byte[] thumbnail) {
     }
 
     static boolean command(String app, Action action, long positionTicks) {
+        long began = System.currentTimeMillis();
+        String what = action == Action.SEEK
+                ? "SEEK to " + MusicDebug.clock(positionTicks / MusicDebug.TICKS_PER_MS) : action.name();
         Pointer session = find(app);
         if (session == null) {
+            MusicDebug.line("button " + what + " for " + app + ": there's no session to send it to");
             return false;
         }
         try {
+            String target = MusicDebug.active() ? string(session, SESSION_APP_ID) : app;
             PointerByReference op = new PointerByReference();
             int hr = switch (action) {
                 case TOGGLE -> invoke(session, SESSION_TOGGLE, op);
@@ -189,18 +228,75 @@ final class WindowsMedia {
                 case SEEK -> invoke(session, SESSION_SEEK, positionTicks, op);
             };
             if (hr < 0 || op.getValue() == null) {
+                MusicDebug.line("button " + what + " sent to " + target + ": Windows refused it, " + hr(hr));
                 return false;
             }
             Pointer operation = op.getValue();
             try {
                 if (!finished(operation)) {
+                    MusicDebug.line("button " + what + " sent to " + target + ": " + failure);
                     return false;
                 }
                 ByteByReference done = new ByteByReference();
-                return invoke(operation, ASYNC_OPERATION_RESULTS, done) >= 0 && done.getValue() != 0;
+                int results = invoke(operation, ASYNC_OPERATION_RESULTS, done);
+                boolean accepted = results >= 0 && done.getValue() != 0;
+                MusicDebug.line("button " + what + " sent to " + target + ": "
+                        + (results < 0 ? "no answer, " + hr(results)
+                        : accepted ? "the app accepted it" : "the app said no")
+                        + " after " + (System.currentTimeMillis() - began) + "ms");
+                return accepted;
             } finally {
                 release(operation);
             }
+        } finally {
+            release(session);
+        }
+    }
+
+    static List<Listed> sessions() {
+        List<Listed> all = new ArrayList<>();
+        Pointer sessions = out(manager, MANAGER_GET_SESSIONS);
+        if (sessions == null) {
+            return all;
+        }
+        try {
+            int size = integer(sessions, VECTOR_SIZE, 0);
+            for (int i = 0; i < size; i++) {
+                PointerByReference item = new PointerByReference();
+                if (invoke(sessions, VECTOR_GET_AT, i, item) < 0 || item.getValue() == null) {
+                    continue;
+                }
+                Pointer session = item.getValue();
+                try {
+                    Track track = track(session);
+                    Pointer props = await(out(session, SESSION_MEDIA_PROPERTIES_ASYNC), ASYNC_OPERATION_RESULTS);
+                    if (props == null) {
+                        all.add(new Listed(track, "no song: " + failure));
+                        continue;
+                    }
+                    try {
+                        all.add(new Listed(track.named(string(props, PROPS_TITLE), string(props, PROPS_ARTIST),
+                                string(props, PROPS_ALBUM)), ""));
+                    } finally {
+                        release(props);
+                    }
+                } finally {
+                    release(session);
+                }
+            }
+        } finally {
+            release(sessions);
+        }
+        return all;
+    }
+
+    static String currentApp() {
+        Pointer session = out(manager, MANAGER_GET_CURRENT_SESSION);
+        if (session == null) {
+            return "";
+        }
+        try {
+            return string(session, SESSION_APP_ID);
         } finally {
             release(session);
         }
@@ -286,12 +382,14 @@ final class WindowsMedia {
     private static byte[] thumbnail(Pointer props) {
         Pointer reference = out(props, PROPS_THUMBNAIL);
         if (reference == null || bufferFactory == null) {
+            MusicDebug.cover(reference == null ? "the app gives no cover" : "no Windows buffer to read it");
             release(reference);
             return null;
         }
         Pointer stream = await(out(reference, STREAM_REFERENCE_OPEN), ASYNC_OPERATION_RESULTS);
         release(reference);
         if (stream == null) {
+            MusicDebug.cover("opening it failed, " + failure);
             return null;
         }
         Pointer random = query(stream, IID_RANDOM_ACCESS_STREAM);
@@ -299,10 +397,12 @@ final class WindowsMedia {
         release(stream);
         try {
             if (random == null || input == null) {
+                MusicDebug.cover("it isn't a readable stream");
                 return null;
             }
             long size = int64(random, STREAM_SIZE);
             if (size <= 0 || size > MAX_THUMBNAIL_BYTES) {
+                MusicDebug.cover("the app says it's " + size + " bytes");
                 return null;
             }
             ByteArrayOutputStream bytes = new ByteArrayOutputStream((int) size);
@@ -313,6 +413,9 @@ final class WindowsMedia {
                     break;
                 }
                 bytes.write(chunk, 0, chunk.length);
+            }
+            if (bytes.size() < size) {
+                MusicDebug.cover("only read " + bytes.size() + " of " + size + " bytes");
             }
             return bytes.size() > 0 ? bytes.toByteArray() : null;
         } finally {
@@ -378,6 +481,7 @@ final class WindowsMedia {
 
     private static Pointer await(Pointer operation, int resultsSlot) {
         if (operation == null) {
+            failure = "Windows refused the request";
             return null;
         }
         try {
@@ -385,7 +489,12 @@ final class WindowsMedia {
                 return null;
             }
             PointerByReference result = new PointerByReference();
-            return invoke(operation, resultsSlot, result) < 0 ? null : result.getValue();
+            int hr = invoke(operation, resultsSlot, result);
+            if (hr < 0 || result.getValue() == null) {
+                failure = hr < 0 ? "the result couldn't be read, " + hr(hr) : "the result was empty";
+                return null;
+            }
+            return result.getValue();
         } finally {
             release(operation);
         }
@@ -394,13 +503,16 @@ final class WindowsMedia {
     private static boolean finished(Pointer operation) {
         Pointer info = query(operation, IID_ASYNC_INFO);
         if (info == null) {
+            failure = "it isn't an async request";
             return false;
         }
         try {
             long deadline = System.currentTimeMillis() + ASYNC_TIMEOUT_MS;
             IntByReference status = new IntByReference();
             while (true) {
-                if (invoke(info, ASYNC_INFO_STATUS, status) < 0) {
+                int hr = invoke(info, ASYNC_INFO_STATUS, status);
+                if (hr < 0) {
+                    failure = "its status couldn't be read, " + hr(hr);
                     return false;
                 }
                 int state = status.getValue();
@@ -408,10 +520,13 @@ final class WindowsMedia {
                     return true;
                 }
                 if (state != ASYNC_STARTED) {
+                    failure = state == ASYNC_ERROR ? "it failed, " + hr(integer(info, ASYNC_INFO_ERROR_CODE, 0))
+                            : state == ASYNC_CANCELED ? "it was canceled" : "it ended with status " + state;
                     return false;
                 }
                 if (System.currentTimeMillis() > deadline) {
                     invoke(info, ASYNC_INFO_CANCEL);
+                    failure = "no answer after " + ASYNC_TIMEOUT_MS + "ms";
                     return false;
                 }
                 try {
@@ -419,12 +534,17 @@ final class WindowsMedia {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     invoke(info, ASYNC_INFO_CANCEL);
+                    failure = "QZA stopped waiting";
                     return false;
                 }
             }
         } finally {
             release(info);
         }
+    }
+
+    private static String hr(int code) {
+        return String.format(Locale.ROOT, "HRESULT 0x%08X", code);
     }
 
     private static Pointer out(Pointer self, int slot) {

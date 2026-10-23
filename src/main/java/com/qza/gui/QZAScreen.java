@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.qza.chat.ChatKeybind;
 import com.qza.compat.Mc;
 import com.qza.config.ConfigManager;
-import com.qza.config.QZAConfig;
 import com.qza.gui.setting.ActionSetting;
 import com.qza.gui.setting.DropdownSetting;
 import com.qza.gui.setting.NumberSetting;
@@ -87,6 +86,8 @@ public class QZAScreen extends Screen {
     private static String selectedCategory = SettingsRegistry.CATEGORIES.get(0);
     private static double scroll;
     private static final Set<String> expanded = new HashSet<>();
+    private static String closedQuery = "";
+    private static final Set<String> closedSearchOpen = new HashSet<>();
 
     private List<Setting> allSettings = List.of();
     private final List<Row> rows = new ArrayList<>();
@@ -135,22 +136,18 @@ public class QZAScreen extends Screen {
     }
 
     public static QZAScreen fromCommand() {
-        QZAConfig cfg = ConfigManager.get();
-        expanded.clear();
-        if (!cfg.guiReopenLast) {
+        if (!ConfigManager.get().guiReopenLast) {
             selectedCategory = SettingsRegistry.CATEGORIES.get(0);
             scroll = 0;
+            expanded.clear();
+            closedQuery = "";
+            closedSearchOpen.clear();
             return new QZAScreen();
         }
-        if (SettingsRegistry.CATEGORIES.contains(cfg.guiLastCategory)) {
-            selectedCategory = cfg.guiLastCategory;
-        }
-        scroll = Math.max(0, cfg.guiLastScroll);
-        expanded.addAll(cfg.guiLastOpenCards);
         QZAScreen screen = new QZAScreen();
-        screen.lastQuery = cfg.guiLastSearch == null ? "" : cfg.guiLastSearch;
-        screen.searchOpenQuery = screen.lastQuery.trim();
-        screen.searchOpen.addAll(cfg.guiLastSearchCards);
+        screen.lastQuery = closedQuery;
+        screen.searchOpenQuery = closedQuery.trim();
+        screen.searchOpen.addAll(closedSearchOpen);
         return screen;
     }
 
@@ -1444,15 +1441,9 @@ public class QZAScreen extends Screen {
 
     @Override
     public void removed() {
-        QZAConfig cfg = ConfigManager.get();
-        if (cfg.guiReopenLast) {
-            cfg.guiLastCategory = selectedCategory;
-            cfg.guiLastScroll = scroll;
-            cfg.guiLastOpenCards = new ArrayList<>(expanded);
-            cfg.guiLastSearch = lastQuery;
-            cfg.guiLastSearchCards = new ArrayList<>(searchOpen);
-            ConfigManager.save();
-        }
+        closedQuery = lastQuery;
+        closedSearchOpen.clear();
+        closedSearchOpen.addAll(searchOpen);
         super.removed();
     }
 
